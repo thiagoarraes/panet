@@ -33,6 +33,10 @@ const isJwtSessionError = (error) => {
 
 const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v1";
 const PAGE_SIZE = 20;
+const escapePostgrestLike = (value) =>
+  String(value || "")
+    .replace(/[,*().]/g, " ")
+    .trim();
 
 const readCachedAdminColaboradores = (queryKey) => {
   try {
@@ -225,18 +229,24 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil", { count: "planned" })
+        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil", { count: "exact" })
         .order("nome", { ascending: true })
         .range(from, to);
       if (normalizedSearch) {
-        query = query.or(`nome.ilike.%${normalizedSearch}%,email.ilike.%${normalizedSearch}%`);
+        const safeSearch = escapePostgrestLike(normalizedSearch);
+        query = query.or(`nome.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`);
       }
       const { data, error, count } = await query;
       if (error) throw error;
 
-      writeCachedAdminColaboradores(queryKey, data || [], count || 0);
-      setLista((data || []).map((row) => mapProfileToRow(row, currentUserId)));
-      setTotalItems(Number(count || 0));
+      const rows = data || [];
+      const hasExactCount = Number.isFinite(count);
+      const fallbackTotal = cachedPayload?.total || from + rows.length;
+      const resolvedTotal = hasExactCount ? Number(count) : Number(fallbackTotal);
+
+      writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
+      setLista(rows.map((row) => mapProfileToRow(row, currentUserId)));
+      setTotalItems(Math.max(rows.length, resolvedTotal));
     } catch (err) {
       if (!cachedPayload || cachedPayload.rows.length === 0) {
         setLista([]);
