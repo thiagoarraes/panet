@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X } from "lucide-react";
 import {
   COLABORADORES,
@@ -14,15 +14,15 @@ import { readCachedDomain, runDedupedRequest, writeCachedDomain } from "../lib/b
 import { Avatar } from "./Avatar";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
-import { DashboardPage } from "../pages/DashboardPage";
-import { PostagensPage } from "../pages/PostagensPage";
-import { PostDetalhePage } from "../pages/PostDetalhePage";
-import { ColaboradoresPage } from "../pages/ColaboradoresPage";
-import { AniversariosPage } from "../pages/AniversariosPage";
-import { FeriasPage } from "../pages/FeriasPage";
-import { GaleriaPage } from "../pages/GaleriaPage";
-import { PerfilPage } from "../pages/PerfilPage";
-import { AdminPage } from "../pages/admin/AdminPage";
+const DashboardPage = lazy(() => import("../pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const PostagensPage = lazy(() => import("../pages/PostagensPage").then((m) => ({ default: m.PostagensPage })));
+const PostDetalhePage = lazy(() => import("../pages/PostDetalhePage").then((m) => ({ default: m.PostDetalhePage })));
+const ColaboradoresPage = lazy(() => import("../pages/ColaboradoresPage").then((m) => ({ default: m.ColaboradoresPage })));
+const AniversariosPage = lazy(() => import("../pages/AniversariosPage").then((m) => ({ default: m.AniversariosPage })));
+const FeriasPage = lazy(() => import("../pages/FeriasPage").then((m) => ({ default: m.FeriasPage })));
+const GaleriaPage = lazy(() => import("../pages/GaleriaPage").then((m) => ({ default: m.GaleriaPage })));
+const PerfilPage = lazy(() => import("../pages/PerfilPage").then((m) => ({ default: m.PerfilPage })));
+const AdminPage = lazy(() => import("../pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 
 const mockMe = COLABORADORES.find((c) => c.isMe);
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
@@ -39,6 +39,8 @@ const DATA_CACHE_TTL = {
   mural: 20 * 1000,
 };
 const ADMIN_LIST_CACHE_TTL = 30 * 1000;
+const PANZAP_METRICS_STORAGE_KEY = "panet.metrics.panzap.v1";
+const PANZAP_METRICS_LIMIT = 200;
 
 const getGaleriaStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
@@ -441,6 +443,14 @@ const writeCachedProfile = (profile) => {
   }
 };
 
+const PageFallback = () => (
+  <div className="card">
+    <div className="card-body" style={{ padding: 24 }}>
+      <div className="section-sub">Carregando página...</div>
+    </div>
+  </div>
+);
+
 export default function PanetApp() {
   const [tela, setTela] = useState("login");
   const [pagina, setPagina] = useState("dashboard");
@@ -463,6 +473,7 @@ export default function PanetApp() {
   const colaboradoresRef = useRef(colaboradores);
   const adminListCacheRef = useRef(new Map());
   const muralSyncTimerRef = useRef(null);
+  const panzapPendingRef = useRef(new Map());
 
   useEffect(() => {
     colaboradoresRef.current = colaboradores;
@@ -484,6 +495,27 @@ export default function PanetApp() {
 
   const invalidateAdminListCache = useCallback(() => {
     adminListCacheRef.current.clear();
+  }, []);
+
+  const logPanzapMetric = useCallback((event, payload = {}) => {
+    const entry = {
+      event,
+      at: new Date().toISOString(),
+      ...payload,
+    };
+    try {
+      const raw = localStorage.getItem(PANZAP_METRICS_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const next = Array.isArray(parsed) ? parsed : [];
+      next.push(entry);
+      while (next.length > PANZAP_METRICS_LIMIT) next.shift();
+      localStorage.setItem(PANZAP_METRICS_STORAGE_KEY, JSON.stringify(next));
+    } catch (_err) {
+      // ignore metric persistence failure
+    }
+    if (typeof window !== "undefined") {
+      window.__PANET_PANZAP_METRICS_LAST = entry;
+    }
   }, []);
 
   const eu = useMemo(() => (currentProfile ? toAvatar(currentProfile) : mockMe), [currentProfile]);
@@ -1200,7 +1232,19 @@ export default function PanetApp() {
               String(item.colaborador?.id) === String(row.colaborador_id) &&
               String(item.texto || "").trim() === String(row.texto || "").trim()
           );
-          if (optimisticIdx >= 0) withoutSameId.splice(optimisticIdx, 1);
+          if (optimisticIdx >= 0) {
+            const optimisticId = withoutSameId[optimisticIdx]?.id;
+            const pending = panzapPendingRef.current.get(optimisticId);
+            if (pending) {
+              logPanzapMetric("send_realtime_confirmed", {
+                optimistic_id: optimisticId,
+                persisted_id: row.id,
+                realtime_latency_ms: Math.round(performance.now() - pending.startedAt),
+              });
+              panzapPendingRef.current.delete(optimisticId);
+            }
+            withoutSameId.splice(optimisticIdx, 1);
+          }
           return [uiMsg, ...withoutSameId].slice(0, 200);
         });
       })
@@ -1226,7 +1270,7 @@ export default function PanetApp() {
     return () => {
       channel.unsubscribe();
     };
-  }, [currentProfile?.id, tela, upsertMuralMessage]);
+  }, [currentProfile?.id, logPanzapMetric, tela, upsertMuralMessage]);
 
   useEffect(() => {
     if (!isSupabaseEnabled || tela !== "app" || !currentProfile?.id) return;
@@ -1250,6 +1294,30 @@ export default function PanetApp() {
     },
     []
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__PANET_GET_PANZAP_METRICS = () => {
+      try {
+        const raw = localStorage.getItem(PANZAP_METRICS_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_err) {
+        return [];
+      }
+    };
+    window.__PANET_CLEAR_PANZAP_METRICS = () => {
+      try {
+        localStorage.removeItem(PANZAP_METRICS_STORAGE_KEY);
+      } catch (_err) {
+        // ignore
+      }
+    };
+    return () => {
+      delete window.__PANET_GET_PANZAP_METRICS;
+      delete window.__PANET_CLEAR_PANZAP_METRICS;
+    };
+  }, []);
 
   const handleLogin = async (email, password) => {
     if (!isSupabaseEnabled) {
@@ -1547,6 +1615,12 @@ export default function PanetApp() {
     if (!isSupabaseEnabled || !currentProfile?.id) return { queued: false };
     const now = new Date();
     const optimisticId = `optimistic-${now.getTime()}`;
+    const startedAt = performance.now();
+    panzapPendingRef.current.set(optimisticId, { startedAt });
+    logPanzapMetric("send_queued", {
+      optimistic_id: optimisticId,
+      text_size: String(texto || "").length,
+    });
     const optimisticRow = {
       id: optimisticId,
       texto,
@@ -1566,12 +1640,31 @@ export default function PanetApp() {
         if (error) throw new Error(error.message);
       })
       .then(() => {
+        const pending = panzapPendingRef.current.get(optimisticId);
+        if (pending) {
+          logPanzapMetric("send_persisted", {
+            optimistic_id: optimisticId,
+            persistence_latency_ms: Math.round(performance.now() - pending.startedAt),
+          });
+          pending.persistedAt = performance.now();
+          panzapPendingRef.current.set(optimisticId, pending);
+          setTimeout(() => {
+            panzapPendingRef.current.delete(optimisticId);
+          }, 60000);
+        }
         setMuralMsgs((prev) =>
           (prev || []).map((row) => (row.id === optimisticId ? { ...row, pending: false } : row))
         );
       })
       .catch((error) => {
         console.error("Falha ao enviar PanZap:", error);
+        const pending = panzapPendingRef.current.get(optimisticId);
+        logPanzapMetric("send_failed", {
+          optimistic_id: optimisticId,
+          latency_ms: pending ? Math.round(performance.now() - pending.startedAt) : null,
+          error: String(error?.message || error || "unknown_error"),
+        });
+        panzapPendingRef.current.delete(optimisticId);
         setMuralMsgs((prev) =>
           (prev || []).map((row) => (row.id === optimisticId ? { ...row, pending: false, erroEnvio: true } : row))
         );
@@ -2008,11 +2101,14 @@ export default function PanetApp() {
             {mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
-        <div className="content">{PAGINAS[pagina]}</div>
+        <div className="content">
+          <Suspense fallback={<PageFallback />}>{PAGINAS[pagina]}</Suspense>
+        </div>
       </div>
     </>
   );
 }
+
 
 
 
