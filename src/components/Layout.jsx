@@ -383,6 +383,10 @@ const toPostSlug = (value) =>
     .replace(/^-+|-+$/g, "");
 
 const escapeIlikeTerm = (value) => String(value || "").replace(/[\\%_]/g, (char) => `\\${char}`);
+const escapePostgrestOrTerm = (value) =>
+  String(value || "")
+    .replace(/[,*().]/g, " ")
+    .trim();
 
 const isTransientAuthTimeout = (err) => {
   const msg = String(err?.message || "");
@@ -871,33 +875,70 @@ export default function PanetApp() {
     if (cached) return cached;
 
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
-      let query = supabase
+      let rowsQuery = supabase
         .from("postagens")
-        .select("id,titulo,descricao,imagem_url,categoria,data_post,created_at,curtidas(colaborador_id),comentarios(id)", { count: "planned" })
+        .select("id,titulo,descricao,imagem_url,categoria,data_post,created_at")
         .order("data_post", { ascending: false })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+        .order("created_at", { ascending: false });
+
+      let countQuery = supabase.from("postagens").select("id", { count: "exact", head: true });
 
       if (term) {
-        const escaped = escapeIlikeTerm(term);
-        query = query.or(`titulo.ilike.%${escaped}%,descricao.ilike.%${escaped}%,categoria.ilike.%${escaped}%`);
+        const escaped = escapePostgrestOrTerm(term);
+        const expression = `titulo.ilike.*${escaped}*,descricao.ilike.*${escaped}*,categoria.ilike.*${escaped}*`;
+        rowsQuery = rowsQuery.or(expression);
+        countQuery = countQuery.or(expression);
       }
 
-      const { data, count, error } = await query;
+      const [{ data, error }, { count }] = await Promise.all([
+        rowsQuery.range(from, to),
+        countQuery,
+      ]);
       if (error) throw new Error(error.message);
 
-      const rows = (data || []).map((post) => ({
+      const postagemIds = (data || []).map((post) => post.id).filter(Boolean);
+      const likesByPost = new Map();
+      const commentsByPost = new Map();
+
+      if (postagemIds.length > 0) {
+        const [{ data: likesRows, error: likesError }, { data: commentsRows, error: commentsError }] = await Promise.all([
+          supabase.from("curtidas").select("postagem_id,colaborador_id").in("postagem_id", postagemIds),
+          supabase.from("comentarios").select("id,postagem_id").in("postagem_id", postagemIds),
+        ]);
+        if (likesError) throw new Error(likesError.message);
+        if (commentsError) throw new Error(commentsError.message);
+
+        (likesRows || []).forEach((row) => {
+          const key = String(row.postagem_id);
+          const list = likesByPost.get(key) || [];
+          list.push(row.colaborador_id);
+          likesByPost.set(key, list);
+        });
+
+        (commentsRows || []).forEach((row) => {
+          const key = String(row.postagem_id);
+          const list = commentsByPost.get(key) || [];
+          list.push({ id: row.id });
+          commentsByPost.set(key, list);
+        });
+      }
+
+      const rows = (data || []).map((post) => {
+        const key = String(post.id);
+        return {
         id: post.id,
         titulo: post.titulo,
         descricao: post.descricao,
         imagem: post.imagem_url || postImg(post.id),
         categoria: post.categoria,
         data: post.data_post,
-        curtidas: (post.curtidas || []).map((item) => item.colaborador_id),
-        comentarios: (post.comentarios || []).map((item) => ({ id: item.id })),
+        curtidas: likesByPost.get(key) || [],
+        comentarios: commentsByPost.get(key) || [],
         userCurtiu: false,
-      }));
-      const payload = { rows, count: Number(count || 0) };
+      };
+      });
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
       setAdminListCache(cacheKey, payload);
       return payload;
     });
@@ -916,14 +957,16 @@ export default function PanetApp() {
     if (cached) return cached;
 
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
-      let query = supabase
+      let rowsQuery = supabase
         .from("ferias")
-        .select("id,inicio,fim,status,tipo,colaborador_id,colaborador:colaboradores!ferias_colaborador_id_fkey(id,nome,cargo,cor_avatar,foto_url)", {
-          count: "planned",
-        })
+        .select("id,inicio,fim,status,tipo,colaborador_id")
         .eq("tipo", safeTipo)
-        .order("inicio", { ascending: true })
-        .range(from, to);
+        .order("inicio", { ascending: true });
+
+      let countQuery = supabase
+        .from("ferias")
+        .select("id", { count: "exact", head: true })
+        .eq("tipo", safeTipo);
 
       if (term) {
         const escaped = escapeIlikeTerm(term);
@@ -935,19 +978,50 @@ export default function PanetApp() {
         if (colsError) throw new Error(colsError.message);
         const ids = (cols || []).map((row) => row.id);
         if (ids.length > 0) {
-          query = query.in("colaborador_id", ids);
+          rowsQuery = rowsQuery.in("colaborador_id", ids);
+          countQuery = countQuery.in("colaborador_id", ids);
         } else {
-          query = query.ilike("status", `%${escaped}%`);
+          rowsQuery = rowsQuery.ilike("status", `%${escaped}%`);
+          countQuery = countQuery.ilike("status", `%${escaped}%`);
         }
       }
 
-      const { data, count, error } = await query;
+      const [{ data, error }, { count }] = await Promise.all([
+        rowsQuery.range(from, to),
+        countQuery,
+      ]);
       if (error) throw new Error(error.message);
-      const payload = { rows: (data || []).map(mapDbFeriasToUi), count: Number(count || 0) };
+
+      const localLookup = new Map((colaboradores || []).map((col) => [String(col.id), toDbLikeColaboradorFromUi(col)]));
+      const missingIds = Array.from(
+        new Set((data || []).map((row) => String(row.colaborador_id || "")).filter((id) => id && !localLookup.has(id)))
+      );
+      if (missingIds.length > 0) {
+        const { data: missingCols, error: missingColsError } = await supabase
+          .from("colaboradores")
+          .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github")
+          .in("id", missingIds);
+        if (!missingColsError) {
+          (missingCols || []).forEach((row) => {
+            localLookup.set(String(row.id), row);
+          });
+        }
+      }
+
+      const rows = (data || []).map((row) =>
+        mapDbFeriasToUi({
+          ...row,
+          colaborador:
+            localLookup.get(String(row.colaborador_id || "")) ||
+            getUnknownColaboradorFallback(row.colaborador_id),
+        })
+      );
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
       setAdminListCache(cacheKey, payload);
       return payload;
     });
-  }, [currentProfile?.id, getAdminListCache, setAdminListCache]);
+  }, [colaboradores, currentProfile?.id, getAdminListCache, setAdminListCache]);
 
   const listAdminGaleria = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
@@ -961,21 +1035,41 @@ export default function PanetApp() {
     if (cached) return cached;
 
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
-      let query = supabase
+      let rowsQuery = supabase
         .from("galeria_eventos")
-        .select("id,titulo,mes_ano,capa_url,created_at,galeria_fotos(id,evento_id,foto_url,legenda,ordem)", { count: "planned" })
+        .select("id,titulo,mes_ano,capa_url,created_at")
         .order("created_at", { ascending: false })
-        .order("ordem", { foreignTable: "galeria_fotos", ascending: true })
         .range(from, to);
 
+      let countQuery = supabase
+        .from("galeria_eventos")
+        .select("id", { count: "exact", head: true });
+
       if (term) {
-        const escaped = escapeIlikeTerm(term);
-        query = query.or(`titulo.ilike.%${escaped}%,mes_ano.ilike.%${escaped}%`);
+        const escaped = escapePostgrestOrTerm(term);
+        const expression = `titulo.ilike.*${escaped}*,mes_ano.ilike.*${escaped}*`;
+        rowsQuery = rowsQuery.or(expression);
+        countQuery = countQuery.or(expression);
       }
 
-      const { data, count, error } = await query;
+      const [{ data, error }, { count }] = await Promise.all([rowsQuery, countQuery]);
       if (error) throw new Error(error.message);
-      const payload = { rows: mapDbGaleriaToUi(data || []), count: Number(count || 0) };
+
+      const eventoIds = (data || []).map((row) => row.id).filter(Boolean);
+      let fotosRows = [];
+      if (eventoIds.length > 0) {
+        const { data: fotos, error: fotosError } = await supabase
+          .from("galeria_fotos")
+          .select("id,evento_id,foto_url,legenda,ordem")
+          .in("evento_id", eventoIds)
+          .order("ordem", { ascending: true });
+        if (fotosError) throw new Error(fotosError.message);
+        fotosRows = fotos || [];
+      }
+
+      const rows = mapDbGaleriaToUi(data || [], fotosRows);
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
       setAdminListCache(cacheKey, payload);
       return payload;
     });
@@ -993,13 +1087,15 @@ export default function PanetApp() {
     if (cached) return cached;
 
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
-      let query = supabase
+      let rowsQuery = supabase
         .from("mural")
-        .select("id,texto,created_at,colaborador_id", {
-          count: "planned",
-        })
+        .select("id,texto,created_at,colaborador_id")
         .order("created_at", { ascending: false })
         .range(from, to);
+
+      let countQuery = supabase
+        .from("mural")
+        .select("id", { count: "exact", head: true });
 
       if (term) {
         const escaped = escapeIlikeTerm(term);
@@ -1019,13 +1115,15 @@ export default function PanetApp() {
           ids = (cols || []).map((row) => row.id);
         }
         if (ids.length > 0) {
-          query = query.in("colaborador_id", ids);
+          rowsQuery = rowsQuery.in("colaborador_id", ids);
+          countQuery = countQuery.in("colaborador_id", ids);
         } else {
-          query = query.ilike("texto", `%${escaped}%`);
+          rowsQuery = rowsQuery.ilike("texto", `%${escaped}%`);
+          countQuery = countQuery.ilike("texto", `%${escaped}%`);
         }
       }
 
-      const { data, count, error } = await query;
+      const [{ data, error }, { count }] = await Promise.all([rowsQuery, countQuery]);
       if (error) throw new Error(error.message);
 
       const localLookup = new Map((colaboradores || []).map((col) => [String(col.id), toDbLikeColaboradorFromUi(col)]));
@@ -1050,7 +1148,8 @@ export default function PanetApp() {
           colaborador: localLookup.get(String(row.colaborador_id || "")) || toDbLikeColaboradorFromUi({ id: row.colaborador_id, nome: "Colaborador" }),
         })
       );
-      const payload = { rows, count: Number(count || 0) };
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
       setAdminListCache(cacheKey, payload);
       return payload;
     });
