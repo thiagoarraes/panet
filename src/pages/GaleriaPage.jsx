@@ -107,7 +107,7 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
             <img src={g.capa} alt={g.evento} />
             <div className="galeria-overlay">
               <div className="galeria-title">{g.evento}</div>
-              <div className="galeria-sub">{g.mes} · {g.fotos.length} fotos</div>
+              <div className="galeria-sub">{g.mes} · {Array.isArray(g.fotos) ? g.fotos.length : 0} fotos</div>
             </div>
           </div>
         ))}

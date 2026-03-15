@@ -688,8 +688,33 @@ export default function PanetApp() {
         .select("id,titulo,mes_ano,capa_url,created_at,galeria_fotos(id,evento_id,foto_url,legenda,ordem,created_at)")
         .order("created_at", { ascending: false })
         .order("ordem", { foreignTable: "galeria_fotos", ascending: true });
-      if (eventosError) throw eventosError;
-      const mapped = mapDbGaleriaToUi(eventos);
+      if (!eventosError) {
+        const mapped = mapDbGaleriaToUi(eventos);
+        setGaleriaEventos(mapped);
+        writeCachedDomain(currentUserId, "galeria", mapped);
+        return mapped;
+      }
+
+      // Fallback: if embedded relation fails, at least load gallery events.
+      console.warn("Fallback loadGaleria sem embed de fotos:", eventosError?.message || eventosError);
+      const { data: eventosOnly, error: eventosOnlyError } = await supabase
+        .from("galeria_eventos")
+        .select("id,titulo,mes_ano,capa_url,created_at")
+        .order("created_at", { ascending: false });
+      if (eventosOnlyError) throw eventosOnlyError;
+
+      let fotosRows = [];
+      const eventoIds = (eventosOnly || []).map((row) => row.id).filter(Boolean);
+      if (eventoIds.length > 0) {
+        const { data: fotos, error: fotosError } = await supabase
+          .from("galeria_fotos")
+          .select("id,evento_id,foto_url,legenda,ordem,created_at")
+          .in("evento_id", eventoIds)
+          .order("ordem", { ascending: true });
+        if (!fotosError) fotosRows = fotos || [];
+      }
+
+      const mapped = mapDbGaleriaToUi(eventosOnly || [], fotosRows);
       setGaleriaEventos(mapped);
       writeCachedDomain(currentUserId, "galeria", mapped);
       return mapped;
