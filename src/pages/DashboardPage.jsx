@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Cake, CalendarDays, Heart, MessageSquare, SendHorizonal, Plane } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
@@ -64,6 +64,7 @@ export function DashboardPage({
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
   const [enviandoMural, setEnviandoMural] = useState(false);
+  const muralListRef = useRef(null);
   const { canvasRef, launch } = useConfetti();
   const POR_PAGINA = 5;
   const totalPags = Math.ceil(postagens.length / POR_PAGINA);
@@ -82,6 +83,12 @@ export function DashboardPage({
 
   const userJaParabenizou = Boolean(today?.reacoes?.includes(currentUserId));
   const muralOrdenado = useMemo(() => [...(muralMsgs || [])].slice(0, 20).reverse(), [muralMsgs]);
+
+  useEffect(() => {
+    const el = muralListRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [muralOrdenado.length]);
   const proximasFolgas = useMemo(() => {
     const hoje = new Date();
     const hojeNoon = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 12, 0, 0);
@@ -122,13 +129,15 @@ export function DashboardPage({
   const handleEnviarMural = async () => {
     const texto = textoMural.trim();
     if (!texto || enviandoMural) return;
-    try {
-      setEnviandoMural(true);
-      await onEnviarMensagem?.(texto);
-      setTextoMural("");
-    } finally {
-      setEnviandoMural(false);
-    }
+    setEnviandoMural(true);
+    setTextoMural("");
+    Promise.resolve(onEnviarMensagem?.(texto))
+      .catch(() => {
+        setTextoMural((prev) => prev || texto);
+      })
+      .finally(() => {
+        setEnviandoMural(false);
+      });
   };
 
   return (
@@ -330,7 +339,7 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "12px 12px 10px" }}>
-              <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
+              <div ref={muralListRef} style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
                 {muralOrdenado.map((m) => {
                   const isMine = String(m.colaborador?.id) === String(currentUserId);
                   return (
@@ -383,4 +392,6 @@ export function DashboardPage({
     </div>
   );
 }
+
+
 

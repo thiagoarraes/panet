@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
@@ -74,6 +74,7 @@ export function PostDetalhePage({
   const [loadingComentario, setLoadingComentario] = useState(false);
   const [textoMural, setTextoMural] = useState("");
   const [enviandoMural, setEnviandoMural] = useState(false);
+  const muralListRef = useRef(null);
 
   const eu = useMemo(() => currentUser || { nome: "Você", foto: "U", cor: "#11E7E7" }, [currentUser]);
   const dateBox = useMemo(() => (post ? getDateBoxParts(post.data) : { day: "--", month: "---", year: "----" }), [post]);
@@ -88,6 +89,12 @@ export function PostDetalhePage({
   );
 
   const muralOrdenado = useMemo(() => [...(muralMsgs || [])].slice(0, 20).reverse(), [muralMsgs]);
+
+  useEffect(() => {
+    const el = muralListRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [muralOrdenado.length]);
 
   const proximasFolgas = useMemo(() => {
     const hoje = new Date();
@@ -128,13 +135,15 @@ export function PostDetalhePage({
   const handleEnviarMural = async () => {
     const valor = textoMural.trim();
     if (!valor || enviandoMural) return;
-    try {
-      setEnviandoMural(true);
-      await onEnviarMensagem?.(valor);
-      setTextoMural("");
-    } finally {
-      setEnviandoMural(false);
-    }
+    setEnviandoMural(true);
+    setTextoMural("");
+    Promise.resolve(onEnviarMensagem?.(valor))
+      .catch(() => {
+        setTextoMural((prev) => prev || valor);
+      })
+      .finally(() => {
+        setEnviandoMural(false);
+      });
   };
 
   return (
@@ -312,7 +321,7 @@ export function PostDetalhePage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "12px 12px 10px" }}>
-              <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
+              <div ref={muralListRef} style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
                 {muralOrdenado.map((m) => {
                   const isMine = String(m.colaborador?.id) === String(currentUserId);
                   return (
@@ -365,4 +374,6 @@ export function PostDetalhePage({
     </div>
   );
 }
+
+
 

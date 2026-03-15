@@ -24,6 +24,7 @@ export function AdminPage({
   onListFerias,
   muralMsgs,
   onDeleteMuralMensagem,
+  onDeleteMuralMensagens,
   onListMural,
   galeriaEventos,
   onCreateGaleriaEvento,
@@ -97,7 +98,14 @@ export function AdminPage({
           onSetCapaEvento={onSetGaleriaCapa}
         />
       )}
-      {aba === "mural" && <AdminMural mensagens={muralMsgs} onDeleteMensagem={onDeleteMuralMensagem} onListMural={onListMural} />}
+      {aba === "mural" && (
+        <AdminMural
+          mensagens={muralMsgs}
+          onDeleteMensagem={onDeleteMuralMensagem}
+          onDeleteMensagens={onDeleteMuralMensagens}
+          onListMural={onListMural}
+        />
+      )}
     </div>
   );
 }

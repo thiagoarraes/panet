@@ -105,7 +105,11 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   }, [currentPage, onListPostagens, searchTerm]);
 
   const hasServerPagination = typeof onListPostagens === "function";
-  const rows = hasServerPagination ? serverRows : postagensPaginadas;
+  const rows = hasServerPagination
+    ? serverRows.length > 0 || currentPage > 1 || searchTerm
+      ? serverRows
+      : postagensPaginadas
+    : postagensPaginadas;
   const totalItems = hasServerPagination ? serverCount : postagensFiltradas.length;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);

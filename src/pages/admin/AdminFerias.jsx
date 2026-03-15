@@ -120,7 +120,11 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   }, [currentPage, onListFerias, searchTerm, sub]);
 
   const hasServerPagination = typeof onListFerias === "function";
-  const rows = hasServerPagination ? serverRows : listaPaginada;
+  const rows = hasServerPagination
+    ? serverRows.length > 0 || currentPage > 1 || searchTerm
+      ? serverRows
+      : listaPaginada
+    : listaPaginada;
   const totalItems = hasServerPagination ? serverCount : listaFiltrada.length;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);

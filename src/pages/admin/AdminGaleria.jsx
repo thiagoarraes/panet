@@ -93,7 +93,11 @@ export function AdminGaleria({
   }, [currentPage, onListGaleria, searchTerm]);
 
   const hasServerPagination = typeof onListGaleria === "function";
-  const rows = hasServerPagination ? serverRows : eventosPaginados;
+  const rows = hasServerPagination
+    ? serverRows.length > 0 || currentPage > 1 || searchTerm
+      ? serverRows
+      : eventosPaginados
+    : eventosPaginados;
   const totalItems = hasServerPagination ? serverCount : eventosVisiveis.length;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
