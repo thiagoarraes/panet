@@ -478,6 +478,7 @@ export default function PanetApp() {
   const adminListCacheRef = useRef(new Map());
   const muralSyncTimerRef = useRef(null);
   const panzapPendingRef = useRef(new Map());
+  const initialDataLoadRef = useRef({ userId: null, at: 0 });
 
   useEffect(() => {
     colaboradoresRef.current = colaboradores;
@@ -851,14 +852,29 @@ export default function PanetApp() {
   const loadAllBusinessData = useCallback(
     async (currentUserId, options = {}) => {
       if (!isSupabaseEnabled || !currentUserId) return;
-      await Promise.all([
-        loadColaboradores(currentUserId, options),
-        loadPostagens(currentUserId, options),
-        loadFerias(currentUserId, options),
-        loadAniversarios(currentUserId, options),
-        loadGaleria(currentUserId, options),
-        loadMural(currentUserId, options),
+      const force = Boolean(options?.force);
+
+      // Critical path for first paint after login/refresh.
+      await Promise.allSettled([
+        loadColaboradores(currentUserId, { force }),
+        loadMural(currentUserId, { force }),
       ]);
+
+      // Secondary data: still important for dashboard cards, but non-blocking.
+      setTimeout(() => {
+        Promise.allSettled([
+          loadFerias(currentUserId, { force }),
+          loadAniversarios(currentUserId, { force }),
+        ]).catch(() => {});
+      }, 0);
+
+      // Heavy domains in background to keep app interactive sooner.
+      setTimeout(() => {
+        Promise.allSettled([
+          loadPostagens(currentUserId, { force }),
+          loadGaleria(currentUserId, { force }),
+        ]).catch(() => {});
+      }, 120);
     },
     [loadAniversarios, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens]
   );
@@ -1174,9 +1190,17 @@ export default function PanetApp() {
       writeCachedProfile(data);
       setTela(data.primeiro_acesso ? "primeiro_acesso" : "app");
       hydrateBusinessDataFromCache(activeSession.user.id);
-      loadAllBusinessData(activeSession.user.id).catch((err) => {
-        console.error("Falha ao carregar dados de negócio:", err);
-      });
+      const now = Date.now();
+      const lastLoad = initialDataLoadRef.current;
+      const shouldSkipDuplicate =
+        lastLoad.userId === activeSession.user.id &&
+        now - Number(lastLoad.at || 0) < 3000;
+      if (!shouldSkipDuplicate) {
+        initialDataLoadRef.current = { userId: activeSession.user.id, at: now };
+        loadAllBusinessData(activeSession.user.id).catch((err) => {
+          console.error("Falha ao carregar dados de negócio:", err);
+        });
+      }
     },
     [hydrateBusinessDataFromCache, loadAllBusinessData]
   );
