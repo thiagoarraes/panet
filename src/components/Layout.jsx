@@ -479,10 +479,21 @@ export default function PanetApp() {
   const muralSyncTimerRef = useRef(null);
   const panzapPendingRef = useRef(new Map());
   const initialDataLoadRef = useRef({ userId: null, at: 0 });
+  const firstAccessBypassRef = useRef({ userId: null, expiresAt: 0 });
+  const telaRef = useRef(tela);
+  const currentProfileIdRef = useRef(currentProfile?.id || null);
 
   useEffect(() => {
     colaboradoresRef.current = colaboradores;
   }, [colaboradores]);
+
+  useEffect(() => {
+    telaRef.current = tela;
+  }, [tela]);
+
+  useEffect(() => {
+    currentProfileIdRef.current = currentProfile?.id || null;
+  }, [currentProfile?.id]);
 
   const getAdminListCache = useCallback((key) => {
     const hit = adminListCacheRef.current.get(key);
@@ -1186,9 +1197,13 @@ export default function PanetApp() {
       );
       if (error) throw new Error("Não foi possível carregar o perfil do colaborador.");
       if (!data) throw new Error("Seu usuário não está vinculado na tabela de colaboradores.");
-      setCurrentProfile(data);
-      writeCachedProfile(data);
-      setTela(data.primeiro_acesso ? "primeiro_acesso" : "app");
+      const bypass =
+        firstAccessBypassRef.current.userId === activeSession.user.id &&
+        Date.now() < Number(firstAccessBypassRef.current.expiresAt || 0);
+      const resolvedProfile = bypass ? { ...data, primeiro_acesso: false } : data;
+      setCurrentProfile(resolvedProfile);
+      writeCachedProfile(resolvedProfile);
+      setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
       hydrateBusinessDataFromCache(activeSession.user.id);
       const now = Date.now();
       const lastLoad = initialDataLoadRef.current;
@@ -1282,6 +1297,28 @@ export default function PanetApp() {
         }
         return;
       }
+
+      // Avoid expensive profile/data reload on token refresh while app is already active.
+      if (
+        event === "TOKEN_REFRESHED" &&
+        telaRef.current === "app" &&
+        currentProfileIdRef.current &&
+        String(currentProfileIdRef.current) === String(nextSession?.user?.id || "")
+      ) {
+        return;
+      }
+
+      // Password update in first access can emit USER_UPDATED.
+      // Ignore it for the same user to avoid a redundant heavy reload and unblock entry.
+      if (
+        event === "USER_UPDATED" &&
+        currentProfileIdRef.current &&
+        String(currentProfileIdRef.current) === String(nextSession?.user?.id || "") &&
+        (telaRef.current === "primeiro_acesso" || telaRef.current === "app")
+      ) {
+        return;
+      }
+
       try {
         await loadProfileAndRoute(nextSession);
       } catch (err) {
@@ -1463,13 +1500,7 @@ export default function PanetApp() {
       setTela("app");
       return;
     }
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user?.id) {
-      throw new Error("Sessão inválida. Faça login novamente.");
-    }
+    const fallbackUserId = currentProfile?.id || null;
 
     const { error: authError } = await supabase.auth.updateUser({ password: novaSenha });
     if (authError) {
@@ -1482,18 +1513,24 @@ export default function PanetApp() {
       throw new Error(authError.message);
     }
 
+    const userId = fallbackUserId || (await supabase.auth.getUser()).data?.user?.id || null;
+    if (userId) {
+      firstAccessBypassRef.current = { userId, expiresAt: Date.now() + 60000 };
+    }
     setCurrentProfile((prev) => (prev ? { ...prev, primeiro_acesso: false } : prev));
     setTela("app");
 
     // Do not block navigation after password change. Persist first-access flag in background.
-    supabase
-      .from("colaboradores")
-      .update({ primeiro_acesso: false })
-      .eq("id", user.id)
-      .then(({ error }) => {
-        if (error) console.warn("Falha ao persistir primeiro acesso:", error.message);
-      })
-      .catch(() => {});
+    if (userId) {
+      supabase
+        .from("colaboradores")
+        .update({ primeiro_acesso: false })
+        .eq("id", userId)
+        .then(({ error }) => {
+          if (error) console.warn("Falha ao persistir primeiro acesso:", error.message);
+        })
+        .catch(() => {});
+    }
 
     supabase.auth.getSession().catch(() => {});
   };
