@@ -11,12 +11,19 @@ const createImage = (url) =>
     image.src = url;
   });
 
-const getCroppedBlob = async (imageSrc, pixelCrop) => {
+const getCroppedBlob = async (imageSrc, pixelCrop, maxWidth = 1600) => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const ratio = pixelCrop.width > maxWidth ? maxWidth / pixelCrop.width : 1;
+  const targetWidth = Math.max(1, Math.round(pixelCrop.width * ratio));
+  const targetHeight = Math.max(1, Math.round(pixelCrop.height * ratio));
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  if (ctx) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+  }
   ctx.drawImage(
     image,
     pixelCrop.x,
@@ -25,8 +32,8 @@ const getCroppedBlob = async (imageSrc, pixelCrop) => {
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    targetWidth,
+    targetHeight
   );
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -37,8 +44,8 @@ const getCroppedBlob = async (imageSrc, pixelCrop) => {
         }
         resolve(blob);
       },
-      "image/jpeg",
-      0.9
+      "image/webp",
+      0.86
     );
   });
 };
@@ -120,7 +127,7 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
               <ImageIcon size={28} />
             </div>
             <div style={{ fontSize: 14, color: "var(--muted)" }}>Clique ou arraste uma imagem</div>
-            <div style={{ fontSize: 12, color: "var(--border)", marginTop: 4 }}>JPG, PNG, WebP - recomendado 1200x600</div>
+            <div style={{ fontSize: 12, color: "var(--border)", marginTop: 4 }}>JPG, PNG, WebP - otimizada em WebP automaticamente</div>
           </div>
         )}
       </div>
@@ -174,4 +181,3 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
     </>
   );
 }
-

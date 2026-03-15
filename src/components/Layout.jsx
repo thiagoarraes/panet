@@ -68,6 +68,27 @@ const getGaleriaStoragePathFromUrl = (rawUrl) => {
   }
 };
 
+const getAvatarStoragePathFromUrl = (rawUrl) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    const pathname = decodeURIComponent(parsed.pathname || "");
+    const markers = [
+      "/storage/v1/object/public/avatares/",
+      "/storage/v1/object/sign/avatares/",
+      "/storage/v1/object/authenticated/avatares/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+    return "";
+  } catch (_err) {
+    return "";
+  }
+};
+
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "postagens", label: "Postagens", icon: FileText },
@@ -1884,14 +1905,17 @@ export default function PanetApp() {
     if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
 
     let updatedProfile = { ...currentProfile, ...updatePayload };
+    const previousAvatarPath = getAvatarStoragePathFromUrl(currentProfile?.foto_url || "");
+    let uploadedAvatarPath = "";
 
     if (payload.avatarBlob instanceof Blob) {
-      const filePath = `${currentProfile.id}/${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("avatares").upload(filePath, payload.avatarBlob, {
-        contentType: "image/jpeg",
+      const optimizedAvatarBlob = await optimizeImageToWebp(payload.avatarBlob, 720, 0.88);
+      uploadedAvatarPath = `${currentProfile.id}/${Date.now()}.webp`;
+      const { error: uploadError } = await supabase.storage.from("avatares").upload(uploadedAvatarPath, optimizedAvatarBlob, {
+        contentType: "image/webp",
       });
       if (uploadError) throw new Error(uploadError.message);
-      const { data: publicData } = supabase.storage.from("avatares").getPublicUrl(filePath);
+      const { data: publicData } = supabase.storage.from("avatares").getPublicUrl(uploadedAvatarPath);
       if (publicData?.publicUrl) {
         updatePayload.foto_url = publicData.publicUrl;
       }
@@ -1934,6 +1958,13 @@ export default function PanetApp() {
       } else {
         updatedProfile = { ...updatedProfile, foto_url: updatePayload.foto_url };
       }
+    }
+
+    if (uploadedAvatarPath && previousAvatarPath && previousAvatarPath !== uploadedAvatarPath) {
+      supabase.storage
+        .from("avatares")
+        .remove([previousAvatarPath])
+        .catch((err) => console.warn("Falha ao remover avatar antigo:", err?.message || err));
     }
 
     setCurrentProfile(updatedProfile);

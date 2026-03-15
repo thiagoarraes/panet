@@ -10,13 +10,20 @@ const createImage = (url) =>
     image.src = url;
   });
 
-const getCroppedBlob = async (imageSrc, pixelCrop) => {
+const getCroppedBlob = async (imageSrc, pixelCrop, maxWidth = 720) => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const ratio = pixelCrop.width > maxWidth ? maxWidth / pixelCrop.width : 1;
+  const targetWidth = Math.max(1, Math.round(pixelCrop.width * ratio));
+  const targetHeight = Math.max(1, Math.round(pixelCrop.height * ratio));
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  if (ctx) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+  }
 
   ctx.drawImage(
     image,
@@ -26,8 +33,8 @@ const getCroppedBlob = async (imageSrc, pixelCrop) => {
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    targetWidth,
+    targetHeight
   );
 
   return new Promise((resolve, reject) => {
@@ -37,7 +44,7 @@ const getCroppedBlob = async (imageSrc, pixelCrop) => {
         return;
       }
       resolve(blob);
-    }, "image/jpeg", 0.92);
+    }, "image/webp", 0.88);
   });
 };
 
