@@ -89,6 +89,29 @@ const getAvatarStoragePathFromUrl = (rawUrl) => {
   }
 };
 
+const getPostStoragePathFromUrl = (rawUrl) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    const pathname = decodeURIComponent(parsed.pathname || "");
+    const markers = [
+      "/storage/v1/object/public/postagens/",
+      "/storage/v1/object/sign/postagens/",
+      "/storage/v1/object/authenticated/postagens/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+    return "";
+  } catch (_err) {
+    return "";
+  }
+};
+
+const isDataImageUrl = (value) => /^data:image\//i.test(String(value || "").trim());
+
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "postagens", label: "Postagens", icon: FileText },
@@ -1580,10 +1603,26 @@ export default function PanetApp() {
 
   const handleCreatePost = async (payload) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
+    let imagemUrl = payload.imagem || null;
+    if (isDataImageUrl(imagemUrl)) {
+      try {
+        const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
+        const optimizedBlob = await optimizeImageToWebp(sourceBlob, 1600, 0.86);
+        const storagePath = `${currentProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+        const { error: uploadError } = await supabase.storage.from("postagens").upload(storagePath, optimizedBlob, {
+          contentType: "image/webp",
+        });
+        if (uploadError) throw uploadError;
+        const { data: publicData } = supabase.storage.from("postagens").getPublicUrl(storagePath);
+        if (publicData?.publicUrl) imagemUrl = publicData.publicUrl;
+      } catch (err) {
+        console.warn("Falha ao otimizar/upload da capa do post. Mantendo imagem original.", err?.message || err);
+      }
+    }
     const { error } = await supabase.from("postagens").insert({
       titulo: payload.titulo,
       descricao: payload.descricao,
-      imagem_url: payload.imagem || null,
+      imagem_url: imagemUrl,
       categoria: payload.categoria,
       data_post: payload.data,
       autor_id: currentProfile.id,
@@ -1595,25 +1634,80 @@ export default function PanetApp() {
 
   const handleUpdatePost = async (postId, payload) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
+    let previousImageUrl = postagens.find((p) => p.id === postId)?.imagem || "";
+    if (!previousImageUrl) {
+      const { data: existingPost } = await supabase.from("postagens").select("imagem_url").eq("id", postId).maybeSingle();
+      previousImageUrl = existingPost?.imagem_url || "";
+    }
+
+    let imagemUrl = payload.imagem || null;
+    let uploadedPostPath = "";
+    if (isDataImageUrl(imagemUrl)) {
+      try {
+        const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
+        const optimizedBlob = await optimizeImageToWebp(sourceBlob, 1600, 0.86);
+        uploadedPostPath = `${currentProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+        const { error: uploadError } = await supabase.storage.from("postagens").upload(uploadedPostPath, optimizedBlob, {
+          contentType: "image/webp",
+        });
+        if (uploadError) throw uploadError;
+        const { data: publicData } = supabase.storage.from("postagens").getPublicUrl(uploadedPostPath);
+        if (publicData?.publicUrl) imagemUrl = publicData.publicUrl;
+      } catch (err) {
+        uploadedPostPath = "";
+        console.warn("Falha ao otimizar/upload da capa do post. Mantendo imagem original.", err?.message || err);
+      }
+    }
+
     const { error } = await supabase
       .from("postagens")
       .update({
         titulo: payload.titulo,
         descricao: payload.descricao,
-        imagem_url: payload.imagem || null,
+        imagem_url: imagemUrl,
         categoria: payload.categoria,
         data_post: payload.data,
       })
       .eq("id", postId);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (uploadedPostPath) {
+        supabase.storage.from("postagens").remove([uploadedPostPath]).catch(() => {});
+      }
+      throw new Error(error.message);
+    }
+
+    const previousPath = getPostStoragePathFromUrl(previousImageUrl);
+    const nextPath = getPostStoragePathFromUrl(imagemUrl);
+    if (previousPath && previousPath !== nextPath) {
+      supabase.storage
+        .from("postagens")
+        .remove([previousPath])
+        .catch((err) => console.warn("Falha ao remover capa antiga do post:", err?.message || err));
+    }
+
     invalidateAdminListCache();
     loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleDeletePost = async (postId) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
+    let previousImageUrl = postagens.find((p) => p.id === postId)?.imagem || "";
+    if (!previousImageUrl) {
+      const { data: existingPost } = await supabase.from("postagens").select("imagem_url").eq("id", postId).maybeSingle();
+      previousImageUrl = existingPost?.imagem_url || "";
+    }
+
     const { error } = await supabase.from("postagens").delete().eq("id", postId);
     if (error) throw new Error(error.message);
+
+    const previousPath = getPostStoragePathFromUrl(previousImageUrl);
+    if (previousPath) {
+      supabase.storage
+        .from("postagens")
+        .remove([previousPath])
+        .catch((err) => console.warn("Falha ao remover capa do post excluído:", err?.message || err));
+    }
+
     if (selectedPost?.id === postId) navigateTo("postagens");
     invalidateAdminListCache();
     loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
