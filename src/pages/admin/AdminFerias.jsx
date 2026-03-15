@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, Plane } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
@@ -31,9 +31,60 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [saving, setSaving] = useState(false);
-  const lista = sub === "ferias" ? ferias : dayoff;
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
+  const [hiddenIds, setHiddenIds] = useState(new Set());
+  const PAGE_SIZE = 20;
+  const listaBase = sub === "ferias" ? ferias : dayoff;
 
   const colaboradoresOpts = useMemo(() => colaboradores || [], [colaboradores]);
+  const lista = useMemo(() => listaBase.filter((item) => !hiddenIds.has(item.id)), [hiddenIds, listaBase]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchInput.trim().toLowerCase());
+      setCurrentPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sub]);
+
+  useEffect(() => {
+    const existingIds = new Set([...(ferias || []), ...(dayoff || [])].map((item) => String(item.id)));
+    setHiddenIds((prev) => {
+      let changed = false;
+      const next = new Set();
+      for (const id of prev) {
+        if (existingIds.has(String(id))) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [dayoff, ferias]);
+
+  const listaFiltrada = useMemo(() => {
+    if (!searchTerm) return lista;
+    return lista.filter((item) => {
+      const nome = String(item.colaborador?.nome || "").toLowerCase();
+      const cargo = String(item.colaborador?.cargo || "").toLowerCase();
+      const status = String(item.status || "").toLowerCase();
+      const periodo = `${item.inicio || ""} ${item.fim || ""}`.toLowerCase();
+      return nome.includes(searchTerm) || cargo.includes(searchTerm) || status.includes(searchTerm) || periodo.includes(searchTerm);
+    });
+  }, [lista, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(listaFiltrada.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+
+  const listaPaginada = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return listaFiltrada.slice(start, start + PAGE_SIZE);
+  }, [listaFiltrada, page]);
 
   const abrirNovo = () => {
     setForm({ colaboradorId: "", inicio: "", fim: "", status: "marcado" });
@@ -67,6 +118,30 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     }
   };
 
+  const removerRegistro = async () => {
+    if (!confirmarExcluir?.id) return;
+    const id = confirmarExcluir.id;
+    try {
+      setPendingDeleteIds((prev) => new Set(prev).add(id));
+      setHiddenIds((prev) => new Set(prev).add(id));
+      await onDeleteFerias(id);
+      setConfirmarExcluir(null);
+    } catch (error) {
+      console.error(error);
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } finally {
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   return (
     <div>
       <div className="admin-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -78,13 +153,22 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
             <CalendarDays size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> Day Off
           </button>
         </div>
-        <button className="btn-primary" onClick={abrirNovo}>
-          + Adicionar
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <input
+            className="form-input"
+            style={{ maxWidth: 320 }}
+            placeholder="Buscar por colaborador, cargo ou período"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button className="btn-primary" onClick={abrirNovo}>
+            + Adicionar
+          </button>
+        </div>
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {lista.map((item) => (
+        {listaPaginada.map((item) => (
           <div key={item.id} className="card" style={{ padding: 16 }}>
             <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Avatar col={item.colaborador} size={40} />
@@ -128,15 +212,32 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
                     fontSize: 12,
                     cursor: "pointer",
                   }}
+                  disabled={pendingDeleteIds.has(item.id)}
                 >
-                  Remover
+                  {pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
                 </button>
               </div>
             </div>
           </div>
         ))}
-        {lista.length === 0 && <div className="empty-state">Nenhum registro encontrado.</div>}
+        {listaPaginada.length === 0 && <div className="empty-state">Nenhum registro encontrado.</div>}
       </div>
+
+      {listaFiltrada.length > PAGE_SIZE && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            Página {page} de {totalPages} · {listaFiltrada.length} item(ns)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Anterior
+            </button>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
 
       {modal !== null && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
@@ -226,10 +327,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
                   Cancelar
                 </button>
                 <button
-                  onClick={async () => {
-                    await onDeleteFerias(confirmarExcluir.id);
-                    setConfirmarExcluir(null);
-                  }}
+                  onClick={removerRegistro}
                   style={{
                     background: "var(--danger)",
                     color: "#fff",
@@ -240,7 +338,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
                     cursor: "pointer",
                     fontSize: 13,
                   }}
-                  disabled={saving}
+                  disabled={pendingDeleteIds.has(confirmarExcluir.id)}
                 >
                   Remover
                 </button>

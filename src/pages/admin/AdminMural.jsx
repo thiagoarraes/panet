@@ -1,32 +1,93 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, MessageSquare, Trash2 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 
 export function AdminMural({ mensagens = [], onDeleteMensagem }) {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hiddenMensagemIds, setHiddenMensagemIds] = useState(new Set());
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchInput.trim().toLowerCase());
+      setCurrentPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const existingIds = new Set(mensagens.map((m) => String(m.id)));
+    setHiddenMensagemIds((prev) => {
+      let changed = false;
+      const next = new Set();
+      for (const id of prev) {
+        if (existingIds.has(String(id))) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [mensagens]);
+
+  const mensagensVisiveis = useMemo(() => {
+    const base = mensagens.filter((m) => !hiddenMensagemIds.has(m.id));
+    if (!searchTerm) return base;
+    return base.filter((m) => {
+      const nome = String(m.colaborador?.nome || "").toLowerCase();
+      const texto = String(m.texto || "").toLowerCase();
+      const dataHora = `${m.data || ""} ${m.hora || ""}`.toLowerCase();
+      return nome.includes(searchTerm) || texto.includes(searchTerm) || dataHora.includes(searchTerm);
+    });
+  }, [hiddenMensagemIds, mensagens, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(mensagensVisiveis.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+
+  const mensagensPaginadas = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return mensagensVisiveis.slice(start, start + PAGE_SIZE);
+  }, [mensagensVisiveis, page]);
 
   const handleDelete = async () => {
     if (!confirmarExcluir) return;
+    const id = confirmarExcluir.id;
     try {
-      setDeletingId(confirmarExcluir.id);
-      await onDeleteMensagem?.(confirmarExcluir.id);
+      setDeletingId(id);
+      setHiddenMensagemIds((prev) => new Set(prev).add(id));
+      await onDeleteMensagem?.(id);
+      setConfirmarExcluir(null);
+    } catch (error) {
+      console.error(error);
+      setHiddenMensagemIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } finally {
       setDeletingId(null);
-      setConfirmarExcluir(null);
     }
   };
 
   return (
     <div className="card">
-      <div className="card-header">
+      <div className="card-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <MessageSquare size={14} /> PanZap (Admin)
         </span>
+        <input
+          className="form-input"
+          style={{ maxWidth: 320 }}
+          placeholder="Buscar por autor, texto ou data"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
       </div>
       <div className="card-body">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {mensagens.map((m) => (
+          {mensagensPaginadas.map((m) => (
             <div
               key={m.id}
               className="admin-mural-item"
@@ -61,9 +122,25 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
               </button>
             </div>
           ))}
-          {mensagens.length === 0 && <div className="empty-state">Nenhuma mensagem no PanZap.</div>}
+          {mensagensPaginadas.length === 0 && <div className="empty-state">Nenhuma mensagem no PanZap.</div>}
         </div>
       </div>
+
+      {mensagensVisiveis.length > PAGE_SIZE && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 16px" }}>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            Página {page} de {totalPages} · {mensagensVisiveis.length} item(ns)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Anterior
+            </button>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
 
       {confirmarExcluir && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setConfirmarExcluir(null)}>
@@ -122,3 +199,4 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
     </div>
   );
 }
+

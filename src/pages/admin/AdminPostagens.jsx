@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Heart, MessageCircle, X } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
@@ -43,7 +43,38 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
   const CATS = ["Notícia", "Comunicado", "Evento"];
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchInput.trim().toLowerCase());
+      setCurrentPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  const postagensFiltradas = useMemo(() => {
+    if (!searchTerm) return postagens;
+    return postagens.filter((post) => {
+      const titulo = String(post.titulo || "").toLowerCase();
+      const categoria = String(post.categoria || "").toLowerCase();
+      const descricao = stripHtml(post.descricao || "").toLowerCase();
+      return titulo.includes(searchTerm) || categoria.includes(searchTerm) || descricao.includes(searchTerm);
+    });
+  }, [postagens, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(postagensFiltradas.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+
+  const postagensPaginadas = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return postagensFiltradas.slice(start, start + PAGE_SIZE);
+  }, [page, postagensFiltradas]);
 
   const abrirNovo = () => {
     setForm({
@@ -85,28 +116,42 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   };
 
   const excluir = async (post) => {
+    const snapshot = [...postagens];
     try {
-      setSaving(true);
+      setPendingDeleteIds((prev) => new Set(prev).add(post.id));
+      setPostagens((p) => p.filter((x) => x.id !== post.id));
       if (onDeletePost) {
         await onDeletePost(post.id);
-      } else {
-        setPostagens((p) => p.filter((x) => x.id !== post.id));
       }
       setConfirmarExcluir(null);
+    } catch (error) {
+      console.error(error);
+      setPostagens(snapshot);
     } finally {
-      setSaving(false);
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(post.id);
+        return next;
+      });
     }
   };
 
   return (
     <div>
-      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 16 }}>
+        <input
+          className="form-input"
+          style={{ maxWidth: 320 }}
+          placeholder="Buscar por título, categoria ou descrição"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
         <button className="btn-primary" onClick={abrirNovo}>
           + Nova postagem
         </button>
       </div>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {postagens.map((post) => (
+        {postagensPaginadas.map((post) => (
           <div key={post.id} className="card" style={{ padding: 16, transition: "border-color 0.2s" }}>
             <div className="admin-post-row" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <img src={post.imagem} alt={post.titulo} style={{ width: 72, height: 36, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
@@ -148,14 +193,34 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
                     fontSize: 12,
                     cursor: "pointer",
                   }}
+                  disabled={pendingDeleteIds.has(post.id)}
                 >
-                  Excluir
+                  {pendingDeleteIds.has(post.id) ? "Excluindo..." : "Excluir"}
                 </button>
               </div>
             </div>
           </div>
         ))}
+        {postagensPaginadas.length === 0 && (
+          <div className="empty-state">{searchTerm ? "Nenhuma postagem encontrada para este filtro." : "Sem postagens."}</div>
+        )}
       </div>
+
+      {postagensFiltradas.length > PAGE_SIZE && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            Página {page} de {totalPages} · {postagensFiltradas.length} item(ns)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Anterior
+            </button>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
 
       {modal !== null && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
@@ -251,7 +316,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
                     cursor: "pointer",
                     fontSize: 13,
                   }}
-                  disabled={saving}
+                  disabled={pendingDeleteIds.has(confirmarExcluir.id)}
                 >
                   Excluir
                 </button>

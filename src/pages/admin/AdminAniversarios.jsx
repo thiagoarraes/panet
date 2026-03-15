@@ -41,7 +41,7 @@ export function AdminAniversarios({ aniversariantes, colaboradores, onCreateAniv
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button className="btn-primary" onClick={abrirNovo}>
-          + Adicionar aniversÃ¡rio
+          + Adicionar aniversário
         </button>
       </div>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -93,7 +93,7 @@ export function AdminAniversarios({ aniversariantes, colaboradores, onCreateAniv
           <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-                {modal === "novo" ? "Adicionar aniversÃ¡rio" : "Editar aniversÃ¡rio"}
+                {modal === "novo" ? "Adicionar aniversário" : "Editar aniversário"}
               </div>
               <button className="modal-close" onClick={() => setModal(null)}>
                 <X size={18} />

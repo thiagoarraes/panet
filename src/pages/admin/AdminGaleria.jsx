@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Pencil, Trash2, X } from "lucide-react";
 
 export function AdminGaleria({
@@ -15,8 +15,53 @@ export function AdminGaleria({
   const [eventoForm, setEventoForm] = useState({ titulo: "", mes: "", ano: "" });
   const [filesLote, setFilesLote] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
+  const [hiddenEventoIds, setHiddenEventoIds] = useState(new Set());
   const inputFotosMaisRef = useRef(null);
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchTerm(searchInput.trim().toLowerCase());
+      setCurrentPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const existingIds = new Set(eventos.map((evento) => String(evento.id)));
+    setHiddenEventoIds((prev) => {
+      let changed = false;
+      const next = new Set();
+      for (const id of prev) {
+        if (existingIds.has(String(id))) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [eventos]);
+
+  const eventosVisiveis = useMemo(() => {
+    const base = eventos.filter((evento) => !hiddenEventoIds.has(evento.id));
+    if (!searchTerm) return base;
+    return base.filter((evento) => {
+      const titulo = String(evento.evento || "").toLowerCase();
+      const mes = String(evento.mes || "").toLowerCase();
+      return titulo.includes(searchTerm) || mes.includes(searchTerm);
+    });
+  }, [eventos, hiddenEventoIds, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(eventosVisiveis.length / PAGE_SIZE));
+  const page = Math.min(currentPage, totalPages);
+
+  const eventosPaginados = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return eventosVisiveis.slice(start, start + PAGE_SIZE);
+  }, [eventosVisiveis, page]);
 
   const eventoAtual = useMemo(() => eventos.find((e) => e.id === modalFotos) || null, [eventos, modalFotos]);
 
@@ -31,6 +76,27 @@ export function AdminGaleria({
     setEventoForm({ titulo: evento.evento || "", mes: mesAtual, ano: anoAtual });
     setFilesLote([]);
     setModalEvento(evento.id);
+  };
+
+  const excluirEvento = async (id) => {
+    try {
+      setPendingDeleteIds((prev) => new Set(prev).add(id));
+      setHiddenEventoIds((prev) => new Set(prev).add(id));
+      await onDeleteEvento?.(id);
+    } catch (error) {
+      console.error(error);
+      setHiddenEventoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } finally {
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   const salvarEvento = async () => {
@@ -77,14 +143,21 @@ export function AdminGaleria({
 
   return (
     <div>
-      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 16 }}>
+        <input
+          className="form-input"
+          style={{ maxWidth: 320 }}
+          placeholder="Buscar por evento ou mês"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
         <button className="btn-primary" onClick={abrirNovoEvento}>
           + Novo evento
         </button>
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {eventos.map((evento) => (
+        {eventosPaginados.map((evento) => (
           <div key={evento.id} className="card" style={{ padding: 14 }}>
             <div className="admin-galeria-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
@@ -114,7 +187,8 @@ export function AdminGaleria({
                     padding: "5px 10px",
                     cursor: "pointer",
                   }}
-                  onClick={() => onDeleteEvento?.(evento.id)}
+                  onClick={() => excluirEvento(evento.id)}
+                  disabled={pendingDeleteIds.has(evento.id)}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -122,8 +196,26 @@ export function AdminGaleria({
             </div>
           </div>
         ))}
-        {eventos.length === 0 && <div className="empty-state">Sem eventos de galeria.</div>}
+        {eventosPaginados.length === 0 && (
+          <div className="empty-state">{searchTerm ? "Nenhum evento encontrado para este filtro." : "Sem eventos de galeria."}</div>
+        )}
       </div>
+
+      {eventosVisiveis.length > PAGE_SIZE && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            Página {page} de {totalPages} · {eventosVisiveis.length} item(ns)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Anterior
+            </button>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              Próxima
+            </button>
+          </div>
+        </div>
+      )}
 
       {modalEvento !== null && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModalEvento(null)}>

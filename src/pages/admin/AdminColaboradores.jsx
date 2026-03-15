@@ -32,22 +32,46 @@ const isJwtSessionError = (error) => {
 };
 
 const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v1";
+const PAGE_SIZE = 20;
 
-const readCachedAdminColaboradores = () => {
+const readCachedAdminColaboradores = (queryKey) => {
   try {
     const raw = localStorage.getItem(ADMIN_COLABS_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
+    if (!parsed || typeof parsed !== "object") return null;
+    const entry = parsed[queryKey];
+    if (!entry || typeof entry !== "object") return null;
+    if (!Array.isArray(entry.rows)) return null;
+    return {
+      rows: entry.rows,
+      total: Number(entry.total || 0),
+    };
   } catch (_err) {
     return null;
   }
 };
 
-const writeCachedAdminColaboradores = (rows) => {
+const writeCachedAdminColaboradores = (queryKey, rows, total) => {
   try {
-    if (!Array.isArray(rows)) return;
-    localStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(rows));
+    if (!queryKey || !Array.isArray(rows)) return;
+    const raw = localStorage.getItem(ADMIN_COLABS_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const next = parsed && typeof parsed === "object" ? parsed : {};
+    next[queryKey] = {
+      rows,
+      total: Number(total || 0),
+      at: Date.now(),
+    };
+    localStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(next));
+  } catch (_err) {
+    // ignore cache failures
+  }
+};
+
+const clearCachedAdminColaboradores = () => {
+  try {
+    localStorage.removeItem(ADMIN_COLABS_CACHE_KEY);
   } catch (_err) {
     // ignore cache failures
   }
@@ -81,11 +105,7 @@ const mapProfileToRow = (profile, currentUserId) => {
 };
 
 export function AdminColaboradores() {
-  const [lista, setLista] = useState(() => {
-    if (!isSupabaseEnabled) return COLABORADORES;
-    const cached = readCachedAdminColaboradores();
-    return Array.isArray(cached) ? cached : [];
-  });
+  const [lista, setLista] = useState(isSupabaseEnabled ? [] : COLABORADORES);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -93,7 +113,12 @@ export function AdminColaboradores() {
   const [errorMsg, setErrorMsg] = useState("");
   const [senhaGerada, setSenhaGerada] = useState(null);
   const [senhaCopiada, setSenhaCopiada] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(isSupabaseEnabled ? 0 : COLABORADORES.length);
   const refreshTimerRef = useRef(null);
+  const totalPages = Math.max(1, Math.ceil((totalItems || 0) / PAGE_SIZE));
 
   const getValidAccessToken = useCallback(async () => {
     const {
@@ -161,11 +186,22 @@ export function AdminColaboradores() {
     }
   }, [getValidAccessToken]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const normalized = String(searchInput || "").trim();
+      setCurrentPage(1);
+      setSearchTerm(normalized);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const carregarColaboradores = useCallback(async (options = {}) => {
     if (!isSupabaseEnabled) return;
     const { silent = false, force = false } = options;
-    const cachedRows = !force ? readCachedAdminColaboradores() : null;
-    const showBlockingLoading = !silent && (!Array.isArray(cachedRows) || cachedRows.length === 0);
+    const normalizedSearch = String(searchTerm || "").trim();
+    const queryKey = `${currentPage}|${normalizedSearch.toLowerCase()}`;
+    const cachedPayload = !force ? readCachedAdminColaboradores(queryKey) : null;
+    const showBlockingLoading = !silent && (!cachedPayload || cachedPayload.rows.length === 0);
     if (showBlockingLoading) setLoading(true);
     setErrorMsg("");
     try {
@@ -174,31 +210,41 @@ export function AdminColaboradores() {
       } = await supabase.auth.getSession();
       const loggedUserId = session?.user?.id || null;
 
-      if (!force && Array.isArray(cachedRows) && cachedRows.length > 0) {
-        setLista(cachedRows.map((row) => mapProfileToRow(row, loggedUserId)));
+      if (!force && cachedPayload && cachedPayload.rows.length > 0) {
+        setLista(cachedPayload.rows.map((row) => mapProfileToRow(row, loggedUserId)));
+        setTotalItems(cachedPayload.total || cachedPayload.rows.length);
       }
 
-      const { data, error } = await supabase
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      let query = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,perfil")
-        .order("nome", { ascending: true });
+        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,perfil", { count: "exact" })
+        .order("nome", { ascending: true })
+        .range(from, to);
+      if (normalizedSearch) {
+        query = query.or(`nome.ilike.%${normalizedSearch}%,email.ilike.%${normalizedSearch}%`);
+      }
+      const { data, error, count } = await query;
       if (error) throw error;
 
-      writeCachedAdminColaboradores(data || []);
+      writeCachedAdminColaboradores(queryKey, data || [], count || 0);
       setLista((data || []).map((row) => mapProfileToRow(row, loggedUserId)));
+      setTotalItems(Number(count || 0));
     } catch (err) {
-      if (!Array.isArray(cachedRows) || cachedRows.length === 0) {
+      if (!cachedPayload || cachedPayload.rows.length === 0) {
         setLista([]);
+        setTotalItems(0);
         setErrorMsg(err?.message || "Não foi possível carregar colaboradores.");
       }
     } finally {
       if (showBlockingLoading) setLoading(false);
     }
-  }, []);
+  }, [currentPage, searchTerm]);
 
   useEffect(() => {
     carregarColaboradores({ silent: true });
-  }, [carregarColaboradores]);
+  }, [carregarColaboradores, currentPage, searchTerm]);
 
   useEffect(() => {
     if (!isSupabaseEnabled) return undefined;
@@ -237,12 +283,14 @@ export function AdminColaboradores() {
   const salvar = async () => {
     if (!form.nome || !form.email) return;
     const normalizedEmail = String(form.email || "").trim().toLowerCase();
-    const duplicatedEmail = lista.some(
-      (c) => String(c?.email || "").trim().toLowerCase() === normalizedEmail && (modal === "novo" || c.id !== form.id)
-    );
-    if (duplicatedEmail) {
-      setErrorMsg("Já existe um colaborador com este e-mail.");
-      return;
+    if (!isSupabaseEnabled) {
+      const duplicatedEmail = lista.some(
+        (c) => String(c?.email || "").trim().toLowerCase() === normalizedEmail && (modal === "novo" || c.id !== form.id)
+      );
+      if (duplicatedEmail) {
+        setErrorMsg("Já existe um colaborador com este e-mail.");
+        return;
+      }
     }
 
     const iniciais = form.nome
@@ -263,10 +311,20 @@ export function AdminColaboradores() {
     setLoading(true);
     setErrorMsg("");
     try {
+      const { data: emailConflict, error: emailConflictError } = await supabase
+        .from("colaboradores")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+      if (emailConflictError) throw emailConflictError;
+      if (emailConflict && (modal === "novo" || emailConflict.id !== form.id)) {
+        throw new Error("Já existe um colaborador com este e-mail.");
+      }
+
       if (modal === "novo") {
         const payload = {
           nome: form.nome,
-          email: form.email,
+          email: normalizedEmail,
           perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
         const data = await invokeAdminFunction("create-collaborator", payload, "Não foi possível criar o colaborador.");
@@ -281,12 +339,14 @@ export function AdminColaboradores() {
           .from("colaboradores")
           .update({
             nome: form.nome,
-            email: form.email,
+            email: normalizedEmail,
             perfil: form.perfil === "admin" ? "admin" : "colaborador",
           })
           .eq("id", form.id);
         if (error) throw error;
       }
+      clearCachedAdminColaboradores();
+      if (modal === "novo") setCurrentPage(1);
       await carregarColaboradores({ force: true });
       setModal(null);
     } catch (err) {
@@ -304,15 +364,22 @@ export function AdminColaboradores() {
     }
 
     const previousLista = lista;
+    const previousTotal = totalItems;
     setConfirmarExcluir(null);
     setLista((p) => p.filter((c) => c.id !== colaborador.id));
+    setTotalItems((p) => Math.max(0, p - 1));
     setLoading(true);
     setErrorMsg("");
     try {
       await invokeDeleteCollaborator(colaborador.id);
+      clearCachedAdminColaboradores();
+      if (previousLista.length === 1 && currentPage > 1) {
+        setCurrentPage((p) => Math.max(1, p - 1));
+      }
       carregarColaboradores({ force: true, silent: true }).catch(() => {});
     } catch (err) {
       setLista(previousLista);
+      setTotalItems(previousTotal);
       setErrorMsg(err?.message || "Não foi possível excluir o colaborador.");
     } finally {
       setLoading(false);
@@ -334,6 +401,7 @@ export function AdminColaboradores() {
       });
       setSenhaCopiada(false);
 
+      clearCachedAdminColaboradores();
       await carregarColaboradores({ force: true });
     } catch (err) {
       setErrorMsg(err?.message || "Não foi possível alterar a senha.");
@@ -368,8 +436,17 @@ export function AdminColaboradores() {
   return (
     <div>
       <div className="admin-toolbar" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
-        <div style={{ fontSize: 12, color: "var(--muted)" }}>
-          {loading ? "Sincronizando com Supabase..." : `${lista.length} colaborador(es)`}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+          <input
+            className="search-input"
+            style={{ minWidth: 240 }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Buscar por nome ou e-mail"
+          />
+          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+            {loading ? "Sincronizando com Supabase..." : `${totalItems} colaborador(es)`}
+          </div>
         </div>
         <button className="btn-primary" onClick={abrirNovo} disabled={loading}>
           + Novo colaborador
@@ -394,99 +471,125 @@ export function AdminColaboradores() {
 
       <div className="card">
         <div className="admin-table-wrap">
-        <table className="admin-users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Colaborador", "Cargo", "E-mail", "Nível", "Ações"].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    padding: "10px 16px",
-                    textAlign: "left",
-                    fontSize: 11,
-                    color: "var(--muted)",
-                    fontWeight: 600,
-                    letterSpacing: "0.5px",
-                    textTransform: "uppercase",
-                  }}
+          <table className="admin-users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                {["Colaborador", "Cargo", "E-mail", "Nível", "Ações"].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      padding: "10px 16px",
+                      textAlign: "left",
+                      fontSize: 11,
+                      color: "var(--muted)",
+                      fontWeight: 600,
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((col) => (
+                <tr
+                  key={col.id}
+                  style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                 >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map((col) => (
-              <tr
-                key={col.id}
-                style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-              >
-                <td style={{ padding: "12px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Avatar col={col} size={32} />
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500 }}>{col.nome}</div>
-                      {col.isMe && <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>VOCÊ</span>}
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Avatar col={col} size={32} />
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{col.nome}</div>
+                        {col.isMe && <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>VOCÊ</span>}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.cargo}</td>
-                <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
-                <td style={{ padding: "12px 16px" }}>
-                  {col.perfil === "admin" ? (
-                    <span
-                      className="status-chip"
-                      style={{
-                        background: "color-mix(in srgb, var(--accent) 18%, transparent)",
-                        color: "var(--accent)",
-                        border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
-                      }}
-                    >
-                      Administrador
-                    </span>
-                  ) : (
-                    <span className="status-chip status-marcado">Colaborador</span>
-                  )}
-                </td>
-                <td style={{ padding: "12px 16px" }}>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => abrirEditar(col)}>
-                      Editar
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: 12 }}
-                      onClick={() => alterarSenha(col)}
-                      disabled={loading}
-                    >
-                      Alterar senha
-                    </button>
-                    {!col.isMe && (
-                      <button
-                        onClick={() => setConfirmarExcluir(col)}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.cargo}</td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    {col.perfil === "admin" ? (
+                      <span
+                        className="status-chip"
                         style={{
-                          background: "rgba(255,107,107,0.1)",
-                          border: "1px solid rgba(255,107,107,0.3)",
-                          color: "var(--danger)",
-                          borderRadius: 6,
-                          padding: "4px 10px",
-                          fontSize: 12,
-                          cursor: "pointer",
+                          background: "color-mix(in srgb, var(--accent) 18%, transparent)",
+                          color: "var(--accent)",
+                          border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
                         }}
                       >
-                        Excluir
-                      </button>
+                        Administrador
+                      </span>
+                    ) : (
+                      <span className="status-chip status-marcado">Colaborador</span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => abrirEditar(col)}>
+                        Editar
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: "4px 10px", fontSize: 12 }}
+                        onClick={() => alterarSenha(col)}
+                        disabled={loading}
+                      >
+                        Alterar senha
+                      </button>
+                      {!col.isMe && (
+                        <button
+                          onClick={() => setConfirmarExcluir(col)}
+                          style={{
+                            background: "rgba(255,107,107,0.1)",
+                            border: "1px solid rgba(255,107,107,0.3)",
+                            color: "var(--danger)",
+                            borderRadius: 6,
+                            padding: "4px 10px",
+                            fontSize: 12,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Excluir
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!loading && lista.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ padding: "18px 16px", color: "var(--muted)", fontSize: 13 }}>
+                    Nenhum colaborador encontrado para o filtro atual.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
+            ‹
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+            ›
+          </button>
+        </div>
+      )}
 
       {modal !== null && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
