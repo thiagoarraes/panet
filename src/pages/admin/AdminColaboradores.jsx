@@ -227,26 +227,43 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
       const from = (currentPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      let query = supabase
+      let rowsQuery = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil", { count: "exact" })
+        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil")
         .order("nome", { ascending: true })
         .range(from, to);
+
+      let countQuery = supabase
+        .from("colaboradores")
+        .select("id", { count: "exact", head: true });
+
       if (normalizedSearch) {
         const safeSearch = escapePostgrestLike(normalizedSearch);
-        query = query.or(`nome.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`);
+        const searchExpression = `nome.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`;
+        rowsQuery = rowsQuery.or(searchExpression);
+        countQuery = countQuery.or(searchExpression);
       }
-      const { data, error, count } = await query;
+
+      const { data, error } = await rowsQuery;
       if (error) throw error;
 
       const rows = data || [];
-      const hasExactCount = Number.isFinite(count);
-      const fallbackTotal = cachedPayload?.total || from + rows.length;
-      const resolvedTotal = hasExactCount ? Number(count) : Number(fallbackTotal);
-
-      writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
+      const fallbackTotal = Number(cachedPayload?.total || 0) || from + rows.length;
+      setTotalItems(Math.max(rows.length, fallbackTotal));
       setLista(rows.map((row) => mapProfileToRow(row, currentUserId)));
-      setTotalItems(Math.max(rows.length, resolvedTotal));
+      writeCachedAdminColaboradores(queryKey, rows, fallbackTotal);
+      if (showBlockingLoading) setLoading(false);
+
+      try {
+        const { count, error: countError } = await countQuery;
+        if (!countError && Number.isFinite(count)) {
+          const resolvedTotal = Number(count);
+          setTotalItems(Math.max(rows.length, resolvedTotal));
+          writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
+        }
+      } catch (_countErr) {
+        // keep fallback total when count query fails
+      }
     } catch (err) {
       if (!cachedPayload || cachedPayload.rows.length === 0) {
         setLista([]);
@@ -254,7 +271,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         setErrorMsg(err?.message || "Não foi possível carregar colaboradores.");
       }
     } finally {
-      if (showBlockingLoading) setLoading(false);
+      setLoading(false);
     }
   }, [currentPage, currentUserId, searchTerm]);
 
