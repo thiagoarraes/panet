@@ -288,7 +288,7 @@ export function PerfilPage({ profile, onSalvar }) {
 
           <div className="form-group">
             <label className="form-label">ANIVERSÁRIO (DIA E MÊS)</label>
-            <div className="grid-2">
+            <div className="grid-2 perfil-aniversario-grid">
               <select
                 className="form-input"
                 value={form.aniversarioDia}
@@ -320,7 +320,7 @@ export function PerfilPage({ profile, onSalvar }) {
 
           {error && <div style={{ color: "var(--danger)", fontSize: 13, marginBottom: 10 }}>{error}</div>}
           <button className="btn-primary" onClick={salvar} disabled={saving}>
-            {saving ? "Salvando..." : saved ? "? Salvo!" : "Salvar alterações"}
+            {saving ? "Salvando..." : saved ? "Salvo!" : "Salvar alterações"}
           </button>
         </div>
       </div>

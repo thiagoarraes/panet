@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X } from "lucide-react";
 import {
   COLABORADORES,
   POSTAGENS_INIT,
@@ -11,11 +11,11 @@ import {
 } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled } from "../lib/supabase.js";
 import { Avatar } from "./Avatar";
-import { PostModal } from "./PostModal";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
 import { DashboardPage } from "../pages/DashboardPage";
 import { PostagensPage } from "../pages/PostagensPage";
+import { PostDetalhePage } from "../pages/PostDetalhePage";
 import { ColaboradoresPage } from "../pages/ColaboradoresPage";
 import { AniversariosPage } from "../pages/AniversariosPage";
 import { FeriasPage } from "../pages/FeriasPage";
@@ -29,6 +29,33 @@ const THEME_KEY = "panet.theme";
 const PROFILE_CACHE_KEY = "panet.profile.cache";
 const AUTH_TIMEOUT_MS = 12000;
 const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
+
+const getGaleriaStoragePathFromUrl = (rawUrl) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    const pathname = decodeURIComponent(parsed.pathname || "");
+
+    if (pathname.startsWith("/galerias/")) {
+      return pathname.slice("/galerias/".length);
+    }
+
+    const markers = [
+      "/storage/v1/object/public/galeria/",
+      "/storage/v1/object/sign/galeria/",
+      "/storage/v1/object/authenticated/galeria/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+    return "";
+  } catch (_err) {
+    return "";
+  }
+};
+
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "postagens", label: "Postagens", icon: FileText },
@@ -40,11 +67,11 @@ const NAV_ITEMS = [
 
 const PAGE_PATHS = {
   dashboard: "/",
-  postagens: "/post",
+  postagens: "/posts",
   colaboradores: "/colaboradores",
   aniversarios: "/aniversarios",
   ferias: "/folgas",
-  galeria: "/galeria",
+  galeria: "/galerias",
   perfil: "/perfil",
   admin: "/admin",
 };
@@ -58,10 +85,16 @@ const ADMIN_TAB_PATHS = {
 };
 
 const resolveRoute = (pathname) => {
-  switch (pathname) {
+  const path = String(pathname || "/");
+  if (path.startsWith("/galerias/")) {
+    return { pagina: "galeria", adminAba: "colaboradores", known: true };
+  }
+  switch (path) {
     case "/":
     case "/dashboard":
       return { pagina: "dashboard", adminAba: "colaboradores", known: true };
+    case "/posts":
+      return { pagina: "postagens", adminAba: "colaboradores", known: true };
     case "/post":
       return { pagina: "postagens", adminAba: "colaboradores", known: true };
     case "/colaboradores":
@@ -70,6 +103,8 @@ const resolveRoute = (pathname) => {
       return { pagina: "aniversarios", adminAba: "colaboradores", known: true };
     case "/folgas":
       return { pagina: "ferias", adminAba: "colaboradores", known: true };
+    case "/galerias":
+      return { pagina: "galeria", adminAba: "colaboradores", known: true };
     case "/galeria":
       return { pagina: "galeria", adminAba: "colaboradores", known: true };
     case "/perfil":
@@ -87,8 +122,18 @@ const resolveRoute = (pathname) => {
     case "/admin/mural":
       return { pagina: "admin", adminAba: "mural", known: true };
     default:
-      return { pagina: "dashboard", adminAba: "colaboradores", known: false };
+      break;
   }
+
+  const singleSegmentMatch = path.match(/^\/([^/]+)$/);
+  if (singleSegmentMatch) {
+    const slug = decodeURIComponent(singleSegmentMatch[1] || "").trim();
+    if (slug) {
+      return { pagina: "post_detalhe", adminAba: "colaboradores", known: true, postSlug: slug };
+    }
+  }
+
+  return { pagina: "dashboard", adminAba: "colaboradores", known: false };
 };
 
 const toAvatar = (profile) => {
@@ -278,6 +323,15 @@ const withTimeout = (promise, timeoutMs, timeoutMessage = "timeout") =>
     new Promise((_, reject) => setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)),
   ]);
 
+const toPostSlug = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const isTransientAuthTimeout = (err) => {
   const msg = String(err?.message || "");
   return msg === "session_timeout" || msg === "profile_timeout" || msg === "session_recheck_timeout";
@@ -326,7 +380,7 @@ export default function PanetApp() {
   const [tela, setTela] = useState("login");
   const [pagina, setPagina] = useState("dashboard");
   const [adminAba, setAdminAba] = useState("colaboradores");
-  const [postModalId, setPostModalId] = useState(null);
+  const [postSlug, setPostSlug] = useState("");
   const [authLoading, setAuthLoading] = useState(isSupabaseEnabled);
   const [currentProfile, setCurrentProfile] = useState(null);
 
@@ -338,12 +392,16 @@ export default function PanetApp() {
   const [galeriaEventos, setGaleriaEventos] = useState(isSupabaseEnabled ? [] : GALERIA_EVENTOS);
   const [muralMsgs, setMuralMsgs] = useState(isSupabaseEnabled ? [] : MURAL_INIT);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const userMenuRef = useRef(null);
 
   const eu = useMemo(() => (currentProfile ? toAvatar(currentProfile) : mockMe), [currentProfile]);
   const isAdmin = currentProfile?.perfil === "admin";
-  const postModal = useMemo(() => postagens.find((p) => p.id === postModalId) || null, [postModalId, postagens]);
+  const selectedPost = useMemo(
+    () => postagens.find((p) => toPostSlug(p.titulo) === postSlug) || null,
+    [postagens, postSlug]
+  );
   const getPathForState = useCallback((nextPagina, nextAdminAba) => {
     if (nextPagina === "admin") {
       return ADMIN_TAB_PATHS[nextAdminAba] || PAGE_PATHS.admin;
@@ -355,6 +413,9 @@ export default function PanetApp() {
     (nextPagina, nextAdminAba, options = {}) => {
       const aba = nextAdminAba || adminAba;
       setPagina(nextPagina);
+      if (nextPagina === "post_detalhe") setPostSlug(String(options.postSlug || ""));
+      else setPostSlug("");
+      setMobileNavOpen(false);
       if (nextPagina === "admin") {
         setAdminAba(aba);
       }
@@ -661,7 +722,7 @@ export default function PanetApp() {
   useEffect(() => {
     if (tela !== "app" || typeof window === "undefined") return;
     const applyLocation = () => {
-      const { pagina: nextPagina, adminAba: nextAdminAba, known } = resolveRoute(window.location.pathname);
+      const { pagina: nextPagina, adminAba: nextAdminAba, known, postSlug: nextPostSlug } = resolveRoute(window.location.pathname);
       if (!known) {
         navigateTo("dashboard", "colaboradores", { replace: true });
         return;
@@ -672,6 +733,7 @@ export default function PanetApp() {
       }
       setPagina(nextPagina);
       setAdminAba(nextAdminAba);
+      setPostSlug(nextPagina === "post_detalhe" ? String(nextPostSlug || "") : "");
     };
     applyLocation();
     const onPopState = () => applyLocation();
@@ -823,7 +885,7 @@ export default function PanetApp() {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
     const { error } = await supabase.from("postagens").delete().eq("id", postId);
     if (error) throw new Error(error.message);
-    if (postModalId === postId) setPostModalId(null);
+    if (selectedPost?.id === postId) navigateTo("postagens");
     await loadPostagens(currentProfile.id);
   };
 
@@ -878,6 +940,23 @@ export default function PanetApp() {
 
   const handleDeleteGaleriaEvento = async (id) => {
     if (!isSupabaseEnabled) return;
+
+    const { data: fotos, error: fotosError } = await supabase.from("galeria_fotos").select("foto_url").eq("evento_id", id);
+    if (fotosError) throw new Error(fotosError.message);
+
+    const storagePaths = Array.from(
+      new Set(
+        (fotos || [])
+          .map((foto) => getGaleriaStoragePathFromUrl(foto?.foto_url))
+          .filter(Boolean)
+      )
+    );
+
+    if (storagePaths.length > 0) {
+      const { error: removeError } = await supabase.storage.from("galeria").remove(storagePaths);
+      if (removeError) throw new Error(removeError.message);
+    }
+
     const { error } = await supabase.from("galeria_eventos").delete().eq("id", id);
     if (error) throw new Error(error.message);
     await loadGaleria();
@@ -1112,7 +1191,11 @@ export default function PanetApp() {
     }
   };
 
-  const handleOpenPost = (post) => setPostModalId(post.id);
+  const handleOpenPost = (post) => {
+    const slug = toPostSlug(post?.titulo || "");
+    if (!slug) return;
+    navigateTo("post_detalhe", "colaboradores", { path: `/${slug}`, postSlug: slug });
+  };
 
   const handleParabenizarAniversario = async (aniversarianteId) => {
     if (!currentProfile?.id || !aniversarianteId) return;
@@ -1192,6 +1275,15 @@ export default function PanetApp() {
   }, [theme]);
 
   useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const isMobile = typeof window !== "undefined" && window.innerWidth <= 900;
+    document.body.style.overflow = mobileNavOpen && isMobile ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
     const onClickOutside = (event) => {
       if (!userMenuRef.current) return;
       if (!userMenuRef.current.contains(event.target)) {
@@ -1222,6 +1314,24 @@ export default function PanetApp() {
       />
     ),
     postagens: <PostagensPage onOpen={handleOpenPost} onToggleCurtida={handleToggleCurtida} postagens={postagens} />,
+    post_detalhe: (
+      <PostDetalhePage
+        post={selectedPost}
+        currentUser={eu}
+        currentUserId={currentProfile?.id || eu.id}
+        onVoltar={() => navigateTo("postagens")}
+        onToggleCurtida={handleToggleCurtida}
+        onComentar={handleComentar}
+        onOpenAniversarios={() => navigateTo("aniversarios")}
+        onOpenFolgas={() => navigateTo("ferias")}
+        onEnviarMensagem={handleEnviarMensagem}
+        aniversariantes={aniversariantes}
+        colaboradores={colaboradores}
+        muralMsgs={muralMsgs}
+        ferias={ferias}
+        dayoff={dayoff}
+      />
+    ),
     colaboradores: <ColaboradoresPage colaboradores={colaboradores} />,
     aniversarios: (
       <AniversariosPage
@@ -1276,18 +1386,22 @@ export default function PanetApp() {
   if (tela === "login") {
     return <LoginPage onLogin={handleLogin} theme={theme} />;
   }
-  if (tela === "primeiro_acesso") return <PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} />;
+  if (tela === "primeiro_acesso") return <PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} theme={theme} />;
 
   return (
     <>
-      <nav className="sidebar">
+      <nav className={`sidebar ${mobileNavOpen ? "open" : ""}`}>
         <div className="sidebar-logo">
-          <img src={theme === "light" ? "/pan-logo-light.svg" : "/pan-logo.svg"} alt="Panet" className="logo-image" />
+          <img src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"} alt="Panet" className="logo-image" />
         </div>
         <div className="nav-section">
           <div className="nav-label">MENU</div>
           {NAV_ITEMS.map((n) => (
-            <button key={n.id} className={`nav-item ${pagina === n.id ? "active" : ""}`} onClick={() => navigateTo(n.id)}>
+            <button
+              key={n.id}
+              className={`nav-item ${pagina === n.id || (n.id === "postagens" && pagina === "post_detalhe") ? "active" : ""}`}
+              onClick={() => navigateTo(n.id)}
+            >
               <span className="nav-icon"><n.icon size={16} /></span>
               {n.label}
             </button>
@@ -1310,17 +1424,21 @@ export default function PanetApp() {
             <div className="user-menu">
               <button
                 className="user-menu-item"
+                style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
                 onClick={() => {
                   navigateTo("perfil");
                   setUserMenuOpen(false);
                 }}
               >
+                <User size={14} />
                 Editar perfil
               </button>
-              <button className="user-menu-item" onClick={handleToggleTheme}>
+              <button className="user-menu-item" style={{ display: "inline-flex", alignItems: "center", gap: 8 }} onClick={handleToggleTheme}>
+                {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
                 {theme === "dark" ? "Tema claro" : "Tema escuro"}
               </button>
-              <button className="user-menu-item danger" onClick={handleLogout}>
+              <button className="user-menu-item danger" style={{ display: "inline-flex", alignItems: "center", gap: 8 }} onClick={handleLogout}>
+                <LogOut size={14} />
                 Deslogar
               </button>
             </div>
@@ -1335,23 +1453,21 @@ export default function PanetApp() {
           </div>
         </div>
       </nav>
+      {mobileNavOpen && <button className="sidebar-overlay" aria-label="Fechar menu" onClick={() => setMobileNavOpen(false)} />}
 
       <div className="main-wrap">
+        <div className="mobile-topbar">
+          <img src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"} alt="Panet" className="mobile-topbar-logo" />
+          <button className="mobile-menu-btn" aria-label="Abrir menu" onClick={() => setMobileNavOpen((prev) => !prev)}>
+            {mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
         <div className="content">{PAGINAS[pagina]}</div>
       </div>
-
-      {postModal && (
-        <PostModal
-          post={postModal}
-          currentUser={eu}
-          onClose={() => setPostModalId(null)}
-          onToggleCurtida={handleToggleCurtida}
-          onComentar={handleComentar}
-        />
-      )}
     </>
   );
 }
+
 
 
 

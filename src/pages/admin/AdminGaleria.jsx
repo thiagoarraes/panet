@@ -77,7 +77,7 @@ export function AdminGaleria({
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button className="btn-primary" onClick={abrirNovoEvento}>
           + Novo evento
         </button>
@@ -86,19 +86,19 @@ export function AdminGaleria({
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {eventos.map((evento) => (
           <div key={evento.id} className="card" style={{ padding: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="admin-galeria-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
                 src={evento.capa || evento.fotos?.[0]?.src || "https://picsum.photos/seed/galeria-empty/120/80"}
                 alt={evento.evento}
                 style={{ width: 84, height: 56, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="admin-galeria-main" style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 14 }}>{evento.evento}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>
                   {evento.mes || "Sem mês"} · {evento.fotos?.length || 0} foto(s)
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="admin-galeria-actions" style={{ display: "flex", gap: 6 }}>
                 <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => setModalFotos(evento.id)}>
                   Fotos
                 </button>
@@ -223,7 +223,7 @@ export function AdminGaleria({
               </button>
             </div>
             <div className="modal-body">
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+              <div className="admin-galeria-fotos-toolbar" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
                 <input
                   ref={inputFotosMaisRef}
                   type="file"
@@ -236,9 +236,9 @@ export function AdminGaleria({
                   {saving ? "Enviando..." : "+ Adicionar mais fotos"}
                 </button>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+              <div className="admin-galeria-fotos-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
                 {(eventoAtual.fotos || []).map((foto) => (
-                  <div key={foto.id} className="card" style={{ padding: 8 }}>
+                  <div key={foto.id} className="card admin-galeria-foto-card" style={{ padding: 8 }}>
                     {eventoAtual.capa === foto.src && (
                       <div
                         style={{
@@ -254,7 +254,7 @@ export function AdminGaleria({
                     )}
                     <img src={foto.src} alt={foto.legenda || "foto"} style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8 }} />
                     <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, minHeight: 18 }}>{foto.legenda || "Sem legenda"}</div>
-                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <div className="admin-galeria-foto-actions" style={{ display: "flex", gap: 6, marginTop: 8 }}>
                       <button
                         className="btn-ghost"
                         style={{ padding: "4px 8px", fontSize: 12 }}
@@ -288,3 +288,4 @@ export function AdminGaleria({
     </div>
   );
 }
+

@@ -29,6 +29,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
           {mensagens.map((m) => (
             <div
               key={m.id}
+              className="admin-mural-item"
               style={{
                 display: "flex",
                 gap: 10,
@@ -41,7 +42,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
             >
               <Avatar col={m.colaborador} size={34} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                <div className="admin-mural-item-head" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{m.colaborador?.nome}</span>
                   <span style={{ fontSize: 11, color: "var(--muted)" }}>
                     {m.data} · {m.hora}
@@ -50,7 +51,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
                 <div style={{ fontSize: 13, color: "var(--text)" }}>{m.texto}</div>
               </div>
               <button
-                className="btn-ghost"
+                className="btn-ghost admin-mural-item-delete"
                 style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))" }}
                 onClick={() => setConfirmarExcluir(m)}
                 disabled={deletingId === m.id}
@@ -93,7 +94,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 18 }}>
                 Essa ação remove a mensagem do PanZap para todos os colaboradores.
               </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
                   Cancelar
                 </button>

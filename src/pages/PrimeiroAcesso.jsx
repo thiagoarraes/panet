@@ -10,7 +10,7 @@ const validatePassword = (password) => {
   return "";
 };
 
-export function PrimeiroAcessoPage({ onConcluir }) {
+export function PrimeiroAcessoPage({ onConcluir, theme }) {
   const [nova, setNova] = useState("");
   const [confirma, setConfirma] = useState("");
   const [erro, setErro] = useState("");
@@ -56,13 +56,7 @@ export function PrimeiroAcessoPage({ onConcluir }) {
       <div className="login-bg" />
       <div className="login-card">
         <div className="login-logo">
-          <div className="logo-mark">P</div>
-          <div>
-            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 20 }}>Panet</div>
-            <div style={{ fontSize: 10, color: "var(--muted)", letterSpacing: "1.5px", textTransform: "uppercase" }}>
-              Intranet da Pan
-            </div>
-          </div>
+          <img src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"} alt="Panet" className="login-logo-image" />
         </div>
 
         <div

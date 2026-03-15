@@ -160,12 +160,14 @@ export function ColaboradoresPage({ colaboradores = [] }) {
               {signo && (
                 <div className="profile-row collab-profile-row">
                   <span className="profile-icon" aria-hidden="true">{signo.emoji}</span>
-                  <span className="profile-val" style={{ color: "var(--text)", marginRight: 6 }}>
-                    {signo.nome}
-                  </span>
-                  <a className="profile-val link-primary-underline" href={signoHref} target="_blank" rel="noreferrer">
-                    Como são as pessoas desse signo
-                  </a>
+                  <div className="collab-signo-content">
+                    <span className="profile-val" style={{ color: "var(--text)" }}>
+                      {signo.nome}
+                    </span>
+                    <a className="profile-val link-primary-underline collab-signo-link" href={signoHref} target="_blank" rel="noreferrer">
+                      Como são as pessoas desse signo
+                    </a>
+                  </div>
                 </div>
               )}
             </div>

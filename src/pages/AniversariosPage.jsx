@@ -23,6 +23,27 @@ const formatDiasRestantes = (diasRestantes) => {
   return `em ${diasRestantes} dias`;
 };
 
+const formatBirthday = (isoDate) => {
+  const [year, month, day] = String(isoDate || "").split("-");
+  if (!year || !month || !day) return "";
+  return `${day.padStart(2, "0")}/${month.padStart(2, "0")}`;
+};
+
+const daysUntilBirthday = (isoDate) => {
+  const raw = String(isoDate || "");
+  if (!raw) return 0;
+  const [year, month, day] = raw.split("-").map((part) => Number(part));
+  if (!year || !month || !day) return 0;
+
+  const now = new Date();
+  const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  const thisYearTarget = new Date(now.getFullYear(), month - 1, day, 12, 0, 0);
+  const nextTarget =
+    thisYearTarget < todayNoon ? new Date(now.getFullYear() + 1, month - 1, day, 12, 0, 0) : thisYearTarget;
+  const diffMs = nextTarget.getTime() - todayNoon.getTime();
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+};
+
 const getMesIndex = (item) => {
   const mes = Number(String(item?.data || "").split("/")[1] || 0);
   return Number.isFinite(mes) && mes >= 1 && mes <= 12 ? mes - 1 : -1;
@@ -36,24 +57,61 @@ const sortByDia = (a, b) => {
   return String(a?.colaborador?.nome || "").localeCompare(String(b?.colaborador?.nome || ""), "pt-BR");
 };
 
-export function AniversariosPage({ aniversariantes = [] }) {
+const sortByMesDia = (a, b) => {
+  const mesDiff = getMesIndex(a) - getMesIndex(b);
+  if (mesDiff !== 0) return mesDiff;
+  return sortByDia(a, b);
+};
+
+export function AniversariosPage({ aniversariantes = [], colaboradores = [] }) {
   const mesAtualIndex = new Date().getMonth();
-  const [mesSelecionado, setMesSelecionado] = useState(String(mesAtualIndex));
+  const [mesSelecionado, setMesSelecionado] = useState("todos");
+
+  const aniversariantesTodos = useMemo(() => {
+    const aniversariantesById = new Map(aniversariantes.map((item) => [String(item?.colaborador?.id || item?.id), item]));
+
+    const base = (colaboradores || [])
+      .filter((col) => Boolean(col?.aniversario))
+      .map((col) => {
+        const existing = aniversariantesById.get(String(col.id));
+        if (existing) {
+          return {
+            ...existing,
+            colaborador: { ...col, ...(existing.colaborador || {}) },
+          };
+        }
+        return {
+          id: col.id,
+          colaborador: col,
+          data: formatBirthday(col.aniversario),
+          diasRestantes: daysUntilBirthday(col.aniversario),
+          reacoes: [],
+        };
+      });
+
+    return base.filter((item) => item?.data).sort(sortByMesDia);
+  }, [aniversariantes, colaboradores]);
 
   const aniversariantesMesAtual = useMemo(
-    () => aniversariantes.filter((a) => getMesIndex(a) === mesAtualIndex).sort(sortByDia),
-    [aniversariantes, mesAtualIndex]
+    () => aniversariantesTodos.filter((a) => getMesIndex(a) === mesAtualIndex).sort(sortByDia),
+    [aniversariantesTodos, mesAtualIndex]
   );
 
   const opcoesMes = useMemo(
-    () => MESES.map((nome, index) => ({ nome, index, total: aniversariantes.filter((a) => getMesIndex(a) === index).length })),
-    [aniversariantes]
+    () =>
+      MESES.map((nome, index) => ({
+        nome,
+        index,
+        total: aniversariantesTodos.filter((a) => getMesIndex(a) === index).length,
+      })),
+    [aniversariantesTodos]
   );
 
-  const aniversariantesMesSelecionado = useMemo(
-    () => aniversariantes.filter((a) => getMesIndex(a) === Number(mesSelecionado)).sort(sortByDia),
-    [aniversariantes, mesSelecionado]
-  );
+  const aniversariantesFiltrados = useMemo(() => {
+    if (mesSelecionado === "todos") return aniversariantesTodos;
+    const mesIndex = Number(mesSelecionado);
+    return aniversariantesTodos.filter((a) => getMesIndex(a) === mesIndex).sort(sortByDia);
+  }, [aniversariantesTodos, mesSelecionado]);
 
   const AnivCard = ({ a }) => (
     <div className="aniv-item">
@@ -108,16 +166,16 @@ export function AniversariosPage({ aniversariantes = [] }) {
         </div>
 
         <div className="card">
-          <div className="card-header" style={{ alignItems: "center", gap: 12 }}>
-            <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <CalendarDays size={14} /> Todos os aniversariantes
+          <div className="card-header aniv-all-header">
+            <span className="card-title aniv-all-title">
+              <CalendarDays size={14} /> Todos os aniversariantes ({aniversariantesFiltrados.length})
             </span>
             <select
-              className="search-input"
-              style={{ marginLeft: "auto", minWidth: 170 }}
+              className="search-input aniv-all-select"
               value={mesSelecionado}
               onChange={(e) => setMesSelecionado(e.target.value)}
             >
+              <option value="todos">Todos ({aniversariantesTodos.length})</option>
               {opcoesMes.map((mes) => (
                 <option key={mes.index} value={String(mes.index)}>
                   {mes.nome} ({mes.total})
@@ -125,13 +183,15 @@ export function AniversariosPage({ aniversariantes = [] }) {
               ))}
             </select>
           </div>
-          <div className="card-body" style={{ padding: "8px 16px" }}>
-            {aniversariantesMesSelecionado.length === 0 ? (
+          <div className="card-body" style={{ padding: "8px 16px", maxHeight: 420, overflowY: "auto" }}>
+            {aniversariantesFiltrados.length === 0 ? (
               <div className="empty-state" style={{ padding: 20 }}>
-                Nenhum aniversariante em {MESES[Number(mesSelecionado)]}
+                {mesSelecionado === "todos"
+                  ? "Nenhum aniversariante cadastrado no perfil."
+                  : `Nenhum aniversariante em ${MESES[Number(mesSelecionado)]}.`}
               </div>
             ) : (
-              aniversariantesMesSelecionado.map((a) => <AnivCard key={a.id} a={a} />)
+              aniversariantesFiltrados.map((a) => <AnivCard key={a.id} a={a} />)
             )}
           </div>
         </div>
@@ -139,3 +199,4 @@ export function AniversariosPage({ aniversariantes = [] }) {
     </div>
   );
 }
+

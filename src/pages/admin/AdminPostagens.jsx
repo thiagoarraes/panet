@@ -100,7 +100,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button className="btn-primary" onClick={abrirNovo}>
           + Nova postagem
         </button>
@@ -108,10 +108,10 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {postagens.map((post) => (
           <div key={post.id} className="card" style={{ padding: 16, transition: "border-color 0.2s" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div className="admin-post-row" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <img src={post.imagem} alt={post.titulo} style={{ width: 72, height: 36, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+              <div className="admin-post-main" style={{ flex: 1 }}>
+                <div className="admin-post-meta" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
                   <Badge cat={post.categoria} />
                   <span style={{ fontSize: 12, color: "var(--muted)" }}>{fmtDate(post.data)}</span>
                 </div>
@@ -130,8 +130,8 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
                   {stripHtml(post.descricao)}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <div className="admin-post-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span className="admin-post-stats" style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <Heart size={12} /> {post.curtidas.length} · <MessageCircle size={12} /> {post.comentarios.length}
                 </span>
                 <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => abrirEditar(post)}>
@@ -213,7 +213,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
                   placeholder="Descreva o conteúdo da postagem..."
                 />
               </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button className="btn-ghost" onClick={() => setModal(null)}>
                   Cancelar
                 </button>
@@ -235,7 +235,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
               </div>
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Excluir postagem?</div>
               <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>Esta ação não pode ser desfeita.</div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                 <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
                   Cancelar
                 </button>
@@ -263,3 +263,4 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
     </div>
   );
 }
+

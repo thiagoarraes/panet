@@ -30,27 +30,13 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
         <img src={post.imagem} alt={post.titulo} />
       </div>
       <div className="post-body">
-        <div style={{ display: "flex", alignItems: "stretch", gap: 10, marginBottom: 8 }}>
-          <div
-            style={{
-              width: 56,
-              minWidth: 56,
-              borderRadius: 10,
-              background: "linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #fff), var(--accent2))",
-              color: "#ffffff",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 4px",
-              boxShadow: "0 6px 14px color-mix(in srgb, var(--accent) 28%, transparent)",
-            }}
-          >
-            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 19, lineHeight: 1 }}>{dateBox.day}</div>
-            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 9, letterSpacing: 0.6, marginTop: 2 }}>{dateBox.month}</div>
-            <div style={{ fontSize: 9, fontWeight: 600, opacity: 0.95, marginTop: 1 }}>{dateBox.year}</div>
+        <div className="post-card-head">
+          <div className="post-card-datebox">
+            <div className="post-card-date-day">{dateBox.day}</div>
+            <div className="post-card-date-month">{dateBox.month}</div>
+            <div className="post-card-date-year">{dateBox.year}</div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 0, flex: 1 }}>
+          <div className="post-card-head-content">
             <div className="post-meta" style={{ marginBottom: 4 }}>
               <Badge cat={post.categoria} />
             </div>

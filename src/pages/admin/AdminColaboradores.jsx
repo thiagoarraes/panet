@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { COLABORADORES } from "../../data/mockData.js";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
@@ -308,7 +308,7 @@ export function AdminColaboradores() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
+      <div className="admin-toolbar" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
         <div style={{ fontSize: 12, color: "var(--muted)" }}>
           {loading ? "Sincronizando com Supabase..." : `${lista.length} colaborador(es)`}
         </div>
@@ -334,7 +334,8 @@ export function AdminColaboradores() {
       )}
 
       <div className="card">
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="admin-table-wrap">
+        <table className="admin-users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {["Colaborador", "Cargo", "E-mail", "Nível", "Ações"].map((h) => (
@@ -425,6 +426,7 @@ export function AdminColaboradores() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {modal !== null && (

@@ -45,7 +45,7 @@ export function LoginPage({ onLogin, theme }) {
       </div>
       <div className="login-card">
         <div className="login-logo">
-          <img src={theme === "light" ? "/pan-logo-light.svg" : "/pan-logo.svg"} alt="Panet" className="login-logo-image" />
+          <img src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"} alt="Panet" className="login-logo-image" />
         </div>
         <div className="login-title">Olá, Panner!</div>
         <div className="login-sub">Entre com seu email da Pan e acompanhe os bastidores.</div>

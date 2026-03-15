@@ -1,10 +1,33 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const extractAvatarPathFromUrl = (fotoUrl: string) => {
+  const trimmed = String(fotoUrl || "").trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    const path = decodeURIComponent(parsed.pathname || "");
+    const markers = [
+      "/storage/v1/object/public/avatares/",
+      "/storage/v1/object/sign/avatares/",
+      "/storage/v1/object/authenticated/avatares/",
+    ];
+    for (const marker of markers) {
+      const idx = path.indexOf(marker);
+      if (idx >= 0) {
+        return path.slice(idx + marker.length);
+      }
+    }
+    return "";
+  } catch (_err) {
+    return "";
+  }
 };
 
 serve(async (req) => {
@@ -37,6 +60,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
@@ -82,6 +106,19 @@ serve(async (req) => {
       });
     }
 
+    const { data: targetProfile, error: targetProfileError } = await adminClient
+      .from("colaboradores")
+      .select("id, foto_url")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (targetProfileError) {
+      return new Response(JSON.stringify({ error: targetProfileError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { error: reassignPostsError } = await adminClient
       .from("postagens")
       .update({ autor_id: callerUser.id })
@@ -93,6 +130,38 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const avatarPaths = new Set<string>();
+    const currentAvatarPath = extractAvatarPathFromUrl(String(targetProfile?.foto_url || ""));
+    if (currentAvatarPath) avatarPaths.add(currentAvatarPath);
+
+    const { data: userAvatarFiles, error: listAvatarError } = await adminClient.storage.from("avatares").list(userId, {
+      limit: 1000,
+      offset: 0,
+    });
+
+    if (listAvatarError) {
+      return new Response(JSON.stringify({ error: listAvatarError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    for (const file of userAvatarFiles || []) {
+      if (!file?.name) continue;
+      avatarPaths.add(`${userId}/${file.name}`);
+    }
+
+    if (avatarPaths.size > 0) {
+      const { error: removeAvatarError } = await adminClient.storage.from("avatares").remove(Array.from(avatarPaths));
+      if (removeAvatarError) {
+        return new Response(JSON.stringify({ error: removeAvatarError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteError) {
       return new Response(JSON.stringify({ error: deleteError.message }), {

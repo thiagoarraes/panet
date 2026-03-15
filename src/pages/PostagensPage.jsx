@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PostCard } from "../components/PostCard";
 
 export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
@@ -16,7 +16,7 @@ export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
       <div className="section-header">
         <div>
           <div className="section-title">Postagens</div>
-          <div className="section-sub">{postagens.length} publicações</div>
+          <div className="section-sub">{postagens.length} {postagens.length === 1 ? "publicação" : "publicações"}</div>
         </div>
       </div>
       <div

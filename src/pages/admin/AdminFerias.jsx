@@ -69,7 +69,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div className="admin-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div className="filter-tabs">
           <button className={`filter-tab ${sub === "ferias" ? "active" : ""}`} onClick={() => setSub("ferias")}>
             <Plane size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> Férias
@@ -86,21 +86,21 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {lista.map((item) => (
           <div key={item.id} className="card" style={{ padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Avatar col={item.colaborador} size={40} />
-              <div style={{ flex: 1 }}>
+              <div className="admin-ferias-main" style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{item.colaborador.cargo}</div>
-                <div style={{ fontSize: 12, marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div className="admin-ferias-dates" style={{ fontSize: 12, marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <CalendarDays size={12} /> {item.inicio} - {item.fim}
                 </div>
               </div>
               {sub === "ferias" && (
-                <span className={`status-chip ${item.status === "em_andamento" ? "status-andamento" : "status-marcado"}`}>
+                <span className={`status-chip admin-ferias-status ${item.status === "em_andamento" ? "status-andamento" : "status-marcado"}`}>
                   {item.status === "em_andamento" ? "De férias" : "Agendado"}
                 </span>
               )}
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="admin-ferias-actions" style={{ display: "flex", gap: 6 }}>
                 <button
                   className="btn-ghost"
                   style={{ padding: "4px 10px", fontSize: 12 }}
@@ -199,7 +199,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
                   </select>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button className="btn-ghost" onClick={() => setModal(null)}>
                   Cancelar
                 </button>
@@ -221,7 +221,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
               </div>
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Remover registro?</div>
               <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>Essa ação não pode ser desfeita.</div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                 <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
                   Cancelar
                 </button>
@@ -252,3 +252,4 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     </div>
   );
 }
+
