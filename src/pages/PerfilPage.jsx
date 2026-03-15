@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import Cropper from "react-easy-crop";
+﻿import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "../components/Avatar";
+
+const PerfilAvatarCropModal = lazy(() =>
+  import("../components/PerfilAvatarCropModal").then((m) => ({ default: m.PerfilAvatarCropModal }))
+);
 
 const formatPhoneBR = (value) => {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 11);
@@ -40,46 +43,6 @@ const MONTH_OPTIONS = [
   { value: "12", label: "Dezembro" },
 ];
 
-const createImage = (url) =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", (error) => reject(error));
-    image.setAttribute("crossOrigin", "anonymous");
-    image.src = url;
-  });
-
-const getCroppedBlob = async (imageSrc, pixelCrop) => {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("Não foi possível recortar a imagem."));
-        return;
-      }
-      resolve(blob);
-    }, "image/jpeg", 0.92);
-  });
-};
-
 export function PerfilPage({ profile, onSalvar }) {
   const [form, setForm] = useState({
     nome: "",
@@ -97,13 +60,10 @@ export function PerfilPage({ profile, onSalvar }) {
   const [avatarSrc, setAvatarSrc] = useState("");
   const [avatarBlob, setAvatarBlob] = useState(null);
   const [cropModalOpen, setCropModalOpen] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [cropLoading, setCropLoading] = useState(false);
 
   const fileInputRef = useRef(null);
   const lastProfileIdRef = useRef(null);
+  const avatarObjectUrlRef = useRef("");
 
   useEffect(() => {
     if (!profile) return;
@@ -126,9 +86,22 @@ export function PerfilPage({ profile, onSalvar }) {
     if (profileChanged) {
       setIsDirty(false);
       setAvatarBlob(null);
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+        avatarObjectUrlRef.current = "";
+      }
       setAvatarSrc(profile.foto_url || "");
     }
   }, [profile, isDirty]);
+
+  useEffect(
+    () => () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    },
+    []
+  );
 
   const eu = useMemo(() => {
     if (!profile) return null;
@@ -166,31 +139,11 @@ export function PerfilPage({ profile, onSalvar }) {
     const reader = new FileReader();
     reader.onload = () => {
       setError("");
-      setCrop({ x: 0, y: 0 });
-      setZoom(1);
       setAvatarSrc(String(reader.result || ""));
       setCropModalOpen(true);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
-  };
-
-  const aplicarCrop = async () => {
-    if (!avatarSrc || !croppedAreaPixels) return;
-    try {
-      setCropLoading(true);
-      setError("");
-      const blob = await getCroppedBlob(avatarSrc, croppedAreaPixels);
-      const preview = URL.createObjectURL(blob);
-      setAvatarBlob(blob);
-      setAvatarSrc(preview);
-      setCropModalOpen(false);
-      setIsDirty(true);
-    } catch (err) {
-      setError(err?.message || "Não foi possível recortar a imagem.");
-    } finally {
-      setCropLoading(false);
-    }
   };
 
   const salvar = async () => {
@@ -326,53 +279,34 @@ export function PerfilPage({ profile, onSalvar }) {
       </div>
 
       {cropModalOpen && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setCropModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Ajustar avatar</div>
-              <button className="modal-close" onClick={() => setCropModalOpen(false)}>
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="avatar-crop-wrap">
-                <Cropper
-                  image={avatarSrc}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={1}
-                  cropShape="round"
-                  showGrid={false}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={(_, areaPixels) => setCroppedAreaPixels(areaPixels)}
-                />
-              </div>
-              <div style={{ marginTop: 14 }}>
-                <label className="form-label">ZOOM</label>
-                <input
-                  type="range"
-                  min={1}
-                  max={3}
-                  step={0.01}
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-                <button className="btn-ghost" onClick={() => setCropModalOpen(false)}>
-                  Cancelar
-                </button>
-                <button className="btn-primary" onClick={aplicarCrop} disabled={cropLoading}>
-                  {cropLoading ? "Aplicando..." : "Aplicar recorte"}
-                </button>
+        <Suspense
+          fallback={
+            <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }}>
+              <div className="modal" style={{ maxWidth: 560 }}>
+                <div className="modal-body">
+                  <div className="section-sub">Carregando editor de avatar...</div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          }
+        >
+          <PerfilAvatarCropModal
+            open={cropModalOpen}
+            avatarSrc={avatarSrc}
+            onClose={() => setCropModalOpen(false)}
+            onError={(message) => setError(message)}
+            onApply={(blob, preview) => {
+              if (avatarObjectUrlRef.current) URL.revokeObjectURL(avatarObjectUrlRef.current);
+              avatarObjectUrlRef.current = preview;
+              setError("");
+              setAvatarBlob(blob);
+              setAvatarSrc(preview);
+              setCropModalOpen(false);
+              setIsDirty(true);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
 }
-

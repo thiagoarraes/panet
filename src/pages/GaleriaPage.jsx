@@ -1,6 +1,9 @@
-﻿import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, ImageIcon, X } from "lucide-react";
+﻿import { Suspense, lazy, useState, useEffect, useCallback } from "react";
+import { ImageIcon } from "lucide-react";
 import { GALERIA_EVENTOS } from "../data/mockData.js";
+
+const loadGaleriaLightbox = () => import("../components/GaleriaLightbox");
+const GaleriaLightbox = lazy(() => loadGaleriaLightbox().then((m) => ({ default: m.GaleriaLightbox })));
 
 const slugifyGaleria = (value) =>
   String(value || "")
@@ -24,6 +27,7 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
   const [fotoIdx, setFotoIdx] = useState(0);
 
   const abrirEvento = (evento, options = {}) => {
+    loadGaleriaLightbox().catch(() => {});
     const shouldSyncUrl = options.syncUrl !== false;
     setEventoAberto(evento);
     setFotoIdx(0);
@@ -55,17 +59,6 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
   }, [eventoAberto]);
 
   useEffect(() => {
-    if (!eventoAberto) return;
-    const handler = (e) => {
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "ArrowRight") next();
-      if (e.key === "Escape") fechar();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [eventoAberto, fechar, next, prev]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const syncFromPath = () => {
@@ -78,6 +71,7 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
 
       const match = eventos.find((evento) => slugifyGaleria(evento?.evento || "") === slug);
       if (match) {
+        loadGaleriaLightbox().catch(() => {});
         setEventoAberto(match);
         setFotoIdx(0);
       } else {
@@ -114,33 +108,16 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
       </div>
 
       {eventoAberto && (
-        <div className="lightbox" onClick={() => fechar({ syncUrl: true })}>
-          <button className="lightbox-close" onClick={() => fechar({ syncUrl: true })}>
-            <X size={18} />
-          </button>
-          <button className="lightbox-prev lightbox-nav" onClick={(e) => { e.stopPropagation(); prev(); }}>
-            <ChevronLeft size={20} />
-          </button>
-          <img
-            key={fotoIdx}
-            className="lightbox-img"
-            src={eventoAberto.fotos[fotoIdx].src}
-            alt={eventoAberto.fotos[fotoIdx].legenda}
-            onClick={(e) => e.stopPropagation()}
+        <Suspense fallback={null}>
+          <GaleriaLightbox
+            eventoAberto={eventoAberto}
+            fotoIdx={fotoIdx}
+            onClose={() => fechar({ syncUrl: true })}
+            onPrev={prev}
+            onNext={next}
+            onSetFotoIdx={setFotoIdx}
           />
-          <button className="lightbox-next lightbox-nav" onClick={(e) => { e.stopPropagation(); next(); }}>
-            <ChevronRight size={20} />
-          </button>
-          <div className="lightbox-caption">
-            <div>{eventoAberto.fotos[fotoIdx].legenda}</div>
-            <div>{fotoIdx + 1}/{eventoAberto.fotos.length}</div>
-          </div>
-          <div className="lightbox-strip" onClick={(e) => e.stopPropagation()}>
-            {eventoAberto.fotos.map((f, i) => (
-              <img key={i} src={f.src} className={`lightbox-thumb ${i === fotoIdx ? "active" : ""}`} onClick={() => setFotoIdx(i)} alt="" />
-            ))}
-          </div>
-        </div>
+        </Suspense>
       )}
     </div>
   );
