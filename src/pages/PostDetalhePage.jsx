@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from "react";
-import { ArrowLeft, Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal } from "lucide-react";
+import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
 
@@ -61,16 +61,12 @@ const getPeriodoFolgaLabel = (item) => {
 export function PostDetalhePage({
   post,
   currentUser,
-  currentUserId,
-  onVoltar,
-  onToggleCurtida,
+  currentUserId,  onToggleCurtida,
   onComentar,
   onOpenAniversarios,
   onOpenFolgas,
   onEnviarMensagem,
-  aniversariantes = [],
-  colaboradores = [],
-  muralMsgs = [],
+  aniversariantes = [],  muralMsgs = [],
   ferias = [],
   dayoff = [],
 }) {
@@ -369,3 +365,4 @@ export function PostDetalhePage({
     </div>
   );
 }
+

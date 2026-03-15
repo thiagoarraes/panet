@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { CalendarDays, X } from "lucide-react";
+﻿import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 
 const ddmmToDate = (value) => {
@@ -41,7 +41,7 @@ export function AdminAniversarios({ aniversariantes, colaboradores, onCreateAniv
     <div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button className="btn-primary" onClick={abrirNovo}>
-          + Adicionar aniversário
+          + Adicionar aniversÃ¡rio
         </button>
       </div>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -93,7 +93,7 @@ export function AdminAniversarios({ aniversariantes, colaboradores, onCreateAniv
           <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-                {modal === "novo" ? "Adicionar aniversário" : "Editar aniversário"}
+                {modal === "novo" ? "Adicionar aniversÃ¡rio" : "Editar aniversÃ¡rio"}
               </div>
               <button className="modal-close" onClick={() => setModal(null)}>
                 <X size={18} />
@@ -136,3 +136,4 @@ export function AdminAniversarios({ aniversariantes, colaboradores, onCreateAniv
     </div>
   );
 }
+
