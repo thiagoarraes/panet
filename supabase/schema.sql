@@ -50,6 +50,21 @@ create policy "colaboradores: editar próprio"
   on public.colaboradores for update
   using (auth.uid() = id);
 
+create policy "colaboradores: admin update"
+  on public.colaboradores for update
+  using (
+    exists (
+      select 1 from public.colaboradores
+      where id = auth.uid() and perfil = 'admin'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.colaboradores
+      where id = auth.uid() and perfil = 'admin'
+    )
+  );
+
 -- Admins podem inserir e deletar
 create policy "colaboradores: admin insert"
   on public.colaboradores for insert

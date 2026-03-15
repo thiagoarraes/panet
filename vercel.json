@@ -1,5 +1,9 @@
 {
   "rewrites": [
+    {
+      "source": "/galerias/:path*",
+      "destination": "https://zzrmkncyulptvokgugih.supabase.co/storage/v1/object/public/galeria/:path*"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
