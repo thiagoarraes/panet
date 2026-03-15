@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-client-jwt",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -106,11 +106,22 @@ serve(async (req) => {
       });
     }
 
-    const { data: targetProfile, error: targetProfileError } = await adminClient
-      .from("colaboradores")
-      .select("id, foto_url")
-      .eq("id", userId)
-      .maybeSingle();
+    const [{ data: targetProfile, error: targetProfileError }, { error: reassignPostsError }, { data: userAvatarFiles, error: listAvatarError }] =
+      await Promise.all([
+        adminClient
+          .from("colaboradores")
+          .select("id, foto_url")
+          .eq("id", userId)
+          .maybeSingle(),
+        adminClient
+          .from("postagens")
+          .update({ autor_id: callerUser.id })
+          .eq("autor_id", userId),
+        adminClient.storage.from("avatares").list(userId, {
+          limit: 1000,
+          offset: 0,
+        }),
+      ]);
 
     if (targetProfileError) {
       return new Response(JSON.stringify({ error: targetProfileError.message }), {
@@ -119,13 +130,15 @@ serve(async (req) => {
       });
     }
 
-    const { error: reassignPostsError } = await adminClient
-      .from("postagens")
-      .update({ autor_id: callerUser.id })
-      .eq("autor_id", userId);
-
     if (reassignPostsError) {
       return new Response(JSON.stringify({ error: reassignPostsError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (listAvatarError) {
+      return new Response(JSON.stringify({ error: listAvatarError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -134,18 +147,6 @@ serve(async (req) => {
     const avatarPaths = new Set<string>();
     const currentAvatarPath = extractAvatarPathFromUrl(String(targetProfile?.foto_url || ""));
     if (currentAvatarPath) avatarPaths.add(currentAvatarPath);
-
-    const { data: userAvatarFiles, error: listAvatarError } = await adminClient.storage.from("avatares").list(userId, {
-      limit: 1000,
-      offset: 0,
-    });
-
-    if (listAvatarError) {
-      return new Response(JSON.stringify({ error: listAvatarError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     for (const file of userAvatarFiles || []) {
       if (!file?.name) continue;

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { COLABORADORES } from "../../data/mockData.js";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
@@ -31,6 +31,28 @@ const isJwtSessionError = (error) => {
   return msg.includes("invalid jwt") || msg.includes("jwt expired") || msg.includes("session expired");
 };
 
+const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v1";
+
+const readCachedAdminColaboradores = () => {
+  try {
+    const raw = localStorage.getItem(ADMIN_COLABS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch (_err) {
+    return null;
+  }
+};
+
+const writeCachedAdminColaboradores = (rows) => {
+  try {
+    if (!Array.isArray(rows)) return;
+    localStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(rows));
+  } catch (_err) {
+    // ignore cache failures
+  }
+};
+
 const mapProfileToRow = (profile, currentUserId) => {
   const iniciais = profile.nome
     ?.split(" ")
@@ -59,7 +81,11 @@ const mapProfileToRow = (profile, currentUserId) => {
 };
 
 export function AdminColaboradores() {
-  const [lista, setLista] = useState(isSupabaseEnabled ? [] : COLABORADORES);
+  const [lista, setLista] = useState(() => {
+    if (!isSupabaseEnabled) return COLABORADORES;
+    const cached = readCachedAdminColaboradores();
+    return Array.isArray(cached) ? cached : [];
+  });
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -67,31 +93,27 @@ export function AdminColaboradores() {
   const [errorMsg, setErrorMsg] = useState("");
   const [senhaGerada, setSenhaGerada] = useState(null);
   const [senhaCopiada, setSenhaCopiada] = useState(false);
+  const refreshTimerRef = useRef(null);
+
+  const getValidAccessToken = useCallback(async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (session?.access_token) return session.access_token;
+
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed?.session?.access_token) {
+      throw new Error("Sessão expirada. Faça login novamente.");
+    }
+    return refreshed.session.access_token;
+  }, []);
 
   const invokeAdminFunction = async (fnName, body, fallbackMessage) => {
-    const getAccessToken = async () => {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (session?.access_token) return session.access_token;
-
-      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshed?.session?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.");
-      }
-      return refreshed.session.access_token;
-    };
-
     try {
-      const accessToken = await getAccessToken();
-      const { data, error } = await supabase.functions.invoke(fnName, {
-        body,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      await getValidAccessToken();
+      const { data, error } = await supabase.functions.invoke(fnName, { body });
       if (error || data?.error) {
         const parsedMessage = await parseFunctionInvokeError(error || data, fallbackMessage);
         throw new Error(parsedMessage || fallbackMessage);
@@ -103,14 +125,8 @@ export function AdminColaboradores() {
         throw new Error(parsedMessage || fallbackMessage);
       }
 
-      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshed?.session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
-      const { data: retriedData, error: retriedError } = await supabase.functions.invoke(fnName, {
-        body,
-        headers: {
-          Authorization: `Bearer ${refreshed.session.access_token}`,
-        },
-      });
+      await getValidAccessToken();
+      const { data: retriedData, error: retriedError } = await supabase.functions.invoke(fnName, { body });
       if (retriedError || retriedData?.error) {
         const retriedMessage = await parseFunctionInvokeError(retriedError || retriedData, fallbackMessage);
         throw new Error(retriedMessage || fallbackMessage);
@@ -119,14 +135,48 @@ export function AdminColaboradores() {
     }
   };
 
-  const carregarColaboradores = useCallback(async () => {
+  const invokeDeleteCollaborator = useCallback(async (userId) => {
+    const call = async () => {
+      const accessToken = await getValidAccessToken();
+      const { data, error } = await supabase.functions.invoke("delete-collaborator", {
+        body: { user_id: userId },
+        headers: {
+          "x-client-jwt": accessToken,
+        },
+      });
+      if (error || data?.error) {
+        const parsedMessage = await parseFunctionInvokeError(error || data, "Não foi possível excluir o colaborador.");
+        throw new Error(parsedMessage || "Não foi possível excluir o colaborador.");
+      }
+      return data || {};
+    };
+
+    try {
+      return await call();
+    } catch (err) {
+      const msg = String(err?.message || "");
+      if (!isJwtSessionError({ message: msg })) throw err;
+      await supabase.auth.refreshSession();
+      return call();
+    }
+  }, [getValidAccessToken]);
+
+  const carregarColaboradores = useCallback(async (options = {}) => {
     if (!isSupabaseEnabled) return;
-    setLoading(true);
+    const { silent = false, force = false } = options;
+    const cachedRows = !force ? readCachedAdminColaboradores() : null;
+    const showBlockingLoading = !silent && (!Array.isArray(cachedRows) || cachedRows.length === 0);
+    if (showBlockingLoading) setLoading(true);
     setErrorMsg("");
     try {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const loggedUserId = session?.user?.id || null;
+
+      if (!force && Array.isArray(cachedRows) && cachedRows.length > 0) {
+        setLista(cachedRows.map((row) => mapProfileToRow(row, loggedUserId)));
+      }
 
       const { data, error } = await supabase
         .from("colaboradores")
@@ -134,18 +184,20 @@ export function AdminColaboradores() {
         .order("nome", { ascending: true });
       if (error) throw error;
 
-      const loggedUserId = user?.id || null;
+      writeCachedAdminColaboradores(data || []);
       setLista((data || []).map((row) => mapProfileToRow(row, loggedUserId)));
     } catch (err) {
-      setLista([]);
-      setErrorMsg(err?.message || "Não foi possível carregar colaboradores.");
+      if (!Array.isArray(cachedRows) || cachedRows.length === 0) {
+        setLista([]);
+        setErrorMsg(err?.message || "Não foi possível carregar colaboradores.");
+      }
     } finally {
-      setLoading(false);
+      if (showBlockingLoading) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    carregarColaboradores();
+    carregarColaboradores({ silent: true });
   }, [carregarColaboradores]);
 
   useEffect(() => {
@@ -153,11 +205,15 @@ export function AdminColaboradores() {
     const channel = supabase
       .channel("admin-colaboradores-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "colaboradores" }, () => {
-        carregarColaboradores().catch(() => {});
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = setTimeout(() => {
+          carregarColaboradores({ silent: true, force: true }).catch(() => {});
+        }, 250);
       })
       .subscribe();
 
     return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       channel.unsubscribe();
     };
   }, [carregarColaboradores]);
@@ -231,7 +287,7 @@ export function AdminColaboradores() {
           .eq("id", form.id);
         if (error) throw error;
       }
-      await carregarColaboradores();
+      await carregarColaboradores({ force: true });
       setModal(null);
     } catch (err) {
       setErrorMsg(err?.message || "Não foi possível salvar o colaborador.");
@@ -247,13 +303,16 @@ export function AdminColaboradores() {
       return;
     }
 
+    const previousLista = lista;
+    setConfirmarExcluir(null);
+    setLista((p) => p.filter((c) => c.id !== colaborador.id));
     setLoading(true);
     setErrorMsg("");
     try {
-      await invokeAdminFunction("delete-collaborator", { user_id: colaborador.id }, "Não foi possível excluir o colaborador.");
-      await carregarColaboradores();
-      setConfirmarExcluir(null);
+      await invokeDeleteCollaborator(colaborador.id);
+      carregarColaboradores({ force: true, silent: true }).catch(() => {});
     } catch (err) {
+      setLista(previousLista);
       setErrorMsg(err?.message || "Não foi possível excluir o colaborador.");
     } finally {
       setLoading(false);
@@ -275,7 +334,7 @@ export function AdminColaboradores() {
       });
       setSenhaCopiada(false);
 
-      await carregarColaboradores();
+      await carregarColaboradores({ force: true });
     } catch (err) {
       setErrorMsg(err?.message || "Não foi possível alterar a senha.");
     } finally {
@@ -572,5 +631,6 @@ export function AdminColaboradores() {
     </div>
   );
 }
+
 
 
