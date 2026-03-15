@@ -353,6 +353,8 @@ const toPostSlug = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const escapeIlikeTerm = (value) => String(value || "").replace(/[\\%_]/g, (char) => `\\${char}`);
+
 const isTransientAuthTimeout = (err) => {
   const msg = String(err?.message || "");
   return msg === "session_timeout" || msg === "profile_timeout" || msg === "session_recheck_timeout";
@@ -372,6 +374,21 @@ const hasStoredSupabaseSession = () => {
     // ignore
   }
   return false;
+};
+
+const clearStoredSupabaseSession = () => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i) || "";
+      if (key.startsWith("sb-") && key.endsWith("-auth-token")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (_err) {
+    // ignore cache failures
+  }
 };
 
 const readCachedProfile = () => {
@@ -694,6 +711,143 @@ export default function PanetApp() {
     [loadAniversarios, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens]
   );
 
+  const listAdminPostagens = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+
+    let query = supabase
+      .from("postagens")
+      .select("id,titulo,descricao,imagem_url,categoria,data_post,created_at,curtidas(colaborador_id),comentarios(id)", { count: "exact" })
+      .order("data_post", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (term) {
+      const escaped = escapeIlikeTerm(term);
+      query = query.or(`titulo.ilike.%${escaped}%,descricao.ilike.%${escaped}%,categoria.ilike.%${escaped}%`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const rows = (data || []).map((post) => ({
+      id: post.id,
+      titulo: post.titulo,
+      descricao: post.descricao,
+      imagem: post.imagem_url || postImg(post.id),
+      categoria: post.categoria,
+      data: post.data_post,
+      curtidas: (post.curtidas || []).map((item) => item.colaborador_id),
+      comentarios: (post.comentarios || []).map((item) => ({ id: item.id })),
+      userCurtiu: false,
+    }));
+    return { rows, count: Number(count || 0) };
+  }, [currentProfile?.id]);
+
+  const listAdminFerias = useCallback(async ({ tipo = "ferias", page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+
+    let query = supabase
+      .from("ferias")
+      .select("id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)", {
+        count: "exact",
+      })
+      .eq("tipo", tipo === "dayoff" ? "dayoff" : "ferias")
+      .order("inicio", { ascending: true })
+      .range(from, to);
+
+    if (term) {
+      const escaped = escapeIlikeTerm(term);
+      const { data: cols, error: colsError } = await supabase
+        .from("colaboradores")
+        .select("id")
+        .or(`nome.ilike.%${escaped}%,cargo.ilike.%${escaped}%`)
+        .limit(300);
+      if (colsError) throw new Error(colsError.message);
+      const ids = (cols || []).map((row) => row.id);
+      if (ids.length > 0) {
+        query = query.in("colaborador_id", ids);
+      } else {
+        query = query.ilike("status", `%${escaped}%`);
+      }
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw new Error(error.message);
+    return { rows: (data || []).map(mapDbFeriasToUi), count: Number(count || 0) };
+  }, [currentProfile?.id]);
+
+  const listAdminGaleria = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+
+    let query = supabase
+      .from("galeria_eventos")
+      .select("id,titulo,mes_ano,capa_url,created_at,galeria_fotos(id,evento_id,foto_url,legenda,ordem,created_at)", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .order("ordem", { foreignTable: "galeria_fotos", ascending: true })
+      .range(from, to);
+
+    if (term) {
+      const escaped = escapeIlikeTerm(term);
+      query = query.or(`titulo.ilike.%${escaped}%,mes_ano.ilike.%${escaped}%`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw new Error(error.message);
+    return { rows: mapDbGaleriaToUi(data || []), count: Number(count || 0) };
+  }, [currentProfile?.id]);
+
+  const listAdminMural = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+
+    let query = supabase
+      .from("mural")
+      .select("id,texto,created_at,colaborador:colaboradores!mural_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)", {
+        count: "exact",
+      })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (term) {
+      const escaped = escapeIlikeTerm(term);
+      const { data: cols, error: colsError } = await supabase
+        .from("colaboradores")
+        .select("id")
+        .ilike("nome", `%${escaped}%`)
+        .limit(300);
+      if (colsError) throw new Error(colsError.message);
+      const ids = (cols || []).map((row) => row.id);
+      if (ids.length > 0) {
+        query = query.in("colaborador_id", ids);
+      } else {
+        query = query.ilike("texto", `%${escaped}%`);
+      }
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw new Error(error.message);
+    return { rows: (data || []).map(mapDbMuralToUi), count: Number(count || 0) };
+  }, [currentProfile?.id]);
+
   const loadProfileAndRoute = useCallback(
     async (activeSession) => {
       if (!activeSession?.user?.id) {
@@ -934,14 +1088,14 @@ export default function PanetApp() {
       const { error } = await supabase.from("curtidas").insert({ postagem_id: postId, colaborador_id: currentProfile.id });
       if (error) throw new Error(error.message);
     }
-    await loadPostagens(currentProfile.id, { force: true });
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleComentar = async (postId, texto) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
     const { error } = await supabase.from("comentarios").insert({ postagem_id: postId, colaborador_id: currentProfile.id, texto });
     if (error) throw new Error(error.message);
-    await loadPostagens(currentProfile.id, { force: true });
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleCreatePost = async (payload) => {
@@ -955,7 +1109,7 @@ export default function PanetApp() {
       autor_id: currentProfile.id,
     });
     if (error) throw new Error(error.message);
-    await loadPostagens(currentProfile.id, { force: true });
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleUpdatePost = async (postId, payload) => {
@@ -971,7 +1125,7 @@ export default function PanetApp() {
       })
       .eq("id", postId);
     if (error) throw new Error(error.message);
-    await loadPostagens(currentProfile.id, { force: true });
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleDeletePost = async (postId) => {
@@ -979,28 +1133,28 @@ export default function PanetApp() {
     const { error } = await supabase.from("postagens").delete().eq("id", postId);
     if (error) throw new Error(error.message);
     if (selectedPost?.id === postId) navigateTo("postagens");
-    await loadPostagens(currentProfile.id, { force: true });
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
   const handleCreateFerias = async (payload) => {
     if (!isSupabaseEnabled) return;
     const { error } = await supabase.from("ferias").insert(payload);
     if (error) throw new Error(error.message);
-    await loadFerias(currentProfile?.id, { force: true });
+    loadFerias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar férias:", err));
   };
 
   const handleUpdateFerias = async (id, payload) => {
     if (!isSupabaseEnabled) return;
     const { error } = await supabase.from("ferias").update(payload).eq("id", id);
     if (error) throw new Error(error.message);
-    await loadFerias(currentProfile?.id, { force: true });
+    loadFerias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar férias:", err));
   };
 
   const handleDeleteFerias = async (id) => {
     if (!isSupabaseEnabled) return;
     const { error } = await supabase.from("ferias").delete().eq("id", id);
     if (error) throw new Error(error.message);
-    await loadFerias(currentProfile?.id, { force: true });
+    loadFerias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar férias:", err));
   };
 
   const handleCreateGaleriaEvento = async (payload) => {
@@ -1014,7 +1168,7 @@ export default function PanetApp() {
       .select("id,titulo,mes_ano,capa_url,created_at")
       .single();
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
     return data;
   };
 
@@ -1028,7 +1182,7 @@ export default function PanetApp() {
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleDeleteGaleriaEvento = async (id) => {
@@ -1052,7 +1206,7 @@ export default function PanetApp() {
 
     const { error } = await supabase.from("galeria_eventos").delete().eq("id", id);
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleAddGaleriaFoto = async (eventoId, payload) => {
@@ -1066,7 +1220,7 @@ export default function PanetApp() {
       ordem: nextOrdem,
     });
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleUpdateGaleriaFoto = async (fotoId, payload) => {
@@ -1079,21 +1233,21 @@ export default function PanetApp() {
       })
       .eq("id", fotoId);
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleDeleteGaleriaFoto = async (fotoId) => {
     if (!isSupabaseEnabled) return;
     const { error } = await supabase.from("galeria_fotos").delete().eq("id", fotoId);
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleSetGaleriaCapa = async (eventoId, fotoUrl) => {
     if (!isSupabaseEnabled || !eventoId || !fotoUrl) return;
     const { error } = await supabase.from("galeria_eventos").update({ capa_url: fotoUrl }).eq("id", eventoId);
     if (error) throw new Error(error.message);
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleUploadGaleriaFotos = async (eventoId, files, opts = {}) => {
@@ -1141,7 +1295,7 @@ export default function PanetApp() {
       await supabase.from("galeria_eventos").update({ capa_url: firstUploadedPublicUrl }).eq("id", eventoId);
     }
 
-    await loadGaleria(currentProfile?.id, { force: true });
+    loadGaleria(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar galerias:", err));
   };
 
   const handleEnviarMensagem = async (texto) => {
@@ -1151,14 +1305,14 @@ export default function PanetApp() {
       texto,
     });
     if (error) throw new Error(error.message);
-    await loadMural(currentProfile?.id, { force: true });
+    loadMural(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar mural:", err));
   };
 
   const handleDeleteMuralMensagem = async (id) => {
     if (!isSupabaseEnabled) return;
     const { error } = await supabase.from("mural").delete().eq("id", id);
     if (error) throw new Error(error.message);
-    await loadMural(currentProfile?.id, { force: true });
+    loadMural(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar mural:", err));
   };
 
   const handleSalvarPerfil = async (payload) => {
@@ -1343,19 +1497,25 @@ export default function PanetApp() {
     return { added: !alreadyReacted };
   };
 
-  const handleLogout = async () => {
-    if (isSupabaseEnabled) {
-      await supabase.auth.signOut().catch(() => {});
-    }
+  const handleLogout = () => {
+    clearStoredSupabaseSession();
     setCurrentProfile(null);
     writeCachedProfile(null);
     setTela("login");
     setPagina("dashboard");
     setAdminAba("colaboradores");
+    setMobileNavOpen(false);
     if (typeof window !== "undefined") {
       window.history.replaceState({}, "", PAGE_PATHS.dashboard);
     }
     setUserMenuOpen(false);
+
+    if (isSupabaseEnabled) {
+      supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      setTimeout(() => {
+        supabase.auth.signOut().catch(() => {});
+      }, 0);
+    }
   };
 
   const handleToggleTheme = () => {
@@ -1445,16 +1605,20 @@ export default function PanetApp() {
         ferias={ferias}
         dayoff={dayoff}
         colaboradores={colaboradores}
+        currentUserId={currentProfile?.id}
         onCreatePost={handleCreatePost}
         onUpdatePost={handleUpdatePost}
         onDeletePost={handleDeletePost}
+        onListPostagens={listAdminPostagens}
         onCreateFerias={handleCreateFerias}
         onUpdateFerias={handleUpdateFerias}
         onDeleteFerias={handleDeleteFerias}
+        onListFerias={listAdminFerias}
         galeriaEventos={galeriaEventos}
         onCreateGaleriaEvento={handleCreateGaleriaEvento}
         onUpdateGaleriaEvento={handleUpdateGaleriaEvento}
         onDeleteGaleriaEvento={handleDeleteGaleriaEvento}
+        onListGaleria={listAdminGaleria}
         onAddGaleriaFoto={handleAddGaleriaFoto}
         onUpdateGaleriaFoto={handleUpdateGaleriaFoto}
         onDeleteGaleriaFoto={handleDeleteGaleriaFoto}
@@ -1462,6 +1626,7 @@ export default function PanetApp() {
         onSetGaleriaCapa={handleSetGaleriaCapa}
         muralMsgs={muralMsgs}
         onDeleteMuralMensagem={handleDeleteMuralMensagem}
+        onListMural={listAdminMural}
       />
     ),
   };
@@ -1560,4 +1725,6 @@ export default function PanetApp() {
     </>
   );
 }
+
+
 

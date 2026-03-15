@@ -6,6 +6,7 @@ export function AdminGaleria({
   onCreateEvento,
   onUpdateEvento,
   onDeleteEvento,
+  onListGaleria,
   onDeleteFoto,
   onUploadFotosEvento,
   onSetCapaEvento,
@@ -20,6 +21,9 @@ export function AdminGaleria({
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
   const [hiddenEventoIds, setHiddenEventoIds] = useState(new Set());
+  const [serverRows, setServerRows] = useState([]);
+  const [serverCount, setServerCount] = useState(0);
+  const [serverLoading, setServerLoading] = useState(false);
   const inputFotosMaisRef = useRef(null);
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const PAGE_SIZE = 20;
@@ -63,7 +67,41 @@ export function AdminGaleria({
     return eventosVisiveis.slice(start, start + PAGE_SIZE);
   }, [eventosVisiveis, page]);
 
-  const eventoAtual = useMemo(() => eventos.find((e) => e.id === modalFotos) || null, [eventos, modalFotos]);
+  useEffect(() => {
+    if (!onListGaleria) return;
+    let active = true;
+    setServerLoading(true);
+    onListGaleria({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
+      .then((result) => {
+        if (!active) return;
+        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
+        setServerCount(Number(result?.count || 0));
+      })
+      .catch((error) => {
+        console.error(error);
+        if (active) {
+          setServerRows([]);
+          setServerCount(0);
+        }
+      })
+      .finally(() => {
+        if (active) setServerLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentPage, onListGaleria, searchTerm]);
+
+  const hasServerPagination = typeof onListGaleria === "function";
+  const rows = hasServerPagination ? serverRows : eventosPaginados;
+  const totalItems = hasServerPagination ? serverCount : eventosVisiveis.length;
+  const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const uiPage = Math.min(currentPage, uiTotalPages);
+
+  const eventoAtual = useMemo(() => {
+    const source = hasServerPagination ? rows : eventos;
+    return source.find((e) => e.id === modalFotos) || null;
+  }, [eventos, hasServerPagination, modalFotos, rows]);
 
   const abrirNovoEvento = () => {
     setEventoForm({ titulo: "", mes: "", ano: "" });
@@ -79,17 +117,29 @@ export function AdminGaleria({
   };
 
   const excluirEvento = async (id) => {
+    const snapshotServerRows = [...serverRows];
+    const snapshotServerCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
-      setHiddenEventoIds((prev) => new Set(prev).add(id));
+      if (hasServerPagination) {
+        setServerRows((prev) => prev.filter((row) => row.id !== id));
+        setServerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setHiddenEventoIds((prev) => new Set(prev).add(id));
+      }
       await onDeleteEvento?.(id);
     } catch (error) {
       console.error(error);
-      setHiddenEventoIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      if (hasServerPagination) {
+        setServerRows(snapshotServerRows);
+        setServerCount(snapshotServerCount);
+      } else {
+        setHiddenEventoIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
@@ -157,7 +207,7 @@ export function AdminGaleria({
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {eventosPaginados.map((evento) => (
+        {rows.map((evento) => (
           <div key={evento.id} className="card" style={{ padding: 14 }}>
             <div className="admin-galeria-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
@@ -196,21 +246,23 @@ export function AdminGaleria({
             </div>
           </div>
         ))}
-        {eventosPaginados.length === 0 && (
-          <div className="empty-state">{searchTerm ? "Nenhum evento encontrado para este filtro." : "Sem eventos de galeria."}</div>
+        {rows.length === 0 && (
+          <div className="empty-state">
+            {serverLoading ? "Carregando..." : searchTerm ? "Nenhum evento encontrado para este filtro." : "Sem eventos de galeria."}
+          </div>
         )}
       </div>
 
-      {eventosVisiveis.length > PAGE_SIZE && (
+      {totalItems > PAGE_SIZE && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            Página {page} de {totalPages} · {eventosVisiveis.length} item(ns)
+            Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>
               Próxima
             </button>
           </div>

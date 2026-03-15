@@ -13,18 +13,23 @@ export function AdminPage({
   ferias,
   dayoff,
   colaboradores,
+  currentUserId,
   onCreatePost,
   onUpdatePost,
   onDeletePost,
+  onListPostagens,
   onCreateFerias,
   onUpdateFerias,
   onDeleteFerias,
+  onListFerias,
   muralMsgs,
   onDeleteMuralMensagem,
+  onListMural,
   galeriaEventos,
   onCreateGaleriaEvento,
   onUpdateGaleriaEvento,
   onDeleteGaleriaEvento,
+  onListGaleria,
   onAddGaleriaFoto,
   onUpdateGaleriaFoto,
   onDeleteGaleriaFoto,
@@ -56,7 +61,7 @@ export function AdminPage({
           </button>
         ))}
       </div>
-      {aba === "colaboradores" && <AdminColaboradores />}
+      {aba === "colaboradores" && <AdminColaboradores initialColaboradores={colaboradores} currentUserId={currentUserId} />}
       {aba === "postagens" && (
         <AdminPostagens
           postagens={postagens}
@@ -64,6 +69,7 @@ export function AdminPage({
           onCreatePost={onCreatePost}
           onUpdatePost={onUpdatePost}
           onDeletePost={onDeletePost}
+          onListPostagens={onListPostagens}
         />
       )}
       {aba === "ferias" && (
@@ -74,6 +80,7 @@ export function AdminPage({
           onCreateFerias={onCreateFerias}
           onUpdateFerias={onUpdateFerias}
           onDeleteFerias={onDeleteFerias}
+          onListFerias={onListFerias}
         />
       )}
       {aba === "galeria" && (
@@ -82,6 +89,7 @@ export function AdminPage({
           onCreateEvento={onCreateGaleriaEvento}
           onUpdateEvento={onUpdateGaleriaEvento}
           onDeleteEvento={onDeleteGaleriaEvento}
+          onListGaleria={onListGaleria}
           onAddFoto={onAddGaleriaFoto}
           onUpdateFoto={onUpdateGaleriaFoto}
           onDeleteFoto={onDeleteGaleriaFoto}
@@ -89,7 +97,7 @@ export function AdminPage({
           onSetCapaEvento={onSetGaleriaCapa}
         />
       )}
-      {aba === "mural" && <AdminMural mensagens={muralMsgs} onDeleteMensagem={onDeleteMuralMensagem} />}
+      {aba === "mural" && <AdminMural mensagens={muralMsgs} onDeleteMensagem={onDeleteMuralMensagem} onListMural={onListMural} />}
     </div>
   );
 }

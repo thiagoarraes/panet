@@ -2,13 +2,16 @@
 import { AlertTriangle, MessageSquare, Trash2 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 
-export function AdminMural({ mensagens = [], onDeleteMensagem }) {
+export function AdminMural({ mensagens = [], onDeleteMensagem, onListMural }) {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [hiddenMensagemIds, setHiddenMensagemIds] = useState(new Set());
+  const [serverRows, setServerRows] = useState([]);
+  const [serverCount, setServerCount] = useState(0);
+  const [serverLoading, setServerLoading] = useState(false);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -51,21 +54,64 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
     return mensagensVisiveis.slice(start, start + PAGE_SIZE);
   }, [mensagensVisiveis, page]);
 
+  useEffect(() => {
+    if (!onListMural) return;
+    let active = true;
+    setServerLoading(true);
+    onListMural({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
+      .then((result) => {
+        if (!active) return;
+        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
+        setServerCount(Number(result?.count || 0));
+      })
+      .catch((error) => {
+        console.error(error);
+        if (active) {
+          setServerRows([]);
+          setServerCount(0);
+        }
+      })
+      .finally(() => {
+        if (active) setServerLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentPage, onListMural, searchTerm]);
+
+  const hasServerPagination = typeof onListMural === "function";
+  const rows = hasServerPagination ? serverRows : mensagensPaginadas;
+  const totalItems = hasServerPagination ? serverCount : mensagensVisiveis.length;
+  const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const uiPage = Math.min(currentPage, uiTotalPages);
+
   const handleDelete = async () => {
     if (!confirmarExcluir) return;
+    const snapshotServerRows = [...serverRows];
+    const snapshotServerCount = serverCount;
     const id = confirmarExcluir.id;
     try {
       setDeletingId(id);
-      setHiddenMensagemIds((prev) => new Set(prev).add(id));
+      if (hasServerPagination) {
+        setServerRows((prev) => prev.filter((row) => row.id !== id));
+        setServerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setHiddenMensagemIds((prev) => new Set(prev).add(id));
+      }
       await onDeleteMensagem?.(id);
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      setHiddenMensagemIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      if (hasServerPagination) {
+        setServerRows(snapshotServerRows);
+        setServerCount(snapshotServerCount);
+      } else {
+        setHiddenMensagemIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     } finally {
       setDeletingId(null);
     }
@@ -87,7 +133,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
       </div>
       <div className="card-body">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {mensagensPaginadas.map((m) => (
+          {rows.map((m) => (
             <div
               key={m.id}
               className="admin-mural-item"
@@ -122,20 +168,20 @@ export function AdminMural({ mensagens = [], onDeleteMensagem }) {
               </button>
             </div>
           ))}
-          {mensagensPaginadas.length === 0 && <div className="empty-state">Nenhuma mensagem no PanZap.</div>}
+          {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhuma mensagem no PanZap."}</div>}
         </div>
       </div>
 
-      {mensagensVisiveis.length > PAGE_SIZE && (
+      {totalItems > PAGE_SIZE && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 16px" }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            Página {page} de {totalPages} · {mensagensVisiveis.length} item(ns)
+            Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>
               Próxima
             </button>
           </div>

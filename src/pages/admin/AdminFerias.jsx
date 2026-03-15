@@ -25,7 +25,7 @@ const formatDateForStore = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onUpdateFerias, onDeleteFerias }) {
+export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onUpdateFerias, onDeleteFerias, onListFerias }) {
   const [sub, setSub] = useState("ferias");
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
@@ -36,6 +36,9 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
   const [hiddenIds, setHiddenIds] = useState(new Set());
+  const [serverRows, setServerRows] = useState([]);
+  const [serverCount, setServerCount] = useState(0);
+  const [serverLoading, setServerLoading] = useState(false);
   const PAGE_SIZE = 20;
   const listaBase = sub === "ferias" ? ferias : dayoff;
 
@@ -86,6 +89,42 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     return listaFiltrada.slice(start, start + PAGE_SIZE);
   }, [listaFiltrada, page]);
 
+  useEffect(() => {
+    if (!onListFerias) return;
+    let active = true;
+    setServerLoading(true);
+    onListFerias({
+      tipo: sub === "ferias" ? "ferias" : "dayoff",
+      page: currentPage,
+      pageSize: PAGE_SIZE,
+      search: searchTerm,
+    })
+      .then((result) => {
+        if (!active) return;
+        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
+        setServerCount(Number(result?.count || 0));
+      })
+      .catch((error) => {
+        console.error(error);
+        if (active) {
+          setServerRows([]);
+          setServerCount(0);
+        }
+      })
+      .finally(() => {
+        if (active) setServerLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentPage, onListFerias, searchTerm, sub]);
+
+  const hasServerPagination = typeof onListFerias === "function";
+  const rows = hasServerPagination ? serverRows : listaPaginada;
+  const totalItems = hasServerPagination ? serverCount : listaFiltrada.length;
+  const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const uiPage = Math.min(currentPage, uiTotalPages);
+
   const abrirNovo = () => {
     setForm({ colaboradorId: "", inicio: "", fim: "", status: "marcado" });
     setModal("novo");
@@ -121,18 +160,30 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   const removerRegistro = async () => {
     if (!confirmarExcluir?.id) return;
     const id = confirmarExcluir.id;
+    const snapshotServerRows = [...serverRows];
+    const snapshotServerCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
-      setHiddenIds((prev) => new Set(prev).add(id));
+      if (hasServerPagination) {
+        setServerRows((prev) => prev.filter((row) => row.id !== id));
+        setServerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setHiddenIds((prev) => new Set(prev).add(id));
+      }
       await onDeleteFerias(id);
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      setHiddenIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      if (hasServerPagination) {
+        setServerRows(snapshotServerRows);
+        setServerCount(snapshotServerCount);
+      } else {
+        setHiddenIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
@@ -168,7 +219,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {listaPaginada.map((item) => (
+        {rows.map((item) => (
           <div key={item.id} className="card" style={{ padding: 16 }}>
             <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <Avatar col={item.colaborador} size={40} />
@@ -220,19 +271,19 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
             </div>
           </div>
         ))}
-        {listaPaginada.length === 0 && <div className="empty-state">Nenhum registro encontrado.</div>}
+        {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhum registro encontrado."}</div>}
       </div>
 
-      {listaFiltrada.length > PAGE_SIZE && (
+      {totalItems > PAGE_SIZE && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            Página {page} de {totalPages} · {listaFiltrada.length} item(ns)
+            Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>
               Próxima
             </button>
           </div>

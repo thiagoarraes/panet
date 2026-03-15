@@ -104,8 +104,12 @@ const mapProfileToRow = (profile, currentUserId) => {
   };
 };
 
-export function AdminColaboradores() {
-  const [lista, setLista] = useState(isSupabaseEnabled ? [] : COLABORADORES);
+export function AdminColaboradores({ initialColaboradores = [], currentUserId = null }) {
+  const [lista, setLista] = useState(() => {
+    if (!isSupabaseEnabled) return COLABORADORES;
+    if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return [];
+    return initialColaboradores.map((row) => mapProfileToRow(row, currentUserId));
+  });
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -116,7 +120,7 @@ export function AdminColaboradores() {
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(isSupabaseEnabled ? 0 : COLABORADORES.length);
+  const [totalItems, setTotalItems] = useState(() => (isSupabaseEnabled ? (Array.isArray(initialColaboradores) ? initialColaboradores.length : 0) : COLABORADORES.length));
   const refreshTimerRef = useRef(null);
   const totalPages = Math.max(1, Math.ceil((totalItems || 0) / PAGE_SIZE));
 
@@ -195,6 +199,13 @@ export function AdminColaboradores() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
+    if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return;
+    setLista((prev) => (prev.length > 0 ? prev : initialColaboradores.map((row) => mapProfileToRow(row, currentUserId))));
+    setTotalItems((prev) => (prev > 0 ? prev : initialColaboradores.length));
+  }, [currentUserId, initialColaboradores]);
+
   const carregarColaboradores = useCallback(async (options = {}) => {
     if (!isSupabaseEnabled) return;
     const { silent = false, force = false } = options;
@@ -205,13 +216,8 @@ export function AdminColaboradores() {
     if (showBlockingLoading) setLoading(true);
     setErrorMsg("");
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const loggedUserId = session?.user?.id || null;
-
       if (!force && cachedPayload && cachedPayload.rows.length > 0) {
-        setLista(cachedPayload.rows.map((row) => mapProfileToRow(row, loggedUserId)));
+        setLista(cachedPayload.rows.map((row) => mapProfileToRow(row, currentUserId)));
         setTotalItems(cachedPayload.total || cachedPayload.rows.length);
       }
 
@@ -219,7 +225,7 @@ export function AdminColaboradores() {
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,perfil", { count: "exact" })
+        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil", { count: "planned" })
         .order("nome", { ascending: true })
         .range(from, to);
       if (normalizedSearch) {
@@ -229,7 +235,7 @@ export function AdminColaboradores() {
       if (error) throw error;
 
       writeCachedAdminColaboradores(queryKey, data || [], count || 0);
-      setLista((data || []).map((row) => mapProfileToRow(row, loggedUserId)));
+      setLista((data || []).map((row) => mapProfileToRow(row, currentUserId)));
       setTotalItems(Number(count || 0));
     } catch (err) {
       if (!cachedPayload || cachedPayload.rows.length === 0) {
@@ -240,7 +246,7 @@ export function AdminColaboradores() {
     } finally {
       if (showBlockingLoading) setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage, currentUserId, searchTerm]);
 
   useEffect(() => {
     carregarColaboradores({ silent: true });

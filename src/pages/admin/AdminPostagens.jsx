@@ -38,7 +38,7 @@ const formatDateForStore = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdatePost, onDeletePost }) {
+export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdatePost, onDeletePost, onListPostagens }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -47,6 +47,9 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
+  const [serverRows, setServerRows] = useState([]);
+  const [serverCount, setServerCount] = useState(0);
+  const [serverLoading, setServerLoading] = useState(false);
   const CATS = ["Notícia", "Comunicado", "Evento"];
   const PAGE_SIZE = 20;
 
@@ -75,6 +78,37 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
     const start = (page - 1) * PAGE_SIZE;
     return postagensFiltradas.slice(start, start + PAGE_SIZE);
   }, [page, postagensFiltradas]);
+
+  useEffect(() => {
+    if (!onListPostagens) return;
+    let active = true;
+    setServerLoading(true);
+    onListPostagens({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
+      .then((result) => {
+        if (!active) return;
+        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
+        setServerCount(Number(result?.count || 0));
+      })
+      .catch((error) => {
+        console.error(error);
+        if (active) {
+          setServerRows([]);
+          setServerCount(0);
+        }
+      })
+      .finally(() => {
+        if (active) setServerLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [currentPage, onListPostagens, searchTerm]);
+
+  const hasServerPagination = typeof onListPostagens === "function";
+  const rows = hasServerPagination ? serverRows : postagensPaginadas;
+  const totalItems = hasServerPagination ? serverCount : postagensFiltradas.length;
+  const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const uiPage = Math.min(currentPage, uiTotalPages);
 
   const abrirNovo = () => {
     setForm({
@@ -117,16 +151,28 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
 
   const excluir = async (post) => {
     const snapshot = [...postagens];
+    const snapshotServerRows = [...serverRows];
+    const snapshotServerCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(post.id));
-      setPostagens((p) => p.filter((x) => x.id !== post.id));
+      if (hasServerPagination) {
+        setServerRows((prev) => prev.filter((x) => x.id !== post.id));
+        setServerCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setPostagens((p) => p.filter((x) => x.id !== post.id));
+      }
       if (onDeletePost) {
         await onDeletePost(post.id);
       }
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      setPostagens(snapshot);
+      if (hasServerPagination) {
+        setServerRows(snapshotServerRows);
+        setServerCount(snapshotServerCount);
+      } else {
+        setPostagens(snapshot);
+      }
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
@@ -151,7 +197,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
         </button>
       </div>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {postagensPaginadas.map((post) => (
+        {rows.map((post) => (
           <div key={post.id} className="card" style={{ padding: 16, transition: "border-color 0.2s" }}>
             <div className="admin-post-row" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <img src={post.imagem} alt={post.titulo} style={{ width: 72, height: 36, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
@@ -201,21 +247,23 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
             </div>
           </div>
         ))}
-        {postagensPaginadas.length === 0 && (
-          <div className="empty-state">{searchTerm ? "Nenhuma postagem encontrada para este filtro." : "Sem postagens."}</div>
+        {rows.length === 0 && (
+          <div className="empty-state">
+            {serverLoading ? "Carregando..." : searchTerm ? "Nenhuma postagem encontrada para este filtro." : "Sem postagens."}
+          </div>
         )}
       </div>
 
-      {postagensFiltradas.length > PAGE_SIZE && (
+      {totalItems > PAGE_SIZE && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            Página {page} de {totalPages} · {postagensFiltradas.length} item(ns)
+            Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>
               Próxima
             </button>
           </div>
