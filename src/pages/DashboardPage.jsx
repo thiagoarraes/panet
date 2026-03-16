@@ -10,6 +10,16 @@ const formatDiasRestantes = (diasRestantes) => {
   return `em ${diasRestantes} dias`;
 };
 
+const daysUntilBirthday = (isoDate) => {
+  const now = new Date();
+  const target = new Date(`${isoDate}T12:00:00`);
+  const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  const thisYearTarget = new Date(now.getFullYear(), target.getMonth(), target.getDate(), 12, 0, 0);
+  const next = thisYearTarget < todayNoon ? new Date(now.getFullYear() + 1, target.getMonth(), target.getDate(), 12, 0, 0) : thisYearTarget;
+  const diffMs = next.getTime() - todayNoon.getTime();
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+};
+
 const parseBrDate = (brDate) => {
   const [day, month, year] = String(brDate || "").split("/").map(Number);
   if (!day || !month || !year) return null;
@@ -27,21 +37,17 @@ const getFeriasStatusByDate = (item) => {
   return todayNoon >= inicioDate && todayNoon <= fimDate ? "em_andamento" : (item.status || "marcado");
 };
 
-const getFolgaTotalDias = (item) => {
-  const inicioDate = parseBrDate(item?.inicio);
-  const fimDate = parseBrDate(item?.fim || item?.inicio);
-  if (!inicioDate || !fimDate) return null;
-  const diffMs = fimDate.getTime() - inicioDate.getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-  return Number.isFinite(days) && days > 0 ? days : null;
-};
-
 const getPeriodoFolgaLabel = (item) => {
   const inicio = item?.inicio || "";
   const fim = item?.fim || item?.inicio || "";
+  const toDayMonth = (brDate) => {
+    const [day, month] = String(brDate || "").split("/");
+    if (!day || !month) return String(brDate || "");
+    return `${day}/${month}`;
+  };
   if (!inicio) return "";
-  if (!fim || inicio === fim) return inicio;
-  return `${inicio} a ${fim}`;
+  if (!fim || inicio === fim) return toDayMonth(inicio);
+  return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
 };
 
 export function DashboardPage({
@@ -69,8 +75,29 @@ export function DashboardPage({
   const POR_PAGINA = 5;
   const totalPags = Math.ceil(postagens.length / POR_PAGINA);
   const postsPag = postagens.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
-  const today = aniversariantes.find((a) => a.diasRestantes === 0);
-  const proximos = aniversariantes
+
+  const aniversariantesTodos = useMemo(() => {
+    const byId = new Map((aniversariantes || []).map((item) => [String(item?.colaborador?.id || item?.id), item]));
+    const fromColaboradores = (colaboradores || [])
+      .filter((col) => Boolean(col?.aniversario))
+      .map((col) => {
+        const existing = byId.get(String(col.id));
+        if (existing) return existing;
+        const date = new Date(`${col.aniversario}T12:00:00`);
+        return {
+          id: col.id,
+          colaborador: col,
+          data: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          diasRestantes: daysUntilBirthday(col.aniversario),
+          reacoes: [],
+        };
+      });
+
+    return fromColaboradores.sort((a, b) => a.diasRestantes - b.diasRestantes);
+  }, [aniversariantes, colaboradores]);
+
+  const today = aniversariantesTodos.find((a) => a.diasRestantes === 0);
+  const proximos = aniversariantesTodos
     .filter((a) => a.diasRestantes >= 0)
     .sort((a, b) => a.diasRestantes - b.diasRestantes)
     .slice(0, 5);
@@ -275,57 +302,43 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximasFolgas.map((item, idx) => {
-                const totalDias = getFolgaTotalDias(item);
-                return (
-                <div
-                  key={`${item.tipo}-${item.id}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 10,
-                    padding: "10px 0",
-                    borderBottom: idx === proximasFolgas.length - 1 ? "none" : "1px solid var(--border)",
-                  }}
-                >
-                  <Avatar col={item.colaborador} size={32} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{item.colaborador.nome.split(" ")[0]}</div>
-                    <div style={{ marginTop: 4, fontSize: 11, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
-                    </div>
-                    {totalDias && (
-                      <div style={{ marginTop: 2, fontSize: 11, color: "var(--muted)" }}>
-                        {totalDias}{" "}
-                        {item.tipo === "ferias"
-                          ? totalDias === 1
-                            ? "dia de férias"
-                            : "dias de férias"
-                          : totalDias === 1
-                            ? "dia de day off"
-                            : "dias de day off"}
-                      </div>
-                    )}
-                  </div>
-                  {item.tipo === "ferias" ? (
+              <div style={{ marginTop: 10, marginBottom: 12 }}>
+                {proximasFolgas.map((item) => {
+                  const badge = item.tipo === "ferias" ? (
                     <span
                       className={`status-chip ${item._effectiveStatus === "em_andamento" ? "status-andamento" : "status-marcado"}`}
-                      style={{ marginTop: 2, whiteSpace: "nowrap" }}
+                      style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                     >
                       {item._effectiveStatus === "em_andamento" ? "De férias" : "Agendado"}
                     </span>
                   ) : (
                     <span
                       className="status-chip"
-                      style={{ background: "rgba(232,75,122,0.15)", color: "#E84B7A", marginTop: 2, whiteSpace: "nowrap" }}
+                      style={{ background: "rgba(232,75,122,0.15)", color: "#E84B7A", whiteSpace: "nowrap", flexShrink: 0 }}
                     >
                       Day Off
                     </span>
-                  )}
-                </div>
-                );
-              })}
-              <div style={{ borderTop: "1px solid var(--border)", marginTop: 8 }}>
+                  );
+                  return (
+                  <div
+                    key={`${item.tipo}-${item.id}`}
+                    className={`folga-entry ${item.tipo === "dayoff" ? "is-dayoff" : "is-ferias"}`}
+                  >
+                    <div className="folga-avatar-wrap">
+                      <Avatar col={item.colaborador} size={32} />
+                    </div>
+                    <div className="folga-content">
+                      <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
+                      <div className="folga-status">{badge}</div>
+                      <div className="folga-date-line">
+                        <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 8 }}>
                 <button className="btn-aniversarios-ver-todos" onClick={onOpenFolgas}>
                   Ver todos
                 </button>

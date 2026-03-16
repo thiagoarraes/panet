@@ -11,7 +11,7 @@ const createImage = (url) =>
     image.src = url;
   });
 
-const getCroppedBlob = async (imageSrc, pixelCrop, maxWidth = 1600) => {
+const getCroppedBlob = async (imageSrc, pixelCrop, maxWidth = 1000) => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -45,7 +45,7 @@ const getCroppedBlob = async (imageSrc, pixelCrop, maxWidth = 1600) => {
         resolve(blob);
       },
       "image/webp",
-      0.86
+      0.95
     );
   });
 };

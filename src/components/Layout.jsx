@@ -9,8 +9,8 @@ import {
   GALERIA_EVENTOS,
   MURAL_INIT,
 } from "../data/mockData.js";
-import { supabase, isSupabaseEnabled } from "../lib/supabase.js";
-import { readCachedDomain, runDedupedRequest, writeCachedDomain } from "../lib/businessCache.js";
+import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabase.js";
+import { invalidateCachedDomain, mutateCachedDomain, readCachedDomain, runDedupedRequest, writeCachedDomain } from "../lib/businessCache.js";
 import { Avatar } from "./Avatar";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
@@ -30,6 +30,7 @@ const THEME_KEY = "panet.theme";
 const PROFILE_CACHE_KEY = "panet.profile.cache";
 const AUTH_TIMEOUT_MS = 12000;
 const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
+const MURAL_INITIAL_LIMIT = 120;
 const DATA_CACHE_TTL = {
   colaboradores: 5 * 60 * 1000,
   postagens: 45 * 1000,
@@ -108,6 +109,64 @@ const getPostStoragePathFromUrl = (rawUrl) => {
   } catch (_err) {
     return "";
   }
+};
+
+const getFreshSessionAccessToken = async () => {
+  if (!isSupabaseEnabled) return "";
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError) throw new Error(sessionError.message);
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const expiresAt = Number(session?.expires_at || 0);
+  if (session?.access_token && expiresAt > nowSec + 30) return session.access_token;
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError || !refreshed?.session?.access_token) {
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+  return refreshed.session.access_token;
+};
+
+const invokeEdgeFunctionHttp = async (fnName, body, accessToken, fallbackMessage) => {
+  const baseUrl = String(SUPABASE_URL || "").replace(/\/$/, "");
+  if (!baseUrl) throw new Error("Supabase URL ausente.");
+  if (!SUPABASE_ANON_KEY) throw new Error("Supabase anon key ausente.");
+
+  const response = await fetch(`${baseUrl}/functions/v1/${fnName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      "x-client-jwt": accessToken,
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  const rawText = await response.text();
+  let parsed = null;
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (_err) {
+      parsed = { message: rawText };
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      parsed?.error ||
+      parsed?.message ||
+      rawText ||
+      fallbackMessage ||
+      "Não foi possível concluir a ação.";
+    throw new Error(String(message));
+  }
+
+  return parsed || {};
 };
 
 const isDataImageUrl = (value) => /^data:image\//i.test(String(value || "").trim());
@@ -612,56 +671,65 @@ export default function PanetApp() {
 
   const syncColaboradorReferences = useCallback((mappedCols) => {
     const byId = new Map((mappedCols || []).map((row) => [String(row.id), row]));
+    const hasColaborador = (colaborador) => byId.has(String(colaborador?.id || ""));
 
     setPostagens((prev) =>
       (prev || []).map((post) => ({
         ...post,
-        comentarios: (post.comentarios || []).map((comment) => ({
-          ...comment,
-          autor: mergeColaboradorVisual(comment.autor, byId),
-        })),
+        curtidas: (post.curtidas || []).filter((id) => byId.has(String(id || ""))),
+        comentarios: (post.comentarios || [])
+          .filter((comment) => hasColaborador(comment?.autor))
+          .map((comment) => ({
+            ...comment,
+            autor: mergeColaboradorVisual(comment.autor, byId),
+          })),
       }))
     );
 
     setMuralMsgs((prev) =>
-      (prev || []).map((msg) => ({
-        ...msg,
-        colaborador: mergeColaboradorVisual(msg.colaborador, byId),
-      }))
+      (prev || [])
+        .filter((msg) => hasColaborador(msg?.colaborador))
+        .map((msg) => ({
+          ...msg,
+          colaborador: mergeColaboradorVisual(msg.colaborador, byId),
+        }))
     );
 
     setFerias((prev) =>
-      (prev || []).map((item) => ({
-        ...item,
-        colaborador: mergeColaboradorVisual(item.colaborador, byId),
-      }))
+      (prev || [])
+        .filter((item) => hasColaborador(item?.colaborador))
+        .map((item) => ({
+          ...item,
+          colaborador: mergeColaboradorVisual(item.colaborador, byId),
+        }))
     );
 
     setDayoff((prev) =>
-      (prev || []).map((item) => ({
-        ...item,
-        colaborador: mergeColaboradorVisual(item.colaborador, byId),
-      }))
+      (prev || [])
+        .filter((item) => hasColaborador(item?.colaborador))
+        .map((item) => ({
+          ...item,
+          colaborador: mergeColaboradorVisual(item.colaborador, byId),
+        }))
     );
 
     setAniversariantes((prev) =>
-      (prev || []).map((item) => ({
-        ...item,
-        colaborador: mergeColaboradorVisual(item.colaborador, byId),
-      }))
+      (prev || [])
+        .filter((item) => hasColaborador(item?.colaborador))
+        .map((item) => ({
+          ...item,
+          colaborador: mergeColaboradorVisual(item.colaborador, byId),
+        }))
     );
   }, []);
 
   const hydrateBusinessDataFromCache = useCallback((userId) => {
     if (!userId) return;
     const cachedColaboradores = readCachedDomain(userId, "colaboradores", Infinity);
-    if (Array.isArray(cachedColaboradores) && cachedColaboradores.length > 0) {
+    if (Array.isArray(cachedColaboradores)) {
       setColaboradores(cachedColaboradores);
       syncColaboradorReferences(cachedColaboradores);
     }
-
-    const cachedPostagens = readCachedDomain(userId, "postagens", Infinity);
-    if (Array.isArray(cachedPostagens)) setPostagens(cachedPostagens);
 
     const cachedFerias = readCachedDomain(userId, "ferias", Infinity);
     if (cachedFerias && Array.isArray(cachedFerias.ferias) && Array.isArray(cachedFerias.dayoff)) {
@@ -672,12 +740,22 @@ export default function PanetApp() {
     const cachedAniversarios = readCachedDomain(userId, "aniversarios", Infinity);
     if (Array.isArray(cachedAniversarios)) setAniversariantes(cachedAniversarios);
 
+    const cachedPostagens = readCachedDomain(userId, "postagens", Infinity);
+    if (Array.isArray(cachedPostagens)) setPostagens(cachedPostagens);
+
     const cachedGaleria = readCachedDomain(userId, "galeria", Infinity);
     if (Array.isArray(cachedGaleria)) setGaleriaEventos(cachedGaleria);
 
     const cachedMural = readCachedDomain(userId, "mural", Infinity);
     if (Array.isArray(cachedMural)) setMuralMsgs(cachedMural);
   }, [syncColaboradorReferences]);
+
+  const invalidateUserBusinessCaches = useCallback((userId) => {
+    if (!userId) return;
+    ["colaboradores", "ferias", "aniversarios", "mural", "postagens", "galeria"].forEach((domain) => {
+      invalidateCachedDomain(userId, domain);
+    });
+  }, []);
 
   const loadColaboradores = useCallback(async (currentUserId, options = {}) => {
     if (!isSupabaseEnabled || !currentUserId) return [];
@@ -793,7 +871,7 @@ export default function PanetApp() {
 
   const loadMural = useCallback(async (currentUserId, options = {}) => {
     if (!isSupabaseEnabled || !currentUserId) return [];
-    const { force = false } = options;
+    const { force = false, limit = MURAL_INITIAL_LIMIT } = options;
     if (!force) {
       const cached = readCachedDomain(currentUserId, "mural", DATA_CACHE_TTL.mural);
       if (Array.isArray(cached)) {
@@ -806,7 +884,8 @@ export default function PanetApp() {
       const { data, error } = await supabase
         .from("mural")
         .select("id,texto,created_at,colaborador_id")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(Math.max(20, Number(limit) || MURAL_INITIAL_LIMIT));
       if (error) throw error;
 
       const localLookup = new Map((colaboradoresRef.current || []).map((col) => [String(col.id), toDbLikeColaboradorFromUi(col)]));
@@ -908,12 +987,19 @@ export default function PanetApp() {
     async (currentUserId, options = {}) => {
       if (!isSupabaseEnabled || !currentUserId) return;
       const force = Boolean(options?.force);
+      const hasCachedColaboradores = Array.isArray(readCachedDomain(currentUserId, "colaboradores", Infinity));
 
-      // Critical path for first paint after login/refresh.
-      await Promise.allSettled([
-        loadColaboradores(currentUserId, { force }),
-        loadMural(currentUserId, { force }),
-      ]);
+      // Keep first paint responsive on hard refresh.
+      if (hasCachedColaboradores) {
+        loadColaboradores(currentUserId, { force }).catch(() => {});
+      } else {
+        await loadColaboradores(currentUserId, { force });
+      }
+
+      // PanZap sync in background (bounded payload for faster initial data availability).
+      setTimeout(() => {
+        loadMural(currentUserId, { force, limit: MURAL_INITIAL_LIMIT }).catch(() => {});
+      }, 0);
 
       // Secondary data: still important for dashboard cards, but non-blocking.
       setTimeout(() => {
@@ -1481,8 +1567,16 @@ export default function PanetApp() {
     const channel = supabase
       .channel(`colaboradores-live-${currentProfile.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "colaboradores" }, () => {
-        loadColaboradores(currentProfile.id, { force: true }).catch((err) => {
-          console.warn("Falha ao atualizar avatares em tempo real:", err?.message || err);
+        Promise.allSettled([
+          loadColaboradores(currentProfile.id, { force: true }),
+          loadFerias(currentProfile.id, { force: true }),
+          loadAniversarios(currentProfile.id, { force: true }),
+        ]).then((results) => {
+          results.forEach((result) => {
+            if (result.status === "rejected") {
+              console.warn("Falha ao atualizar dados derivados de colaboradores:", result.reason?.message || result.reason);
+            }
+          });
         });
       })
       .subscribe();
@@ -1490,7 +1584,7 @@ export default function PanetApp() {
     return () => {
       channel.unsubscribe();
     };
-  }, [currentProfile?.id, loadColaboradores, tela]);
+  }, [currentProfile?.id, loadAniversarios, loadColaboradores, loadFerias, tela]);
 
   useEffect(
     () => () => {
@@ -1607,9 +1701,8 @@ export default function PanetApp() {
     if (isDataImageUrl(imagemUrl)) {
       try {
         const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
-        const optimizedBlob = await optimizeImageToWebp(sourceBlob, 1600, 0.86);
         const storagePath = `${currentProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-        const { error: uploadError } = await supabase.storage.from("postagens").upload(storagePath, optimizedBlob, {
+        const { error: uploadError } = await supabase.storage.from("postagens").upload(storagePath, sourceBlob, {
           contentType: "image/webp",
         });
         if (uploadError) throw uploadError;
@@ -1645,9 +1738,8 @@ export default function PanetApp() {
     if (isDataImageUrl(imagemUrl)) {
       try {
         const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
-        const optimizedBlob = await optimizeImageToWebp(sourceBlob, 1600, 0.86);
         uploadedPostPath = `${currentProfile.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-        const { error: uploadError } = await supabase.storage.from("postagens").upload(uploadedPostPath, optimizedBlob, {
+        const { error: uploadError } = await supabase.storage.from("postagens").upload(uploadedPostPath, sourceBlob, {
           contentType: "image/webp",
         });
         if (uploadError) throw uploadError;
@@ -1970,6 +2062,90 @@ export default function PanetApp() {
     loadMural(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar mural:", err));
   };
 
+  const handleDeleteColaborador = useCallback(
+    async (colaboradorId, options = {}) => {
+      if (!isSupabaseEnabled || !currentProfile?.id) return;
+      const { optimisticOnly = false, rollback = false } = options || {};
+      const targetId = String(colaboradorId || "").trim();
+
+      if (targetId) {
+        // Remove immediately from visible state to avoid stale ghost cards.
+        setColaboradores((prev) => (prev || []).filter((row) => String(row.id) !== targetId));
+        setFerias((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
+        setDayoff((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
+        setAniversariantes((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
+        setMuralMsgs((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
+        setPostagens((prev) =>
+          (prev || []).map((post) => ({
+            ...post,
+            comentarios: (post.comentarios || []).filter((comment) => String(comment?.autor?.id || "") !== targetId),
+            curtidas: (post.curtidas || []).filter((id) => String(id) !== targetId),
+          }))
+        );
+
+        // Keep local cache coherent after deletion to avoid slow full refetch on F5.
+        mutateCachedDomain(currentProfile.id, "colaboradores", (prev) =>
+          Array.isArray(prev) ? prev.filter((row) => String(row?.id || "") !== targetId) : []
+        );
+        mutateCachedDomain(currentProfile.id, "ferias", (prev) => {
+          const payload = prev && typeof prev === "object" ? prev : { ferias: [], dayoff: [] };
+          return {
+            ferias: Array.isArray(payload.ferias)
+              ? payload.ferias.filter((item) => String(item?.colaborador?.id || "") !== targetId)
+              : [],
+            dayoff: Array.isArray(payload.dayoff)
+              ? payload.dayoff.filter((item) => String(item?.colaborador?.id || "") !== targetId)
+              : [],
+          };
+        });
+        mutateCachedDomain(currentProfile.id, "aniversarios", (prev) =>
+          Array.isArray(prev) ? prev.filter((item) => String(item?.colaborador?.id || "") !== targetId) : []
+        );
+        mutateCachedDomain(currentProfile.id, "mural", (prev) =>
+          Array.isArray(prev) ? prev.filter((item) => String(item?.colaborador?.id || "") !== targetId) : []
+        );
+        mutateCachedDomain(currentProfile.id, "postagens", (prev) =>
+          Array.isArray(prev)
+            ? prev.map((post) => ({
+              ...post,
+              comentarios: (post.comentarios || []).filter((comment) => String(comment?.autor?.id || "") !== targetId),
+              curtidas: (post.curtidas || []).filter((id) => String(id) !== targetId),
+            }))
+            : []
+        );
+      }
+
+      invalidateAdminListCache();
+      if (!targetId || rollback) invalidateUserBusinessCaches(currentProfile.id);
+
+      if (optimisticOnly && !rollback) return;
+
+      Promise.allSettled([
+        loadColaboradores(currentProfile.id, { force: true }),
+        loadFerias(currentProfile.id, { force: true }),
+        loadAniversarios(currentProfile.id, { force: true }),
+        loadMural(currentProfile.id, { force: true }),
+        loadPostagens(currentProfile.id, { force: true }),
+      ]).then((results) => {
+        results.forEach((result) => {
+          if (result.status === "rejected") {
+            console.warn("Falha ao reconciliar dados após exclusão de colaborador:", result.reason?.message || result.reason);
+          }
+        });
+      });
+    },
+    [
+      currentProfile?.id,
+      invalidateAdminListCache,
+      invalidateUserBusinessCaches,
+      loadAniversarios,
+      loadColaboradores,
+      loadFerias,
+      loadMural,
+      loadPostagens,
+    ]
+  );
+
   const handleSalvarPerfil = async (payload) => {
     if (!currentProfile?.id) return;
 
@@ -1991,12 +2167,7 @@ export default function PanetApp() {
       return;
     }
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-    if (sessionError) throw new Error(sessionError.message);
-    if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
+    const accessToken = await getFreshSessionAccessToken();
 
     let updatedProfile = { ...currentProfile, ...updatePayload };
     const previousAvatarPath = getAvatarStoragePathFromUrl(currentProfile?.foto_url || "");
@@ -2015,12 +2186,13 @@ export default function PanetApp() {
       }
     }
 
-    const { data: fnData, error: fnError } = await supabase.functions.invoke("update-profile", {
-      body: updatePayload,
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
+    let fnData = null;
+    let fnError = null;
+    try {
+      fnData = await invokeEdgeFunctionHttp("update-profile", updatePayload, accessToken, "Não foi possível salvar o perfil.");
+    } catch (error) {
+      fnError = error;
+    }
 
     if (fnError || fnData?.error) {
       const { data, error } = await supabase
@@ -2292,6 +2464,7 @@ export default function PanetApp() {
         muralMsgs={muralMsgs}
         onDeleteMuralMensagem={handleDeleteMuralMensagem}
         onDeleteMuralMensagens={handleDeleteMuralMensagens}
+        onDeleteColaborador={handleDeleteColaborador}
         onListMural={listAdminMural}
       />
     ),

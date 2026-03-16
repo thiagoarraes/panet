@@ -24,6 +24,7 @@ export function AdminPage({
   dayoff,
   colaboradores,
   currentUserId,
+  onDeleteColaborador,
   onCreatePost,
   onUpdatePost,
   onDeletePost,
@@ -74,7 +75,11 @@ export function AdminPage({
       </div>
       {aba === "colaboradores" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminColaboradores initialColaboradores={colaboradores} currentUserId={currentUserId} />
+          <AdminColaboradores
+            initialColaboradores={colaboradores}
+            currentUserId={currentUserId}
+            onDeleteColaborador={onDeleteColaborador}
+          />
         </Suspense>
       )}
       {aba === "postagens" && (

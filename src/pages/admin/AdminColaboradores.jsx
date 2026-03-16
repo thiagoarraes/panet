@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { COLABORADORES } from "../../data/mockData.js";
-import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
+import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../../lib/supabase.js";
 import { Avatar } from "../../components/Avatar";
 
 const parseFunctionInvokeError = async (error, fallbackMessage) => {
@@ -29,6 +29,43 @@ const parseFunctionInvokeError = async (error, fallbackMessage) => {
 const isJwtSessionError = (error) => {
   const msg = String(error?.message || "").toLowerCase();
   return msg.includes("invalid jwt") || msg.includes("jwt expired") || msg.includes("session expired");
+};
+
+const invokeAdminFunctionHttp = async (fnName, body, accessToken, fallbackMessage) => {
+  const fnBaseUrl = String(SUPABASE_URL || "").replace(/\/$/, "");
+  if (!fnBaseUrl) throw new Error(fallbackMessage || "Supabase URL ausente.");
+  if (!SUPABASE_ANON_KEY) throw new Error(fallbackMessage || "Supabase anon key ausente.");
+  const response = await fetch(`${fnBaseUrl}/functions/v1/${fnName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      "x-client-jwt": accessToken,
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  const rawText = await response.text();
+  let parsed = null;
+  if (rawText) {
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (_err) {
+      parsed = { message: rawText };
+    }
+  }
+
+  if (!response.ok) {
+    const message =
+      parsed?.error ||
+      parsed?.message ||
+      rawText ||
+      fallbackMessage ||
+      "Não foi possível concluir a ação.";
+    throw new Error(String(message));
+  }
+  return parsed || {};
 };
 
 const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v1";
@@ -108,7 +145,7 @@ const mapProfileToRow = (profile, currentUserId) => {
   };
 };
 
-export function AdminColaboradores({ initialColaboradores = [], currentUserId = null }) {
+export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
     if (!isSupabaseEnabled) return COLABORADORES;
     if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return [];
@@ -134,7 +171,10 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       error: sessionError,
     } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
-    if (session?.access_token) return session.access_token;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiresAt = Number(session?.expires_at || 0);
+    const hasFreshSession = Boolean(session?.access_token) && expiresAt > nowSec + 30;
+    if (hasFreshSession) return session.access_token;
 
     const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
     if (refreshError || !refreshed?.session?.access_token) {
@@ -144,53 +184,51 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   }, []);
 
   const invokeAdminFunction = async (fnName, body, fallbackMessage) => {
+    const run = async (accessToken) => {
+      return await invokeAdminFunctionHttp(fnName, body, accessToken, fallbackMessage);
+    };
+
     try {
-      await getValidAccessToken();
-      const { data, error } = await supabase.functions.invoke(fnName, { body });
-      if (error || data?.error) {
-        const parsedMessage = await parseFunctionInvokeError(error || data, fallbackMessage);
-        throw new Error(parsedMessage || fallbackMessage);
-      }
-      return data || {};
+      const accessToken = await getValidAccessToken();
+      return await run(accessToken);
     } catch (error) {
       const parsedMessage = await parseFunctionInvokeError(error, fallbackMessage);
       if (!isJwtSessionError({ message: parsedMessage }) && !isJwtSessionError(error)) {
         throw new Error(parsedMessage || fallbackMessage);
       }
-
-      await getValidAccessToken();
-      const { data: retriedData, error: retriedError } = await supabase.functions.invoke(fnName, { body });
-      if (retriedError || retriedData?.error) {
-        const retriedMessage = await parseFunctionInvokeError(retriedError || retriedData, fallbackMessage);
-        throw new Error(retriedMessage || fallbackMessage);
+      try {
+        const accessToken = await getValidAccessToken();
+        return await run(accessToken);
+      } catch (finalErr) {
+        const finalMessage = await parseFunctionInvokeError(finalErr, fallbackMessage);
+        throw new Error(finalMessage || fallbackMessage);
       }
-      return retriedData || {};
     }
   };
 
-  const invokeDeleteCollaborator = useCallback(async (userId) => {
-    const call = async () => {
-      const accessToken = await getValidAccessToken();
-      const { data, error } = await supabase.functions.invoke("delete-collaborator", {
-        body: { user_id: userId },
-        headers: {
-          "x-client-jwt": accessToken,
-        },
-      });
-      if (error || data?.error) {
-        const parsedMessage = await parseFunctionInvokeError(error || data, "Não foi possível excluir o colaborador.");
-        throw new Error(parsedMessage || "Não foi possível excluir o colaborador.");
-      }
-      return data || {};
+  const invokeDeleteCollaborator = useCallback(async (userId, email) => {
+    const call = async (accessToken) => {
+      return await invokeAdminFunctionHttp(
+        "delete-collaborator",
+        { user_id: userId, email },
+        accessToken,
+        "Não foi possível excluir o colaborador."
+      );
     };
 
     try {
-      return await call();
+      const accessToken = await getValidAccessToken();
+      return await call(accessToken);
     } catch (err) {
       const msg = String(err?.message || "");
       if (!isJwtSessionError({ message: msg })) throw err;
-      await supabase.auth.refreshSession();
-      return call();
+      try {
+        const accessToken = await getValidAccessToken();
+        return await call(accessToken);
+      } catch (finalErr) {
+        const finalMessage = String(finalErr?.message || "");
+        throw new Error(finalMessage || "Não foi possível excluir o colaborador.");
+      }
     }
   }, [getValidAccessToken]);
 
@@ -404,8 +442,10 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     setLoading(true);
     setErrorMsg("");
     try {
-      await invokeDeleteCollaborator(colaborador.id);
+      await onDeleteColaborador?.(colaborador.id, { optimisticOnly: true });
+      await invokeDeleteCollaborator(colaborador.id, colaborador.email);
       clearCachedAdminColaboradores();
+      await onDeleteColaborador?.(colaborador.id);
       if (previousLista.length === 1 && currentPage > 1) {
         setCurrentPage((p) => Math.max(1, p - 1));
       }
@@ -413,6 +453,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     } catch (err) {
       setLista(previousLista);
       setTotalItems(previousTotal);
+      await onDeleteColaborador?.(null, { rollback: true });
       setErrorMsg(err?.message || "Não foi possível excluir o colaborador.");
     } finally {
       setLoading(false);

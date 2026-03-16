@@ -30,6 +30,28 @@ const extractAvatarPathFromUrl = (fotoUrl: string) => {
   }
 };
 
+const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
+
+const findAuthUserIdByEmail = async (
+  adminClient: ReturnType<typeof createClient>,
+  email: string,
+) => {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return "";
+  let page = 1;
+  const perPage = 200;
+  for (let i = 0; i < 10; i += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) return "";
+    const users = data?.users || [];
+    const hit = users.find((user) => normalizeEmail(user?.email) === normalized);
+    if (hit?.id) return hit.id;
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return "";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -52,9 +74,11 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     const clientJwtHeader = req.headers.get("x-client-jwt");
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
-    const callerToken = String(clientJwtHeader || bearerToken || "").trim();
+    const candidateTokens = Array.from(
+      new Set([String(bearerToken || "").trim(), String(clientJwtHeader || "").trim()].filter(Boolean))
+    );
 
-    if (!callerToken) {
+    if (candidateTokens.length === 0) {
       return new Response(JSON.stringify({ error: "Missing bearer token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -65,12 +89,19 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    const {
-      data: { user: callerUser },
-      error: callerError,
-    } = await adminClient.auth.getUser(callerToken);
+    let callerUser: { id: string } | null = null;
+    for (const token of candidateTokens) {
+      const {
+        data: { user },
+        error,
+      } = await adminClient.auth.getUser(token);
+      if (!error && user?.id) {
+        callerUser = { id: user.id };
+        break;
+      }
+    }
 
-    if (callerError || !callerUser) {
+    if (!callerUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,43 +123,83 @@ serve(async (req) => {
 
     const body = await req.json();
     const userId = String(body?.user_id || "").trim();
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "user_id é obrigatório." }), {
+    const providedEmail = normalizeEmail(body?.email);
+    if (!userId && !providedEmail) {
+      return new Response(JSON.stringify({ error: "user_id ou email é obrigatório." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (userId === callerUser.id) {
+    if (userId && userId === callerUser.id) {
       return new Response(JSON.stringify({ error: "Você não pode excluir seu próprio usuário." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const [{ data: targetProfile, error: targetProfileError }, { error: reassignPostsError }, { data: userAvatarFiles, error: listAvatarError }] =
-      await Promise.all([
-        adminClient
-          .from("colaboradores")
-          .select("id, foto_url")
-          .eq("id", userId)
-          .maybeSingle(),
-        adminClient
-          .from("postagens")
-          .update({ autor_id: callerUser.id })
-          .eq("autor_id", userId),
-        adminClient.storage.from("avatares").list(userId, {
-          limit: 1000,
-          offset: 0,
-        }),
-      ]);
+    let targetProfile:
+      | {
+          id: string;
+          foto_url: string | null;
+          email: string | null;
+        }
+      | null = null;
 
-    if (targetProfileError) {
-      return new Response(JSON.stringify({ error: targetProfileError.message }), {
+    if (userId) {
+      const { data, error } = await adminClient
+        .from("colaboradores")
+        .select("id, foto_url, email")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetProfile = data;
+    }
+
+    if (!targetProfile && providedEmail) {
+      const { data, error } = await adminClient
+        .from("colaboradores")
+        .select("id, foto_url, email")
+        .eq("email", providedEmail)
+        .maybeSingle();
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetProfile = data;
+    }
+
+    const targetProfileId = String(targetProfile?.id || userId || "").trim();
+    const targetEmail = normalizeEmail(targetProfile?.email || providedEmail);
+
+    if (targetProfileId && targetProfileId === callerUser.id) {
+      return new Response(JSON.stringify({ error: "Você não pode excluir seu próprio usuário." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const [{ error: reassignPostsError }, avatarListResult] = await Promise.all([
+      targetProfileId
+        ? adminClient.from("postagens").update({ autor_id: callerUser.id }).eq("autor_id", targetProfileId)
+        : Promise.resolve({ error: null }),
+      targetProfileId
+        ? adminClient.storage.from("avatares").list(targetProfileId, {
+          limit: 1000,
+          offset: 0,
+        })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const userAvatarFiles = avatarListResult?.data || [];
+    const listAvatarError = avatarListResult?.error || null;
 
     if (reassignPostsError) {
       return new Response(JSON.stringify({ error: reassignPostsError.message }), {
@@ -150,7 +221,7 @@ serve(async (req) => {
 
     for (const file of userAvatarFiles || []) {
       if (!file?.name) continue;
-      avatarPaths.add(`${userId}/${file.name}`);
+      avatarPaths.add(`${targetProfileId}/${file.name}`);
     }
 
     if (avatarPaths.size > 0) {
@@ -163,15 +234,44 @@ serve(async (req) => {
       }
     }
 
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
-    if (deleteError) {
-      return new Response(JSON.stringify({ error: deleteError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Ensure collaborator-linked data is removed before deleting auth user.
+    // This avoids stale cards/filters and handles schemas without full FK cascade.
+    const cleanupTasks = await Promise.all([
+      targetProfileId ? adminClient.from("curtidas").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("comentarios").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("mural").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("ferias").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("aniversario_parabenizacoes").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("aniversario_parabenizacoes").delete().eq("aniversariante_id", targetProfileId) : Promise.resolve({ error: null }),
+      targetProfileId ? adminClient.from("colaboradores").delete().eq("id", targetProfileId) : Promise.resolve({ error: null }),
+      targetEmail ? adminClient.from("colaboradores").delete().eq("email", targetEmail) : Promise.resolve({ error: null }),
+    ]);
+
+    for (const result of cleanupTasks) {
+      if (result.error) {
+        return new Response(JSON.stringify({ error: result.error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    let authUserId = targetProfileId;
+    if (!authUserId && targetEmail) {
+      authUserId = await findAuthUserIdByEmail(adminClient, targetEmail);
+    }
+
+    if (authUserId) {
+      const { error: deleteError } = await adminClient.auth.admin.deleteUser(authUserId);
+      if (deleteError && !String(deleteError.message || "").toLowerCase().includes("not found")) {
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, deleted_auth_user_id: authUserId || null }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

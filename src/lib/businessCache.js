@@ -1,4 +1,4 @@
-const STORAGE_KEY = "panet.business-cache.v1";
+const STORAGE_KEY = "panet.business-cache.v2";
 const inflightRequests = new Map();
 
 const now = () => Date.now();
@@ -55,6 +55,27 @@ export const writeCachedDomain = (userId, domain, data) => {
     [domain]: {
       at: now(),
       data,
+    },
+  };
+  writeStore(store);
+};
+
+export const mutateCachedDomain = (userId, domain, updater) => {
+  const uid = String(userId || "").trim();
+  if (!uid || !domain || typeof updater !== "function") return;
+  const store = readStore();
+  const bucket = getUserBucket(store, uid) || {};
+  const previousEntry = bucket[domain];
+  const previousData =
+    previousEntry && typeof previousEntry === "object" && "data" in previousEntry
+      ? previousEntry.data
+      : null;
+  const nextData = updater(previousData);
+  store[uid] = {
+    ...bucket,
+    [domain]: {
+      at: now(),
+      data: nextData,
     },
   };
   writeStore(store);

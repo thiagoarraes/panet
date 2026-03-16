@@ -8,7 +8,9 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "build": "npm run check:encoding && vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "cleanup:storage:orphans": "node scripts/cleanup-storage-orphans.mjs",
+    "cleanup:storage:orphans:apply": "node scripts/cleanup-storage-orphans.mjs --apply"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",

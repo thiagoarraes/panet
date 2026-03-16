@@ -30,9 +30,14 @@ const getFolgaTotalDias = (item) => {
 const getPeriodoFolgaLabel = (item) => {
   const inicio = item?.inicio || "";
   const fim = item?.fim || item?.inicio || "";
+  const toDayMonth = (brDate) => {
+    const [day, month] = String(brDate || "").split("/");
+    if (!day || !month) return String(brDate || "");
+    return `${day}/${month}`;
+  };
   if (!inicio) return "";
-  if (!fim || inicio === fim) return inicio;
-  return `${inicio} a ${fim}`;
+  if (!fim || inicio === fim) return toDayMonth(inicio);
+  return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
 };
 
 export function FeriasPage({ ferias, dayoff }) {
@@ -55,7 +60,7 @@ export function FeriasPage({ ferias, dayoff }) {
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{f.colaborador.nome}</div>
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>{f.colaborador.cargo}</div>
                     <div style={{ fontSize: 12, marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <CalendarDays size={12} /> {f.inicio} a {f.fim}
+                      <CalendarDays size={12} /> {getPeriodoFolgaLabel(f)}
                       {totalDias ? ` · ${totalDias} ${totalDias === 1 ? "dia" : "dias"}` : ""}
                     </div>
                   </div>
