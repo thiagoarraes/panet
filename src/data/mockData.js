@@ -45,6 +45,46 @@ export const DAYOFF_INIT = [
   { colaborador: COLABORADORES[6], inicio: "17/03/2026", fim: "17/03/2026" },
 ];
 
+export const PRESENCIAL_INIT = [
+  {
+    id: "presencial-1",
+    titulo: "Sprint de Criacao Presencial",
+    dataIso: "2026-03-19",
+    local: "Escritorio Pan - Sala Principal",
+    vagas: 14,
+    observacao: "Dia focado em alinhamentos rapidos, brainstorm e gravacoes internas.",
+    status: "aberto",
+    confirmacoes: [
+      { id: "presencial-1-confirm-1", status: "confirmado", observacao: "Vou direto para o escritorio.", colaborador: COLABORADORES[2] },
+      { id: "presencial-1-confirm-2", status: "confirmado", observacao: "", colaborador: COLABORADORES[4] },
+      { id: "presencial-1-confirm-3", status: "talvez", observacao: "Confirmo de manha.", colaborador: COLABORADORES[7] },
+    ],
+  },
+  {
+    id: "presencial-2",
+    titulo: "Dia de Integracao de Projetos",
+    dataIso: "2026-03-26",
+    local: "Escritorio Pan - Hub Colaborativo",
+    vagas: 10,
+    observacao: "Opcional. Bom momento para quem precisa alinhar demandas entre contas, design e desenvolvimento.",
+    status: "aberto",
+    confirmacoes: [
+      { id: "presencial-2-confirm-1", status: "confirmado", observacao: "", colaborador: COLABORADORES[1] },
+      { id: "presencial-2-confirm-2", status: "talvez", observacao: "Depende de reuniao externa.", colaborador: COLABORADORES[8] },
+    ],
+  },
+  {
+    id: "presencial-3",
+    titulo: "Pan Morning Presencial",
+    dataIso: "2026-04-02",
+    local: "Escritorio Pan - Terraço",
+    vagas: 16,
+    observacao: "Cafe da manha com time completo e rodada de updates leves.",
+    status: "aberto",
+    confirmacoes: [],
+  },
+];
+
 export const GALERIA_EVENTOS = [
   { id: 1, evento: "Festa de Fim de Ano 2025",  mes: "Dez 2025", capa: galeriaImg("christmas-party"), fotos: [
       { src: galeriaImg("xmas1"),    legenda: "Time todo reunido!" },

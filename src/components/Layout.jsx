@@ -1,11 +1,12 @@
 ﻿import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X } from "lucide-react";
+import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X, CalendarDays } from "lucide-react";
 import {
   COLABORADORES,
   POSTAGENS_INIT,
   ANIVERSARIANTES_INIT,
   FERIAS_INIT,
   DAYOFF_INIT,
+  PRESENCIAL_INIT,
   GALERIA_EVENTOS,
   MURAL_INIT,
 } from "../data/mockData.js";
@@ -21,6 +22,7 @@ const ColaboradoresPage = lazy(() => import("../pages/ColaboradoresPage").then((
 const AniversariosPage = lazy(() => import("../pages/AniversariosPage").then((m) => ({ default: m.AniversariosPage })));
 const FeriasPage = lazy(() => import("../pages/FeriasPage").then((m) => ({ default: m.FeriasPage })));
 const GaleriaPage = lazy(() => import("../pages/GaleriaPage").then((m) => ({ default: m.GaleriaPage })));
+const PresencialPage = lazy(() => import("../pages/PresencialPage").then((m) => ({ default: m.PresencialPage })));
 const PerfilPage = lazy(() => import("../pages/PerfilPage").then((m) => ({ default: m.PerfilPage })));
 const AdminPage = lazy(() => import("../pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 
@@ -35,6 +37,7 @@ const DATA_CACHE_TTL = {
   colaboradores: 5 * 60 * 1000,
   postagens: 45 * 1000,
   ferias: 2 * 60 * 1000,
+  presencial: 45 * 1000,
   aniversarios: 6 * 60 * 60 * 1000,
   galeria: 90 * 1000,
   mural: 20 * 1000,
@@ -177,6 +180,7 @@ const NAV_ITEMS = [
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "aniversarios", label: "Aniversários", icon: Cake },
   { id: "ferias", label: "Férias & Day Off", icon: Plane },
+  { id: "presencial", label: "Presencial", icon: CalendarDays },
   { id: "galeria", label: "Galerias", icon: Images },
 ];
 
@@ -186,6 +190,7 @@ const PAGE_PATHS = {
   colaboradores: "/colaboradores",
   aniversarios: "/aniversarios",
   ferias: "/folgas",
+  presencial: "/presencial",
   galeria: "/galerias",
   perfil: "/perfil",
   admin: "/admin",
@@ -195,6 +200,7 @@ const ADMIN_TAB_PATHS = {
   colaboradores: "/admin/colaboradores",
   postagens: "/admin/posts",
   ferias: "/admin/folgas",
+  presencial: "/admin/presencial",
   galeria: "/admin/galeria",
   mural: "/admin/mural",
 };
@@ -218,6 +224,8 @@ const resolveRoute = (pathname) => {
       return { pagina: "aniversarios", adminAba: "colaboradores", known: true };
     case "/folgas":
       return { pagina: "ferias", adminAba: "colaboradores", known: true };
+    case "/presencial":
+      return { pagina: "presencial", adminAba: "colaboradores", known: true };
     case "/galerias":
       return { pagina: "galeria", adminAba: "colaboradores", known: true };
     case "/galeria":
@@ -232,6 +240,8 @@ const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/folgas":
       return { pagina: "admin", adminAba: "ferias", known: true };
+    case "/admin/presencial":
+      return { pagina: "admin", adminAba: "presencial", known: true };
     case "/admin/galeria":
       return { pagina: "admin", adminAba: "galeria", known: true };
     case "/admin/mural":
@@ -324,6 +334,26 @@ const mapDbFeriasToUi = (item) => ({
   status: item.status,
   tipo: item.tipo,
   colaborador: toAvatar(item.colaborador),
+});
+
+const mapDbPresencialConfirmacaoToUi = (item) => ({
+  id: item.id,
+  status: item.status || "confirmado",
+  observacao: item.observacao || "",
+  createdAt: item.created_at || null,
+  colaborador: toAvatar(item.colaborador),
+});
+
+const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
+  id: item.id,
+  titulo: item.titulo || "Dia presencial",
+  dataIso: item.data_presencial,
+  local: item.local || "Escritorio Pan",
+  vagas: Number(item.vagas || 0),
+  observacao: item.observacao || "",
+  status: item.status || "aberto",
+  createdAt: item.created_at || null,
+  confirmacoes,
 });
 
 const mapColaboradorBirthdayToUi = (item) => {
@@ -571,6 +601,7 @@ export default function PanetApp() {
   const [aniversariantes, setAniversariantes] = useState(isSupabaseEnabled ? [] : ANIVERSARIANTES_INIT);
   const [ferias, setFerias] = useState(isSupabaseEnabled ? [] : FERIAS_INIT);
   const [dayoff, setDayoff] = useState(isSupabaseEnabled ? [] : DAYOFF_INIT);
+  const [presencialAgendas, setPresencialAgendas] = useState(isSupabaseEnabled ? [] : PRESENCIAL_INIT);
   const [galeriaEventos, setGaleriaEventos] = useState(isSupabaseEnabled ? [] : GALERIA_EVENTOS);
   const [muralMsgs, setMuralMsgs] = useState(isSupabaseEnabled ? [] : MURAL_INIT);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -721,6 +752,18 @@ export default function PanetApp() {
           colaborador: mergeColaboradorVisual(item.colaborador, byId),
         }))
     );
+
+    setPresencialAgendas((prev) =>
+      (prev || []).map((agenda) => ({
+        ...agenda,
+        confirmacoes: (agenda.confirmacoes || [])
+          .filter((item) => hasColaborador(item?.colaborador))
+          .map((item) => ({
+            ...item,
+            colaborador: mergeColaboradorVisual(item.colaborador, byId),
+          })),
+      }))
+    );
   }, []);
 
   const hydrateBusinessDataFromCache = useCallback((userId) => {
@@ -740,6 +783,9 @@ export default function PanetApp() {
     const cachedAniversarios = readCachedDomain(userId, "aniversarios", Infinity);
     if (Array.isArray(cachedAniversarios)) setAniversariantes(cachedAniversarios);
 
+    const cachedPresencial = readCachedDomain(userId, "presencial", Infinity);
+    if (Array.isArray(cachedPresencial)) setPresencialAgendas(cachedPresencial);
+
     const cachedPostagens = readCachedDomain(userId, "postagens", Infinity);
     if (Array.isArray(cachedPostagens)) setPostagens(cachedPostagens);
 
@@ -752,7 +798,7 @@ export default function PanetApp() {
 
   const invalidateUserBusinessCaches = useCallback((userId) => {
     if (!userId) return;
-    ["colaboradores", "ferias", "aniversarios", "mural", "postagens", "galeria"].forEach((domain) => {
+    ["colaboradores", "ferias", "presencial", "aniversarios", "mural", "postagens", "galeria"].forEach((domain) => {
       invalidateCachedDomain(userId, domain);
     });
   }, []);
@@ -839,6 +885,55 @@ export default function PanetApp() {
       const payload = { ferias: mappedFerias, dayoff: mappedDayoff };
       writeCachedDomain(currentUserId, "ferias", payload);
       return payload;
+    });
+  }, []);
+
+  const loadPresencial = useCallback(async (currentUserId, options = {}) => {
+    if (!isSupabaseEnabled || !currentUserId) return [];
+    const { force = false } = options;
+    if (!force) {
+      const cached = readCachedDomain(currentUserId, "presencial", DATA_CACHE_TTL.presencial);
+      if (Array.isArray(cached)) {
+        setPresencialAgendas(cached);
+        return cached;
+      }
+    }
+
+    return runDedupedRequest(`presencial:${currentUserId}`, async () => {
+      const { data: agendasRows, error: agendasError } = await supabase
+        .from("presencial_agendas")
+        .select("id,titulo,data_presencial,local,observacao,vagas,status,created_at")
+        .order("data_presencial", { ascending: true })
+        .order("created_at", { ascending: false });
+      if (agendasError) throw agendasError;
+
+      const agendaIds = (agendasRows || []).map((row) => row.id).filter(Boolean);
+      let confirmacoesRows = [];
+      if (agendaIds.length > 0) {
+        const { data, error } = await supabase
+          .from("presencial_confirmacoes")
+          .select(
+            "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+          )
+          .in("agenda_id", agendaIds)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        confirmacoesRows = data || [];
+      }
+
+      const confirmacoesByAgenda = new Map();
+      for (const row of confirmacoesRows) {
+        const list = confirmacoesByAgenda.get(String(row.agenda_id)) || [];
+        list.push(mapDbPresencialConfirmacaoToUi(row));
+        confirmacoesByAgenda.set(String(row.agenda_id), list);
+      }
+
+      const mapped = (agendasRows || []).map((row) =>
+        mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || [])
+      );
+      setPresencialAgendas(mapped);
+      writeCachedDomain(currentUserId, "presencial", mapped);
+      return mapped;
     });
   }, []);
 
@@ -1005,6 +1100,7 @@ export default function PanetApp() {
       setTimeout(() => {
         Promise.allSettled([
           loadFerias(currentUserId, { force }),
+          loadPresencial(currentUserId, { force }),
           loadAniversarios(currentUserId, { force }),
         ]).catch(() => {});
       }, 0);
@@ -1017,7 +1113,7 @@ export default function PanetApp() {
         ]).catch(() => {});
       }, 120);
     },
-    [loadAniversarios, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens]
+    [loadAniversarios, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens, loadPresencial]
   );
 
   const listAdminPostagens = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
@@ -1179,6 +1275,69 @@ export default function PanetApp() {
       return payload;
     });
   }, [colaboradores, currentProfile?.id, getAdminListCache, setAdminListCache]);
+
+  const listAdminPresencial = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+    const cacheKey = `presencial:${currentProfile.id}:${safePage}:${safePageSize}:${term.toLowerCase()}`;
+    const cached = getAdminListCache(cacheKey);
+    if (cached) return cached;
+
+    return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
+      let rowsQuery = supabase
+        .from("presencial_agendas")
+        .select("id,titulo,data_presencial,local,observacao,vagas,status,created_at")
+        .order("data_presencial", { ascending: true })
+        .range(from, to);
+
+      let countQuery = supabase
+        .from("presencial_agendas")
+        .select("id", { count: "exact", head: true });
+
+      if (term) {
+        const escaped = escapePostgrestOrTerm(term);
+        const expression = `titulo.ilike.*${escaped}*,local.ilike.*${escaped}*,observacao.ilike.*${escaped}*`;
+        rowsQuery = rowsQuery.or(expression);
+        countQuery = countQuery.or(expression);
+      }
+
+      const [{ data, error }, { count }] = await Promise.all([rowsQuery, countQuery]);
+      if (error) throw new Error(error.message);
+
+      const agendaIds = (data || []).map((row) => row.id).filter(Boolean);
+      let confirmacoesRows = [];
+      if (agendaIds.length > 0) {
+        const { data: rows, error: confirmacoesError } = await supabase
+          .from("presencial_confirmacoes")
+          .select(
+            "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+          )
+          .in("agenda_id", agendaIds)
+          .order("created_at", { ascending: true });
+        if (confirmacoesError) throw new Error(confirmacoesError.message);
+        confirmacoesRows = rows || [];
+      }
+
+      const confirmacoesByAgenda = new Map();
+      for (const row of confirmacoesRows) {
+        const list = confirmacoesByAgenda.get(String(row.agenda_id)) || [];
+        list.push(mapDbPresencialConfirmacaoToUi(row));
+        confirmacoesByAgenda.set(String(row.agenda_id), list);
+      }
+
+      const rows = (data || []).map((row) =>
+        mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || [])
+      );
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
+      setAdminListCache(cacheKey, payload);
+      return payload;
+    });
+  }, [currentProfile?.id, getAdminListCache, setAdminListCache]);
 
   const listAdminGaleria = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
@@ -1829,6 +1988,142 @@ export default function PanetApp() {
     loadFerias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar férias:", err));
   };
 
+  const handleCreatePresencialAgenda = async (payload) => {
+    const normalized = {
+      titulo: payload?.titulo || "Dia presencial",
+      dataIso: payload?.dataIso || "",
+      local: payload?.local || "Escritorio Pan",
+      vagas: Number(payload?.vagas || 0),
+      observacao: payload?.observacao || "",
+      status: payload?.status || "aberto",
+    };
+
+    if (!isSupabaseEnabled) {
+      setPresencialAgendas((prev) =>
+        [...(prev || []), { id: `presencial-${Date.now()}`, ...normalized, confirmacoes: [] }].sort((a, b) =>
+          String(a.dataIso || "").localeCompare(String(b.dataIso || ""))
+        )
+      );
+      return;
+    }
+
+    const { error } = await supabase.from("presencial_agendas").insert({
+      titulo: normalized.titulo,
+      data_presencial: normalized.dataIso,
+      local: normalized.local || null,
+      vagas: normalized.vagas,
+      observacao: normalized.observacao || null,
+      status: normalized.status,
+    });
+    if (error) throw new Error(error.message);
+    invalidateAdminListCache();
+    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
+  };
+
+  const handleUpdatePresencialAgenda = async (id, payload) => {
+    const normalized = {
+      titulo: payload?.titulo || "Dia presencial",
+      dataIso: payload?.dataIso || "",
+      local: payload?.local || "Escritorio Pan",
+      vagas: Number(payload?.vagas || 0),
+      observacao: payload?.observacao || "",
+      status: payload?.status || "aberto",
+    };
+
+    if (!isSupabaseEnabled) {
+      setPresencialAgendas((prev) =>
+        (prev || []).map((agenda) =>
+          String(agenda.id) === String(id)
+            ? { ...agenda, ...normalized }
+            : agenda
+        )
+      );
+      return;
+    }
+
+    const { error } = await supabase
+      .from("presencial_agendas")
+      .update({
+        titulo: normalized.titulo,
+        data_presencial: normalized.dataIso,
+        local: normalized.local || null,
+        vagas: normalized.vagas,
+        observacao: normalized.observacao || null,
+        status: normalized.status,
+      })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    invalidateAdminListCache();
+    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
+  };
+
+  const handleDeletePresencialAgenda = async (id) => {
+    if (!isSupabaseEnabled) {
+      setPresencialAgendas((prev) => (prev || []).filter((agenda) => String(agenda.id) !== String(id)));
+      return;
+    }
+
+    const { error } = await supabase.from("presencial_agendas").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    invalidateAdminListCache();
+    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
+  };
+
+  const handleRespondPresencial = async (agendaId, status) => {
+    const effectiveUserId = currentProfile?.id || eu.id;
+    if (!effectiveUserId || !agendaId) return;
+
+    if (!isSupabaseEnabled) {
+      setPresencialAgendas((prev) =>
+        (prev || []).map((agenda) => {
+          if (String(agenda.id) !== String(agendaId)) return agenda;
+          const filtered = (agenda.confirmacoes || []).filter(
+            (item) => String(item.colaborador?.id || "") !== String(effectiveUserId)
+          );
+          if (!status) return { ...agenda, confirmacoes: filtered };
+          return {
+            ...agenda,
+            confirmacoes: [
+              ...filtered,
+              {
+                id: `${agendaId}-${effectiveUserId}`,
+                status,
+                observacao: "",
+                colaborador: eu,
+              },
+            ],
+          };
+        })
+      );
+      return;
+    }
+
+    if (!status) {
+      const { error } = await supabase
+        .from("presencial_confirmacoes")
+        .delete()
+        .eq("agenda_id", agendaId)
+        .eq("colaborador_id", effectiveUserId);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabase.from("presencial_confirmacoes").upsert(
+        {
+          agenda_id: agendaId,
+          colaborador_id: effectiveUserId,
+          status,
+        },
+        {
+          onConflict: "agenda_id,colaborador_id",
+          ignoreDuplicates: false,
+        }
+      );
+      if (error) throw new Error(error.message);
+    }
+
+    invalidateAdminListCache();
+    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar confirmações presenciais:", err));
+  };
+
   const handleCreateGaleriaEvento = async (payload) => {
     if (!isSupabaseEnabled) return;
     const { data, error } = await supabase
@@ -2074,6 +2369,12 @@ export default function PanetApp() {
         setFerias((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
         setDayoff((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
         setAniversariantes((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
+        setPresencialAgendas((prev) =>
+          (prev || []).map((agenda) => ({
+            ...agenda,
+            confirmacoes: (agenda.confirmacoes || []).filter((item) => String(item?.colaborador?.id || "") !== targetId),
+          }))
+        );
         setMuralMsgs((prev) => (prev || []).filter((item) => String(item?.colaborador?.id || "") !== targetId));
         setPostagens((prev) =>
           (prev || []).map((post) => ({
@@ -2101,6 +2402,14 @@ export default function PanetApp() {
         mutateCachedDomain(currentProfile.id, "aniversarios", (prev) =>
           Array.isArray(prev) ? prev.filter((item) => String(item?.colaborador?.id || "") !== targetId) : []
         );
+        mutateCachedDomain(currentProfile.id, "presencial", (prev) =>
+          Array.isArray(prev)
+            ? prev.map((agenda) => ({
+              ...agenda,
+              confirmacoes: (agenda.confirmacoes || []).filter((item) => String(item?.colaborador?.id || "") !== targetId),
+            }))
+            : []
+        );
         mutateCachedDomain(currentProfile.id, "mural", (prev) =>
           Array.isArray(prev) ? prev.filter((item) => String(item?.colaborador?.id || "") !== targetId) : []
         );
@@ -2123,6 +2432,7 @@ export default function PanetApp() {
       Promise.allSettled([
         loadColaboradores(currentProfile.id, { force: true }),
         loadFerias(currentProfile.id, { force: true }),
+        loadPresencial(currentProfile.id, { force: true }),
         loadAniversarios(currentProfile.id, { force: true }),
         loadMural(currentProfile.id, { force: true }),
         loadPostagens(currentProfile.id, { force: true }),
@@ -2141,6 +2451,7 @@ export default function PanetApp() {
       loadAniversarios,
       loadColaboradores,
       loadFerias,
+      loadPresencial,
       loadMural,
       loadPostagens,
     ]
@@ -2431,6 +2742,13 @@ export default function PanetApp() {
       />
     ),
     ferias: <FeriasPage ferias={ferias} dayoff={dayoff} />,
+    presencial: (
+      <PresencialPage
+        agendas={presencialAgendas}
+        currentUserId={currentProfile?.id || eu.id}
+        onRespond={handleRespondPresencial}
+      />
+    ),
     galeria: <GaleriaPage eventos={galeriaEventos} />,
     perfil: <PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />,
     admin: (
@@ -2451,6 +2769,11 @@ export default function PanetApp() {
         onUpdateFerias={handleUpdateFerias}
         onDeleteFerias={handleDeleteFerias}
         onListFerias={listAdminFerias}
+        presencialAgendas={presencialAgendas}
+        onCreatePresencialAgenda={handleCreatePresencialAgenda}
+        onUpdatePresencialAgenda={handleUpdatePresencialAgenda}
+        onDeletePresencialAgenda={handleDeletePresencialAgenda}
+        onListPresencial={listAdminPresencial}
         galeriaEventos={galeriaEventos}
         onCreateGaleriaEvento={handleCreateGaleriaEvento}
         onUpdateGaleriaEvento={handleUpdateGaleriaEvento}

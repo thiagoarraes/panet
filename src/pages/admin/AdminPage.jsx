@@ -1,11 +1,12 @@
 ﻿import { Suspense, lazy } from "react";
-import { FileText, Images, MessageSquare, Plane, Settings, Users } from "lucide-react";
+import { CalendarDays, FileText, Images, MessageSquare, Plane, Settings, Users } from "lucide-react";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
 const AdminPostagens = lazy(() => import("./AdminPostagens").then((m) => ({ default: m.AdminPostagens })));
 const AdminFerias = lazy(() => import("./AdminFerias").then((m) => ({ default: m.AdminFerias })));
 const AdminMural = lazy(() => import("./AdminMural").then((m) => ({ default: m.AdminMural })));
 const AdminGaleria = lazy(() => import("./AdminGaleria").then((m) => ({ default: m.AdminGaleria })));
+const AdminPresencial = lazy(() => import("./AdminPresencial").then((m) => ({ default: m.AdminPresencial })));
 
 const AdminTabFallback = () => (
   <div className="card">
@@ -33,6 +34,11 @@ export function AdminPage({
   onUpdateFerias,
   onDeleteFerias,
   onListFerias,
+  presencialAgendas,
+  onCreatePresencialAgenda,
+  onUpdatePresencialAgenda,
+  onDeletePresencialAgenda,
+  onListPresencial,
   muralMsgs,
   onDeleteMuralMensagem,
   onDeleteMuralMensagens,
@@ -52,6 +58,7 @@ export function AdminPage({
     { id: "colaboradores", label: "Colaboradores", icon: Users },
     { id: "postagens", label: "Postagens", icon: FileText },
     { id: "ferias", label: "Férias & Day Off", icon: Plane },
+    { id: "presencial", label: "Presencial", icon: CalendarDays },
     { id: "galeria", label: "Galerias", icon: Images },
     { id: "mural", label: "PanZap", icon: MessageSquare },
   ];
@@ -120,6 +127,17 @@ export function AdminPage({
             onDeleteFoto={onDeleteGaleriaFoto}
             onUploadFotosEvento={onUploadGaleriaFotos}
             onSetCapaEvento={onSetGaleriaCapa}
+          />
+        </Suspense>
+      )}
+      {aba === "presencial" && (
+        <Suspense fallback={<AdminTabFallback />}>
+          <AdminPresencial
+            agendas={presencialAgendas}
+            onCreateAgenda={onCreatePresencialAgenda}
+            onUpdateAgenda={onUpdatePresencialAgenda}
+            onDeleteAgenda={onDeletePresencialAgenda}
+            onListPresencial={onListPresencial}
           />
         </Suspense>
       )}
