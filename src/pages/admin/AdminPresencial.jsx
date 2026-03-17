@@ -95,7 +95,8 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
     setForm({
       titulo: "",
       dataIso: "",
-      local: "Escritorio Pan",
+      local: "Agência Pan",
+      mapsUrl: "https://maps.app.goo.gl/QzdePpy5Zf2JLvNp7",
       vagas: 12,
       observacao: "",
       status: "aberto",
@@ -109,6 +110,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
       titulo: agenda.titulo || "",
       dataIso: agenda.dataIso || "",
       local: agenda.local || "",
+      mapsUrl: agenda.mapsUrl || "",
       vagas: agenda.vagas || 0,
       observacao: agenda.observacao || "",
       status: agenda.status || "aberto",
@@ -124,12 +126,25 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
         titulo: form.titulo,
         dataIso: form.dataIso,
         local: form.local,
+        mapsUrl: form.mapsUrl,
         vagas: Number(form.vagas || 0),
         observacao: form.observacao,
         status: form.status || "aberto",
       };
-      if (modal === "novo") await onCreateAgenda?.(payload);
-      else await onUpdateAgenda?.(form.id, payload);
+      if (modal === "novo") {
+        const created = await onCreateAgenda?.(payload);
+        if (created && typeof onListPresencial === "function" && currentPage === 1 && !searchTerm) {
+          setServerRows((prev) => [created, ...(Array.isArray(prev) ? prev : [])].slice(0, PAGE_SIZE));
+          setServerCount((prev) => Number(prev || 0) + 1);
+        }
+      } else {
+        const updated = await onUpdateAgenda?.(form.id, payload);
+        if (updated && typeof onListPresencial === "function") {
+          setServerRows((prev) =>
+            (Array.isArray(prev) ? prev : []).map((row) => (String(row.id) === String(form.id) ? updated : row))
+          );
+        }
+      }
       setModal(null);
     } finally {
       setSaving(false);
@@ -141,6 +156,10 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
     try {
       setRemovingId(confirmarExcluir.id);
       await onDeleteAgenda?.(confirmarExcluir.id);
+      if (typeof onListPresencial === "function") {
+        setServerRows((prev) => (Array.isArray(prev) ? prev.filter((row) => String(row.id) !== String(confirmarExcluir.id)) : []));
+        setServerCount((prev) => Math.max(0, Number(prev || 0) - 1));
+      }
       setConfirmarExcluir(null);
     } finally {
       setRemovingId("");
@@ -152,9 +171,9 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
       <div className="admin-toolbar" style={{ marginBottom: 16 }}>
         <div>
           <div className="section-title" style={{ fontSize: 17 }}>
-            Presencial Pan
+            Confirmar presença
           </div>
-          <div className="section-sub">Crie datas, limite vagas e acompanhe adesão sem depender do WhatsApp.</div>
+          <div className="section-sub">Crie eventos, organize a participação do time e acompanhe as confirmações em um só lugar.</div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <input
@@ -165,7 +184,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
             onChange={(e) => setSearchInput(e.target.value)}
           />
           <button className="btn-primary" onClick={openNew}>
-            + Novo dia presencial
+            + Novo evento
           </button>
         </div>
       </div>
@@ -242,7 +261,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
           <div className="modal" style={{ maxWidth: 540 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-                {modal === "novo" ? "Novo dia presencial" : "Editar dia presencial"}
+                {modal === "novo" ? "Novo evento" : "Editar evento"}
               </div>
               <button className="modal-close" onClick={() => setModal(null)}>
                 ×
@@ -250,7 +269,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">TITULO *</label>
+                <label className="form-label">TÍTULO *</label>
                 <input className="form-input" value={form.titulo || ""} onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))} />
               </div>
 
@@ -283,6 +302,17 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
               <div className="form-group">
                 <label className="form-label">LOCAL</label>
                 <input className="form-input" value={form.local || ""} onChange={(e) => setForm((prev) => ({ ...prev, local: e.target.value }))} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">LINK DO GOOGLE MAPS</label>
+                <input
+                  className="form-input"
+                  type="url"
+                  placeholder="https://maps.google.com/..."
+                  value={form.mapsUrl || ""}
+                  onChange={(e) => setForm((prev) => ({ ...prev, mapsUrl: e.target.value }))}
+                />
               </div>
 
               <div className="form-group">

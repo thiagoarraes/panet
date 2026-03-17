@@ -71,15 +71,26 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
     }
   };
 
+  const renderLocal = (agenda) => {
+    const label = agenda?.local || "Escritorio Pan";
+    const href = String(agenda?.mapsUrl || "").trim();
+    if (!href) return label;
+    return (
+      <a href={href} target="_blank" rel="noreferrer" className="link-primary-underline">
+        {label}
+      </a>
+    );
+  };
+
   return (
     <div className="fade-up presencial-page">
       <div className="section-header">
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <CalendarDays size={22} /> Presencial Pan
+            <CalendarDays size={22} /> Confirmar presença
           </div>
           <div className="section-sub" style={{ maxWidth: 720 }}>
-            Um espaço para acompanhar os dias presenciais da Pan com mais clareza, previsibilidade e organização do time.
+            Um espaço para acompanhar os eventos da Pan e centralizar as confirmações de presença do time em um só lugar.
           </div>
         </div>
       </div>
@@ -90,7 +101,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
             <Info size={16} /> Como funciona
           </div>
           <div className="presencial-hero-text">
-            Escolha uma das respostas em cada data. Sua confirmação entra automaticamente na lista do dia para o time se organizar melhor.
+            Cada evento reúne as confirmações do time em uma lista organizada, dando mais visibilidade para planejamento, logística e participação.
           </div>
         </div>
         <div className="presencial-hero-points">
@@ -99,8 +110,8 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
               <CheckCircle2 size={14} />
             </div>
             <div className="presencial-hero-point-content">
-              <div className="presencial-hero-point-label">Vou presencial</div>
-              <div className="presencial-hero-point-text">Reserva sua presença na lista organizada do dia.</div>
+              <div className="presencial-hero-point-label">Confirmado</div>
+              <div className="presencial-hero-point-text">Mostra que sua participação já está confirmada no evento.</div>
             </div>
           </div>
           <div className="presencial-hero-point">
@@ -109,7 +120,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
             </div>
             <div className="presencial-hero-point-content">
               <div className="presencial-hero-point-label">Talvez eu vá</div>
-              <div className="presencial-hero-point-text">Sinaliza interesse sem confirmar totalmente.</div>
+              <div className="presencial-hero-point-text">Indica interesse em participar, mesmo sem confirmação final.</div>
             </div>
           </div>
         </div>
@@ -143,7 +154,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
                         <CalendarDays size={13} /> {formatDateLong(agenda.dataIso)}
                       </span>
                       <span>
-                        <MapPin size={13} /> {agenda.local || "Escritorio Pan"}
+                        <MapPin size={13} /> {renderLocal(agenda)}
                       </span>
                     </div>
                   </div>
@@ -179,7 +190,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
                     onClick={() => handleRespond(agenda.id, "confirmado")}
                     disabled={isSavingAgenda}
                   >
-                    {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : "Vou presencial"}
+                    {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : "Confirmar presença"}
                   </button>
                   <button
                     className={`btn-ghost ${minhaResposta?.status === "talvez" ? "is-active" : ""}`}
@@ -249,7 +260,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
           <div className="card">
             <div className="card-body">
               <div className="empty-state">
-                Nenhum dia presencial aberto no momento. Quando a próxima data for criada, ela aparecerá aqui para o time confirmar.
+                Nenhum evento aberto no momento.
               </div>
             </div>
           </div>

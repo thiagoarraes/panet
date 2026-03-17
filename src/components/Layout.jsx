@@ -180,7 +180,7 @@ const NAV_ITEMS = [
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "aniversarios", label: "Aniversários", icon: Cake },
   { id: "ferias", label: "Férias & Day Off", icon: Plane },
-  { id: "presencial", label: "Presencial", icon: CalendarDays },
+  { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
   { id: "galeria", label: "Galerias", icon: Images },
 ];
 
@@ -190,7 +190,7 @@ const PAGE_PATHS = {
   colaboradores: "/colaboradores",
   aniversarios: "/aniversarios",
   ferias: "/folgas",
-  presencial: "/presencial",
+  presencial: "/confirmar-presenca",
   galeria: "/galerias",
   perfil: "/perfil",
   admin: "/admin",
@@ -200,7 +200,7 @@ const ADMIN_TAB_PATHS = {
   colaboradores: "/admin/colaboradores",
   postagens: "/admin/posts",
   ferias: "/admin/folgas",
-  presencial: "/admin/presencial",
+  presencial: "/admin/confirmar-presenca",
   galeria: "/admin/galeria",
   mural: "/admin/mural",
 };
@@ -224,7 +224,7 @@ const resolveRoute = (pathname) => {
       return { pagina: "aniversarios", adminAba: "colaboradores", known: true };
     case "/folgas":
       return { pagina: "ferias", adminAba: "colaboradores", known: true };
-    case "/presencial":
+    case "/confirmar-presenca":
       return { pagina: "presencial", adminAba: "colaboradores", known: true };
     case "/galerias":
       return { pagina: "galeria", adminAba: "colaboradores", known: true };
@@ -240,7 +240,7 @@ const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/folgas":
       return { pagina: "admin", adminAba: "ferias", known: true };
-    case "/admin/presencial":
+    case "/admin/confirmar-presenca":
       return { pagina: "admin", adminAba: "presencial", known: true };
     case "/admin/galeria":
       return { pagina: "admin", adminAba: "galeria", known: true };
@@ -349,12 +349,20 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   titulo: item.titulo || "Dia presencial",
   dataIso: item.data_presencial,
   local: item.local || "Escritorio Pan",
+  mapsUrl: item.maps_url || "",
   vagas: Number(item.vagas || 0),
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
   confirmacoes,
 });
+
+const sortPresencialAgendas = (items) =>
+  [...(items || [])].sort((a, b) => {
+    const byDate = String(a?.dataIso || "").localeCompare(String(b?.dataIso || ""));
+    if (byDate !== 0) return byDate;
+    return String(a?.createdAt || "").localeCompare(String(b?.createdAt || ""));
+  });
 
 const mapColaboradorBirthdayToUi = (item) => {
   const date = new Date(`${item.aniversario}T12:00:00`);
@@ -803,6 +811,15 @@ export default function PanetApp() {
     });
   }, []);
 
+  const writePresencialState = useCallback((userId, updater) => {
+    setPresencialAgendas((prev) => {
+      const base = Array.isArray(prev) ? prev : [];
+      const next = sortPresencialAgendas(typeof updater === "function" ? updater(base) : base);
+      if (userId) writeCachedDomain(userId, "presencial", next);
+      return next;
+    });
+  }, []);
+
   const loadColaboradores = useCallback(async (currentUserId, options = {}) => {
     if (!isSupabaseEnabled || !currentUserId) return [];
     const { force = false } = options;
@@ -902,7 +919,7 @@ export default function PanetApp() {
     return runDedupedRequest(`presencial:${currentUserId}`, async () => {
       const { data: agendasRows, error: agendasError } = await supabase
         .from("presencial_agendas")
-        .select("id,titulo,data_presencial,local,observacao,vagas,status,created_at")
+        .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
         .order("data_presencial", { ascending: true })
         .order("created_at", { ascending: false });
       if (agendasError) throw agendasError;
@@ -1290,7 +1307,7 @@ export default function PanetApp() {
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
       let rowsQuery = supabase
         .from("presencial_agendas")
-        .select("id,titulo,data_presencial,local,observacao,vagas,status,created_at")
+        .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
         .order("data_presencial", { ascending: true })
         .range(from, to);
 
@@ -1993,31 +2010,37 @@ export default function PanetApp() {
       titulo: payload?.titulo || "Dia presencial",
       dataIso: payload?.dataIso || "",
       local: payload?.local || "Escritorio Pan",
+      mapsUrl: payload?.mapsUrl || "",
       vagas: Number(payload?.vagas || 0),
       observacao: payload?.observacao || "",
       status: payload?.status || "aberto",
     };
 
     if (!isSupabaseEnabled) {
-      setPresencialAgendas((prev) =>
-        [...(prev || []), { id: `presencial-${Date.now()}`, ...normalized, confirmacoes: [] }].sort((a, b) =>
-          String(a.dataIso || "").localeCompare(String(b.dataIso || ""))
-        )
-      );
-      return;
+      const created = { id: `presencial-${Date.now()}`, ...normalized, confirmacoes: [] };
+      writePresencialState(currentProfile?.id, (prev) => [...prev, created]);
+      invalidateAdminListCache();
+      return created;
     }
 
-    const { error } = await supabase.from("presencial_agendas").insert({
-      titulo: normalized.titulo,
-      data_presencial: normalized.dataIso,
-      local: normalized.local || null,
-      vagas: normalized.vagas,
-      observacao: normalized.observacao || null,
-      status: normalized.status,
-    });
+    const { data, error } = await supabase
+      .from("presencial_agendas")
+      .insert({
+        titulo: normalized.titulo,
+        data_presencial: normalized.dataIso,
+        local: normalized.local || null,
+        maps_url: normalized.mapsUrl || null,
+        vagas: normalized.vagas,
+        observacao: normalized.observacao || null,
+        status: normalized.status,
+      })
+      .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
+      .single();
     if (error) throw new Error(error.message);
+    const created = mapDbPresencialAgendaToUi(data, []);
+    writePresencialState(currentProfile?.id, (prev) => [...prev, created]);
     invalidateAdminListCache();
-    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
+    return created;
   };
 
   const handleUpdatePresencialAgenda = async (id, payload) => {
@@ -2025,103 +2048,121 @@ export default function PanetApp() {
       titulo: payload?.titulo || "Dia presencial",
       dataIso: payload?.dataIso || "",
       local: payload?.local || "Escritorio Pan",
+      mapsUrl: payload?.mapsUrl || "",
       vagas: Number(payload?.vagas || 0),
       observacao: payload?.observacao || "",
       status: payload?.status || "aberto",
     };
 
     if (!isSupabaseEnabled) {
-      setPresencialAgendas((prev) =>
-        (prev || []).map((agenda) =>
-          String(agenda.id) === String(id)
-            ? { ...agenda, ...normalized }
-            : agenda
-        )
+      let updated = null;
+      writePresencialState(currentProfile?.id, (prev) =>
+        prev.map((agenda) => {
+          if (String(agenda.id) !== String(id)) return agenda;
+          updated = { ...agenda, ...normalized };
+          return updated;
+        })
       );
-      return;
+      invalidateAdminListCache();
+      return updated;
     }
 
-    const { error } = await supabase
+    const currentAgenda = (presencialAgendas || []).find((agenda) => String(agenda.id) === String(id));
+    const { data, error } = await supabase
       .from("presencial_agendas")
       .update({
         titulo: normalized.titulo,
         data_presencial: normalized.dataIso,
         local: normalized.local || null,
+        maps_url: normalized.mapsUrl || null,
         vagas: normalized.vagas,
         observacao: normalized.observacao || null,
         status: normalized.status,
       })
+      .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
       .eq("id", id);
     if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    const updated = mapDbPresencialAgendaToUi(row, currentAgenda?.confirmacoes || []);
+    writePresencialState(currentProfile?.id, (prev) =>
+      prev.map((agenda) => (String(agenda.id) === String(id) ? updated : agenda))
+    );
     invalidateAdminListCache();
-    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
+    return updated;
   };
 
   const handleDeletePresencialAgenda = async (id) => {
     if (!isSupabaseEnabled) {
-      setPresencialAgendas((prev) => (prev || []).filter((agenda) => String(agenda.id) !== String(id)));
+      writePresencialState(currentProfile?.id, (prev) => prev.filter((agenda) => String(agenda.id) !== String(id)));
+      invalidateAdminListCache();
       return;
     }
 
     const { error } = await supabase.from("presencial_agendas").delete().eq("id", id);
     if (error) throw new Error(error.message);
+    writePresencialState(currentProfile?.id, (prev) => prev.filter((agenda) => String(agenda.id) !== String(id)));
     invalidateAdminListCache();
-    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar dias presenciais:", err));
   };
 
   const handleRespondPresencial = async (agendaId, status) => {
     const effectiveUserId = currentProfile?.id || eu.id;
     if (!effectiveUserId || !agendaId) return;
 
+    const applyResponse = (prev) =>
+      prev.map((agenda) => {
+        if (String(agenda.id) !== String(agendaId)) return agenda;
+        const filtered = (agenda.confirmacoes || []).filter(
+          (item) => String(item.colaborador?.id || "") !== String(effectiveUserId)
+        );
+        if (!status) return { ...agenda, confirmacoes: filtered };
+        return {
+          ...agenda,
+          confirmacoes: [
+            ...filtered,
+            {
+              id: `${agendaId}-${effectiveUserId}`,
+              status,
+              observacao: "",
+              colaborador: eu,
+            },
+          ],
+        };
+      });
+
+    const previousAgendas = presencialAgendas;
+    writePresencialState(currentProfile?.id, applyResponse);
+    invalidateAdminListCache();
+
     if (!isSupabaseEnabled) {
-      setPresencialAgendas((prev) =>
-        (prev || []).map((agenda) => {
-          if (String(agenda.id) !== String(agendaId)) return agenda;
-          const filtered = (agenda.confirmacoes || []).filter(
-            (item) => String(item.colaborador?.id || "") !== String(effectiveUserId)
-          );
-          if (!status) return { ...agenda, confirmacoes: filtered };
-          return {
-            ...agenda,
-            confirmacoes: [
-              ...filtered,
-              {
-                id: `${agendaId}-${effectiveUserId}`,
-                status,
-                observacao: "",
-                colaborador: eu,
-              },
-            ],
-          };
-        })
-      );
       return;
     }
 
-    if (!status) {
-      const { error } = await supabase
-        .from("presencial_confirmacoes")
-        .delete()
-        .eq("agenda_id", agendaId)
-        .eq("colaborador_id", effectiveUserId);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await supabase.from("presencial_confirmacoes").upsert(
-        {
-          agenda_id: agendaId,
-          colaborador_id: effectiveUserId,
-          status,
-        },
-        {
-          onConflict: "agenda_id,colaborador_id",
-          ignoreDuplicates: false,
-        }
-      );
-      if (error) throw new Error(error.message);
+    try {
+      if (!status) {
+        const { error } = await supabase
+          .from("presencial_confirmacoes")
+          .delete()
+          .eq("agenda_id", agendaId)
+          .eq("colaborador_id", effectiveUserId);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase.from("presencial_confirmacoes").upsert(
+          {
+            agenda_id: agendaId,
+            colaborador_id: effectiveUserId,
+            status,
+          },
+          {
+            onConflict: "agenda_id,colaborador_id",
+            ignoreDuplicates: false,
+          }
+        );
+        if (error) throw new Error(error.message);
+      }
+    } catch (error) {
+      writePresencialState(currentProfile?.id, () => previousAgendas);
+      throw error;
     }
-
-    invalidateAdminListCache();
-    loadPresencial(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar confirmações presenciais:", err));
   };
 
   const handleCreateGaleriaEvento = async (payload) => {

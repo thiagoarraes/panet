@@ -9,6 +9,7 @@ create table public.presencial_agendas (
   titulo text not null,
   data_presencial date not null,
   local text,
+  maps_url text,
   observacao text,
   vagas int not null default 0,
   status public.status_presencial not null default 'aberto',

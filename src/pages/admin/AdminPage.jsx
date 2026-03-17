@@ -58,7 +58,7 @@ export function AdminPage({
     { id: "colaboradores", label: "Colaboradores", icon: Users },
     { id: "postagens", label: "Postagens", icon: FileText },
     { id: "ferias", label: "Férias & Day Off", icon: Plane },
-    { id: "presencial", label: "Presencial", icon: CalendarDays },
+    { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
     { id: "galeria", label: "Galerias", icon: Images },
     { id: "mural", label: "PanZap", icon: MessageSquare },
   ];
