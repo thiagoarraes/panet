@@ -15,7 +15,7 @@ export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
     <div className="fade-up postagens-page">
       <div className="section-header">
         <div>
-          <div className="section-title">Postagens</div>
+          <div className="section-title">PanNews</div>
           <div className="section-sub">{postagens.length} {postagens.length === 1 ? "publicação" : "publicações"}</div>
         </div>
       </div>

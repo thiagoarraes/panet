@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, MapPin, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock3, Gift, MapPin, Users } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -26,7 +26,17 @@ const formatDateLabel = (isoDate) =>
     year: "numeric",
   });
 
-export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, onDeleteAgenda, onListPresencial }) {
+const formatTimeLabel = (timeValue) => String(timeValue || "").slice(0, 5);
+const normalizeTimeInput = (rawValue) => {
+  const digits = String(rawValue || "")
+    .replace(/\D/g, "")
+    .slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+const isValidTime24h = (value) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
+
+export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, onDeleteAgenda, onListPresencial, onRunSecretSanta }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -95,6 +105,10 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
     setForm({
       titulo: "",
       dataIso: "",
+      horaIso: "",
+      amigoSecretoAtivo: false,
+      amigoSecretoRegras: "",
+      amigoSecretoSorteadoAt: null,
       local: "Agência Pan",
       mapsUrl: "https://maps.app.goo.gl/QzdePpy5Zf2JLvNp7",
       vagas: 12,
@@ -109,6 +123,10 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
       id: agenda.id,
       titulo: agenda.titulo || "",
       dataIso: agenda.dataIso || "",
+      horaIso: agenda.horaIso || "",
+      amigoSecretoAtivo: Boolean(agenda.amigoSecretoAtivo),
+      amigoSecretoRegras: agenda.amigoSecretoRegras || "",
+      amigoSecretoSorteadoAt: agenda.amigoSecretoSorteadoAt || null,
       local: agenda.local || "",
       mapsUrl: agenda.mapsUrl || "",
       vagas: agenda.vagas || 0,
@@ -120,11 +138,15 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
 
   const saveAgenda = async () => {
     if (!form.titulo || !form.dataIso) return;
+    if (form.horaIso && !isValidTime24h(form.horaIso)) return;
     try {
       setSaving(true);
       const payload = {
         titulo: form.titulo,
         dataIso: form.dataIso,
+        horaIso: String(form.horaIso || "").slice(0, 5),
+        amigoSecretoAtivo: Boolean(form.amigoSecretoAtivo),
+        amigoSecretoRegras: form.amigoSecretoRegras || "",
         local: form.local,
         mapsUrl: form.mapsUrl,
         vagas: Number(form.vagas || 0),
@@ -191,8 +213,8 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {rows.map((agenda) => {
-          const confirmados = (agenda.confirmacoes || []).filter((item) => item.status === "confirmado").length;
-          const talvez = (agenda.confirmacoes || []).filter((item) => item.status === "talvez").length;
+          const confirmados = (agenda.confirmacoes || []).filter((item) => item.status === "confirmado" || item.status === "talvez").length;
+          const participantesSorteio = (agenda.confirmacoes || []).filter((item) => item.status === "talvez").length;
           const vagas = Number(agenda.vagas || 0);
           return (
             <div key={agenda.id} className="card" style={{ padding: 16 }}>
@@ -203,6 +225,11 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                     <span>
                       <CalendarDays size={13} /> {formatDateLabel(agenda.dataIso)}
                     </span>
+                    {agenda.horaIso && (
+                      <span>
+                        <Clock3 size={13} /> {formatTimeLabel(agenda.horaIso)}
+                      </span>
+                    )}
                     <span>
                       <MapPin size={13} /> {agenda.local || "Escritorio Pan"}
                     </span>
@@ -210,9 +237,18 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                       <Users size={13} /> {confirmados} confirmado(s)
                       {vagas > 0 ? ` / ${vagas} vaga(s)` : ""}
                     </span>
-                    {talvez > 0 && <span>{talvez} talvez</span>}
+                    {agenda.amigoSecretoAtivo && (
+                      <span>
+                        <Gift size={13} /> {participantesSorteio} no sorteio
+                      </span>
+                    )}
                   </div>
                   {agenda.observacao && <div className="admin-presencial-note">{agenda.observacao}</div>}
+                  {agenda.amigoSecretoAtivo && agenda.amigoSecretoRegras && (
+                    <div className="admin-presencial-note" style={{ marginTop: 8 }}>
+                      <strong>Regras do amigo secreto:</strong> {agenda.amigoSecretoRegras}
+                    </div>
+                  )}
                 </div>
 
                 <div className="admin-presencial-side">
@@ -220,6 +256,15 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                     {agenda.status === "encerrado" ? "Encerrado" : agenda.status === "cancelado" ? "Cancelado" : "Aberto"}
                   </span>
                   <div className="admin-presencial-actions">
+                    {agenda.amigoSecretoAtivo && (
+                      <button
+                        className="btn-ghost"
+                        onClick={() => onRunSecretSanta?.(agenda.id)}
+                        disabled={!onRunSecretSanta || Boolean(agenda.amigoSecretoSorteadoAt) || participantesSorteio < 2}
+                      >
+                        {agenda.amigoSecretoSorteadoAt ? "Sorteio iniciado" : "Iniciar sorteio"}
+                      </button>
+                    )}
                     <button className="btn-ghost" onClick={() => openEdit(agenda)}>
                       Editar
                     </button>
@@ -288,15 +333,29 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">VAGAS</label>
+                  <label className="form-label">HORA</label>
                   <input
                     className="form-input"
-                    type="number"
-                    min="0"
-                    value={form.vagas ?? 0}
-                    onChange={(e) => setForm((prev) => ({ ...prev, vagas: e.target.value }))}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:MM"
+                    maxLength={5}
+                    title="Use o formato 24h (HH:MM)"
+                    value={form.horaIso || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, horaIso: normalizeTimeInput(e.target.value) }))}
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">VAGAS</label>
+                <input
+                  className="form-input"
+                  type="number"
+                  min="0"
+                  value={form.vagas ?? 0}
+                  onChange={(e) => setForm((prev) => ({ ...prev, vagas: e.target.value }))}
+                />
               </div>
 
               <div className="form-group">
@@ -323,6 +382,30 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.amigoSecretoAtivo)}
+                    disabled={Boolean(form.amigoSecretoSorteadoAt)}
+                    onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoAtivo: e.target.checked }))}
+                  />
+                  Ativar amigo secreto neste evento
+                </label>
+              </div>
+
+              {form.amigoSecretoAtivo && (
+                <div className="form-group">
+                  <label className="form-label">REGRAS DO SORTEIO</label>
+                  <textarea
+                    className="form-input"
+                    rows="4"
+                    value={form.amigoSecretoRegras || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoRegras: e.target.value }))}
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">OBSERVAÇÃO</label>

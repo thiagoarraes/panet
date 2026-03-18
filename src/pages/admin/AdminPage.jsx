@@ -39,6 +39,7 @@ export function AdminPage({
   onUpdatePresencialAgenda,
   onDeletePresencialAgenda,
   onListPresencial,
+  onRunPresencialSecretSanta,
   muralMsgs,
   onDeleteMuralMensagem,
   onDeleteMuralMensagens,
@@ -56,7 +57,7 @@ export function AdminPage({
 }) {
   const ABAS = [
     { id: "colaboradores", label: "Colaboradores", icon: Users },
-    { id: "postagens", label: "Postagens", icon: FileText },
+    { id: "postagens", label: "PanNews", icon: FileText },
     { id: "ferias", label: "Férias & Day Off", icon: Plane },
     { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
     { id: "galeria", label: "Galerias", icon: Images },
@@ -68,7 +69,7 @@ export function AdminPage({
       <div className="section-header admin-header" style={{ marginBottom: 20 }}>
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <Settings size={20} /> Painel Admin
+            <Settings size={20} /> Painel Administrativo
           </div>
           <div className="section-sub">Gestão de conteúdo e colaboradores da Panet</div>
         </div>
@@ -138,6 +139,7 @@ export function AdminPage({
             onUpdateAgenda={onUpdatePresencialAgenda}
             onDeleteAgenda={onDeletePresencialAgenda}
             onListPresencial={onListPresencial}
+            onRunSecretSanta={onRunPresencialSecretSanta}
           />
         </Suspense>
       )}

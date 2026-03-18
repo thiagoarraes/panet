@@ -176,7 +176,7 @@ const isDataImageUrl = (value) => /^data:image\//i.test(String(value || "").trim
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "postagens", label: "Postagens", icon: FileText },
+  { id: "postagens", label: "PanNews", icon: FileText },
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "aniversarios", label: "Aniversários", icon: Cake },
   { id: "ferias", label: "Férias & Day Off", icon: Plane },
@@ -186,7 +186,7 @@ const NAV_ITEMS = [
 
 const PAGE_PATHS = {
   dashboard: "/",
-  postagens: "/posts",
+  postagens: "/pannews",
   colaboradores: "/colaboradores",
   aniversarios: "/aniversarios",
   ferias: "/folgas",
@@ -198,7 +198,7 @@ const PAGE_PATHS = {
 
 const ADMIN_TAB_PATHS = {
   colaboradores: "/admin/colaboradores",
-  postagens: "/admin/posts",
+  postagens: "/admin/pannews",
   ferias: "/admin/folgas",
   presencial: "/admin/confirmar-presenca",
   galeria: "/admin/galeria",
@@ -214,6 +214,8 @@ const resolveRoute = (pathname) => {
     case "/":
     case "/dashboard":
       return { pagina: "dashboard", adminAba: "colaboradores", known: true };
+    case "/pannews":
+      return { pagina: "postagens", adminAba: "colaboradores", known: true };
     case "/posts":
       return { pagina: "postagens", adminAba: "colaboradores", known: true };
     case "/post":
@@ -236,6 +238,8 @@ const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "colaboradores", known: true };
     case "/admin/colaboradores":
       return { pagina: "admin", adminAba: "colaboradores", known: true };
+    case "/admin/pannews":
+      return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/posts":
       return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/folgas":
@@ -348,6 +352,10 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   id: item.id,
   titulo: item.titulo || "Dia presencial",
   dataIso: item.data_presencial,
+  horaIso: String(item.hora_presencial || "").slice(0, 5),
+  amigoSecretoAtivo: Boolean(item.amigo_secreto_ativo),
+  amigoSecretoRegras: item.amigo_secreto_regras || "",
+  amigoSecretoSorteadoAt: item.amigo_secreto_sorteado_at || null,
   local: item.local || "Escritorio Pan",
   mapsUrl: item.maps_url || "",
   vagas: Number(item.vagas || 0),
@@ -357,10 +365,18 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   confirmacoes,
 });
 
+const getPresencialConfirmedList = (agenda) =>
+  (agenda?.confirmacoes || []).filter((item) => item.status === "confirmado" || item.status === "talvez");
+
+const getPresencialSecretSantaParticipants = (agenda) =>
+  (agenda?.confirmacoes || []).filter((item) => item.status === "talvez");
+
 const sortPresencialAgendas = (items) =>
   [...(items || [])].sort((a, b) => {
     const byDate = String(a?.dataIso || "").localeCompare(String(b?.dataIso || ""));
     if (byDate !== 0) return byDate;
+    const byTime = String(a?.horaIso || "").localeCompare(String(b?.horaIso || ""));
+    if (byTime !== 0) return byTime;
     return String(a?.createdAt || "").localeCompare(String(b?.createdAt || ""));
   });
 
@@ -919,7 +935,7 @@ export default function PanetApp() {
     return runDedupedRequest(`presencial:${currentUserId}`, async () => {
       const { data: agendasRows, error: agendasError } = await supabase
         .from("presencial_agendas")
-        .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
+        .select("id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at")
         .order("data_presencial", { ascending: true })
         .order("created_at", { ascending: false });
       if (agendasError) throw agendasError;
@@ -945,9 +961,35 @@ export default function PanetApp() {
         confirmacoesByAgenda.set(String(row.agenda_id), list);
       }
 
-      const mapped = (agendasRows || []).map((row) =>
-        mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || [])
-      );
+      let secretResultsByAgenda = new Map();
+      const { data: secretRows, error: secretError } = await supabase.rpc("get_my_amigo_secreto_results");
+      if (secretError) throw secretError;
+      if (Array.isArray(secretRows)) {
+        secretResultsByAgenda = new Map(
+          secretRows.map((row) => [
+            String(row.agenda_id),
+            {
+              id: row.tirou_colaborador_id,
+              nome: row.nome,
+              cargo: row.cargo,
+              email: row.email,
+              telefone: row.telefone,
+              cor_avatar: row.cor_avatar,
+              foto_url: row.foto_url,
+              instagram: row.instagram,
+              linkedin: row.linkedin,
+              github: row.github,
+            },
+          ])
+        );
+      }
+
+      const mapped = (agendasRows || []).map((row) => ({
+        ...mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || []),
+        meuAmigoSecreto: secretResultsByAgenda.has(String(row.id))
+          ? toAvatar(secretResultsByAgenda.get(String(row.id)))
+          : null,
+      }));
       setPresencialAgendas(mapped);
       writeCachedDomain(currentUserId, "presencial", mapped);
       return mapped;
@@ -1307,7 +1349,7 @@ export default function PanetApp() {
     return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
       let rowsQuery = supabase
         .from("presencial_agendas")
-        .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
+        .select("id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at")
         .order("data_presencial", { ascending: true })
         .range(from, to);
 
@@ -2009,6 +2051,9 @@ export default function PanetApp() {
     const normalized = {
       titulo: payload?.titulo || "Dia presencial",
       dataIso: payload?.dataIso || "",
+      horaIso: String(payload?.horaIso || "").slice(0, 5),
+      amigoSecretoAtivo: Boolean(payload?.amigoSecretoAtivo),
+      amigoSecretoRegras: payload?.amigoSecretoRegras || "",
       local: payload?.local || "Escritorio Pan",
       mapsUrl: payload?.mapsUrl || "",
       vagas: Number(payload?.vagas || 0),
@@ -2028,13 +2073,16 @@ export default function PanetApp() {
       .insert({
         titulo: normalized.titulo,
         data_presencial: normalized.dataIso,
+        hora_presencial: normalized.horaIso || null,
+        amigo_secreto_ativo: normalized.amigoSecretoAtivo,
+        amigo_secreto_regras: normalized.amigoSecretoRegras || null,
         local: normalized.local || null,
         maps_url: normalized.mapsUrl || null,
         vagas: normalized.vagas,
         observacao: normalized.observacao || null,
         status: normalized.status,
       })
-      .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
+      .select("id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at")
       .single();
     if (error) throw new Error(error.message);
     const created = mapDbPresencialAgendaToUi(data, []);
@@ -2047,6 +2095,9 @@ export default function PanetApp() {
     const normalized = {
       titulo: payload?.titulo || "Dia presencial",
       dataIso: payload?.dataIso || "",
+      horaIso: String(payload?.horaIso || "").slice(0, 5),
+      amigoSecretoAtivo: Boolean(payload?.amigoSecretoAtivo),
+      amigoSecretoRegras: payload?.amigoSecretoRegras || "",
       local: payload?.local || "Escritorio Pan",
       mapsUrl: payload?.mapsUrl || "",
       vagas: Number(payload?.vagas || 0),
@@ -2073,17 +2124,23 @@ export default function PanetApp() {
       .update({
         titulo: normalized.titulo,
         data_presencial: normalized.dataIso,
+        hora_presencial: normalized.horaIso || null,
+        amigo_secreto_ativo: normalized.amigoSecretoAtivo,
+        amigo_secreto_regras: normalized.amigoSecretoRegras || null,
         local: normalized.local || null,
         maps_url: normalized.mapsUrl || null,
         vagas: normalized.vagas,
         observacao: normalized.observacao || null,
         status: normalized.status,
       })
-      .select("id,titulo,data_presencial,local,maps_url,observacao,vagas,status,created_at")
+      .select("id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at")
       .eq("id", id);
     if (error) throw new Error(error.message);
     const row = Array.isArray(data) ? data[0] : data;
-    const updated = mapDbPresencialAgendaToUi(row, currentAgenda?.confirmacoes || []);
+    const updated = {
+      ...mapDbPresencialAgendaToUi(row, currentAgenda?.confirmacoes || []),
+      meuAmigoSecreto: currentAgenda?.meuAmigoSecreto || null,
+    };
     writePresencialState(currentProfile?.id, (prev) =>
       prev.map((agenda) => (String(agenda.id) === String(id) ? updated : agenda))
     );
@@ -2108,21 +2165,27 @@ export default function PanetApp() {
     const effectiveUserId = currentProfile?.id || eu.id;
     if (!effectiveUserId || !agendaId) return;
 
+    const currentAgenda = (presencialAgendas || []).find((agenda) => String(agenda.id) === String(agendaId));
+    const currentResponse = (currentAgenda?.confirmacoes || []).find(
+      (item) => String(item.colaborador?.id || "") === String(effectiveUserId)
+    );
+    const nextStatus = status === "confirmado" && currentResponse?.status === "talvez" ? "talvez" : status;
+
     const applyResponse = (prev) =>
       prev.map((agenda) => {
         if (String(agenda.id) !== String(agendaId)) return agenda;
         const filtered = (agenda.confirmacoes || []).filter(
           (item) => String(item.colaborador?.id || "") !== String(effectiveUserId)
         );
-        if (!status) return { ...agenda, confirmacoes: filtered };
+        if (!nextStatus) return { ...agenda, confirmacoes: filtered, meuAmigoSecreto: null };
         return {
           ...agenda,
           confirmacoes: [
             ...filtered,
             {
               id: `${agendaId}-${effectiveUserId}`,
-              status,
-              observacao: "",
+              status: nextStatus,
+              observacao: currentResponse?.observacao || "",
               colaborador: eu,
             },
           ],
@@ -2138,7 +2201,7 @@ export default function PanetApp() {
     }
 
     try {
-      if (!status) {
+      if (!nextStatus) {
         const { error } = await supabase
           .from("presencial_confirmacoes")
           .delete()
@@ -2150,7 +2213,7 @@ export default function PanetApp() {
           {
             agenda_id: agendaId,
             colaborador_id: effectiveUserId,
-            status,
+            status: nextStatus,
           },
           {
             onConflict: "agenda_id,colaborador_id",
@@ -2163,6 +2226,94 @@ export default function PanetApp() {
       writePresencialState(currentProfile?.id, () => previousAgendas);
       throw error;
     }
+  };
+
+  const handleTogglePresencialSecretSanta = async (agendaId, shouldParticipate) => {
+    const effectiveUserId = currentProfile?.id || eu.id;
+    if (!effectiveUserId || !agendaId) return;
+
+    const currentAgenda = (presencialAgendas || []).find((agenda) => String(agenda.id) === String(agendaId));
+    const currentResponse = (currentAgenda?.confirmacoes || []).find(
+      (item) => String(item.colaborador?.id || "") === String(effectiveUserId)
+    );
+    if (!currentResponse) return;
+    if (currentAgenda?.amigoSecretoSorteadoAt) return;
+
+    const nextStatus = shouldParticipate ? "talvez" : "confirmado";
+    const previousAgendas = presencialAgendas;
+
+    writePresencialState(currentProfile?.id, (prev) =>
+      prev.map((agenda) => {
+        if (String(agenda.id) !== String(agendaId)) return agenda;
+        return {
+          ...agenda,
+          confirmacoes: (agenda.confirmacoes || []).map((item) =>
+            String(item.colaborador?.id || "") === String(effectiveUserId)
+              ? { ...item, status: nextStatus }
+              : item
+          ),
+          meuAmigoSecreto: shouldParticipate ? agenda.meuAmigoSecreto : null,
+        };
+      })
+    );
+    invalidateAdminListCache();
+
+    if (!isSupabaseEnabled) return;
+
+    try {
+      const { error } = await supabase.from("presencial_confirmacoes").upsert(
+        {
+          agenda_id: agendaId,
+          colaborador_id: effectiveUserId,
+          status: nextStatus,
+        },
+        {
+          onConflict: "agenda_id,colaborador_id",
+          ignoreDuplicates: false,
+        }
+      );
+      if (error) throw new Error(error.message);
+    } catch (error) {
+      writePresencialState(currentProfile?.id, () => previousAgendas);
+      throw error;
+    }
+  };
+
+  const handleRunPresencialSecretSanta = async (agendaId) => {
+    if (!agendaId) return;
+
+    if (!isSupabaseEnabled) {
+      const currentUserId = currentProfile?.id || eu.id;
+      const currentLookup = new Map((colaboradoresRef.current || []).map((item) => [String(item.id), item]));
+      writePresencialState(currentProfile?.id, (prev) =>
+        prev.map((agenda) => {
+          if (String(agenda.id) !== String(agendaId) || !agenda.amigoSecretoAtivo || agenda.amigoSecretoSorteadoAt) return agenda;
+          const participants = getPresencialSecretSantaParticipants(agenda);
+          if (participants.length < 2) return agenda;
+          const shuffled = [...participants].sort(() => Math.random() - 0.5);
+          const assignmentMap = new Map(
+            shuffled.map((item, index) => [
+              String(item.colaborador?.id || ""),
+              shuffled[(index + 1) % shuffled.length]?.colaborador || null,
+            ])
+          );
+          return {
+            ...agenda,
+            amigoSecretoSorteadoAt: new Date().toISOString(),
+            meuAmigoSecreto: assignmentMap.has(String(currentUserId))
+              ? currentLookup.get(String(assignmentMap.get(String(currentUserId))?.id || "")) || assignmentMap.get(String(currentUserId))
+              : null,
+          };
+        })
+      );
+      invalidateAdminListCache();
+      return;
+    }
+
+    const { error } = await supabase.rpc("run_amigo_secreto_draw", { p_agenda_id: agendaId });
+    if (error) throw new Error(error.message);
+    invalidateAdminListCache();
+    await loadPresencial(currentProfile?.id, { force: true });
   };
 
   const handleCreateGaleriaEvento = async (payload) => {
@@ -2788,6 +2939,7 @@ export default function PanetApp() {
         agendas={presencialAgendas}
         currentUserId={currentProfile?.id || eu.id}
         onRespond={handleRespondPresencial}
+        onToggleSecretSanta={handleTogglePresencialSecretSanta}
       />
     ),
     galeria: <GaleriaPage eventos={galeriaEventos} />,
@@ -2815,6 +2967,7 @@ export default function PanetApp() {
         onUpdatePresencialAgenda={handleUpdatePresencialAgenda}
         onDeletePresencialAgenda={handleDeletePresencialAgenda}
         onListPresencial={listAdminPresencial}
+        onRunPresencialSecretSanta={handleRunPresencialSecretSanta}
         galeriaEventos={galeriaEventos}
         onCreateGaleriaEvento={handleCreateGaleriaEvento}
         onUpdateGaleriaEvento={handleUpdateGaleriaEvento}
@@ -2876,7 +3029,7 @@ export default function PanetApp() {
               onClick={() => navigateTo("admin", "colaboradores", { path: PAGE_PATHS.admin })}
             >
               <span className="nav-icon"><Settings size={16} /></span>
-              Painel Admin
+              Painel Administrativo
             </button>
           </div>
         )}

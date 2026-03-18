@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock3, Info, MapPin, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock3, Gift, Info, MapPin, Users } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 
 const formatDateLong = (isoDate) =>
@@ -8,6 +8,8 @@ const formatDateLong = (isoDate) =>
     day: "2-digit",
     month: "long",
   });
+
+const formatTimeLabel = (timeValue) => String(timeValue || "").slice(0, 5);
 
 const getDayLabel = (isoDate) =>
   new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
@@ -20,23 +22,13 @@ const getMonthLabel = (isoDate) =>
   });
 
 const getStatusMeta = (status) => {
-  if (status === "confirmado") {
+  if (status === "confirmado" || status === "talvez") {
     return {
       label: "Confirmado",
       style: {
         background: "rgba(86,211,100,0.14)",
         color: "var(--success)",
         border: "1px solid rgba(86,211,100,0.24)",
-      },
-    };
-  }
-  if (status === "talvez") {
-    return {
-      label: "Talvez",
-      style: {
-        background: "rgba(245, 158, 11, 0.14)",
-        color: "#f59e0b",
-        border: "1px solid rgba(245, 158, 11, 0.24)",
       },
     };
   }
@@ -50,14 +42,24 @@ const getStatusMeta = (status) => {
   };
 };
 
-export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
+const getConfirmedParticipants = (agenda) =>
+  (agenda?.confirmacoes || []).filter((item) => item.status === "confirmado" || item.status === "talvez");
+
+const getSecretSantaParticipants = (agenda) =>
+  (agenda?.confirmacoes || []).filter((item) => item.status === "talvez");
+
+export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggleSecretSanta }) {
   const [savingState, setSavingState] = useState({ agendaId: "", status: "" });
 
   const proximasAgendas = useMemo(
     () =>
       [...agendas]
         .filter((agenda) => agenda.status !== "cancelado")
-        .sort((a, b) => String(a.dataIso || "").localeCompare(String(b.dataIso || ""))),
+        .sort((a, b) => {
+          const byDate = String(a.dataIso || "").localeCompare(String(b.dataIso || ""));
+          if (byDate !== 0) return byDate;
+          return String(a.horaIso || "").localeCompare(String(b.horaIso || ""));
+        }),
     [agendas]
   );
 
@@ -114,26 +116,18 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
               <div className="presencial-hero-point-text">Mostra que sua participação já está confirmada no evento.</div>
             </div>
           </div>
-          <div className="presencial-hero-point">
-            <div className="presencial-hero-point-icon presencial-hero-point-icon-talvez">
-              <Clock3 size={14} />
-            </div>
-            <div className="presencial-hero-point-content">
-              <div className="presencial-hero-point-label">Talvez eu vá</div>
-              <div className="presencial-hero-point-text">Indica interesse em participar, mesmo sem confirmação final.</div>
-            </div>
-          </div>
         </div>
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {proximasAgendas.map((agenda) => {
-          const confirmados = (agenda.confirmacoes || []).filter((item) => item.status === "confirmado");
-          const talvez = (agenda.confirmacoes || []).filter((item) => item.status === "talvez");
+          const confirmados = getConfirmedParticipants(agenda);
+          const participantesSorteio = getSecretSantaParticipants(agenda);
           const minhaResposta = (agenda.confirmacoes || []).find(
             (item) => String(item.colaborador?.id || "") === String(currentUserId || "")
           );
           const statusMeta = getStatusMeta(minhaResposta?.status);
+          const estouNoSorteio = minhaResposta?.status === "talvez";
           const vagas = Number(agenda.vagas || 0);
           const ocupacao = vagas > 0 ? Math.min(100, Math.round((confirmados.length / vagas) * 100)) : 0;
           const isSavingAgenda = savingState.agendaId === agenda.id;
@@ -153,6 +147,11 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
                       <span>
                         <CalendarDays size={13} /> {formatDateLong(agenda.dataIso)}
                       </span>
+                      {agenda.horaIso && (
+                        <span>
+                          <Clock3 size={13} /> {formatTimeLabel(agenda.horaIso)}
+                        </span>
+                      )}
                       <span>
                         <MapPin size={13} /> {renderLocal(agenda)}
                       </span>
@@ -171,9 +170,9 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
                       <Users size={13} /> {confirmados.length} confirmado(s)
                       {vagas > 0 ? ` de ${vagas} vaga(s)` : ""}
                     </span>
-                    {talvez.length > 0 && (
+                    {agenda.amigoSecretoAtivo && (
                       <span>
-                        <Clock3 size={13} /> {talvez.length} talvez
+                        <Gift size={13} /> {participantesSorteio.length} no sorteio
                       </span>
                     )}
                   </div>
@@ -186,27 +185,76 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
 
                 <div className="presencial-actions">
                   <button
-                    className={`btn-primary ${minhaResposta?.status === "confirmado" ? "is-active" : ""}`}
+                    className={`btn-primary ${minhaResposta?.status === "confirmado" || minhaResposta?.status === "talvez" ? "is-active" : ""}`}
                     onClick={() => handleRespond(agenda.id, "confirmado")}
                     disabled={isSavingAgenda}
                   >
                     {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : "Confirmar presença"}
                   </button>
-                  <button
-                    className={`btn-ghost ${minhaResposta?.status === "talvez" ? "is-active" : ""}`}
-                    onClick={() => handleRespond(agenda.id, "talvez")}
-                    disabled={isSavingAgenda}
-                  >
-                    Talvez eu vá
-                  </button>
+                  {agenda.amigoSecretoAtivo && minhaResposta && (
+                    <button
+                      className={estouNoSorteio ? "btn-primary is-active" : "btn-primary"}
+                      onClick={() => onToggleSecretSanta?.(agenda.id, !estouNoSorteio)}
+                      disabled={isSavingAgenda || Boolean(agenda.amigoSecretoSorteadoAt)}
+                    >
+                      {agenda.amigoSecretoSorteadoAt
+                        ? estouNoSorteio
+                          ? "Inscrição confirmada no sorteio"
+                          : "Sorteio já iniciado"
+                        : estouNoSorteio
+                          ? "Participando do amigo secreto"
+                          : "Entrar no amigo secreto"}
+                    </button>
+                  )}
                   <button
                     className="btn-ghost"
                     onClick={() => handleRespond(agenda.id, null)}
-                    disabled={isSavingAgenda || !minhaResposta}
+                    disabled={isSavingAgenda || !minhaResposta || (Boolean(agenda.amigoSecretoSorteadoAt) && estouNoSorteio)}
                   >
                     Remover resposta
                   </button>
                 </div>
+
+                {agenda.amigoSecretoAtivo && (
+                  <div className="card" style={{ marginTop: 14, background: "var(--surface2)", border: "1px solid var(--border)" }}>
+                    <div className="card-body" style={{ padding: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, marginBottom: 8 }}>
+                        <Gift size={16} /> Amigo secreto
+                      </div>
+                      {agenda.amigoSecretoRegras && (
+                        <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+                          {agenda.amigoSecretoRegras}
+                        </div>
+                      )}
+                      <div style={{ color: "var(--muted)", fontSize: 12 }}>
+                        {agenda.amigoSecretoSorteadoAt
+                          ? "Sorteio concluído. Só você consegue ver o seu resultado."
+                          : "Marque participação no amigo secreto após confirmar presença."}
+                      </div>
+                      {agenda.amigoSecretoSorteadoAt && estouNoSorteio && agenda.meuAmigoSecreto && (
+                        <div
+                          style={{
+                            marginTop: 12,
+                            padding: 14,
+                            borderRadius: 12,
+                            border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--border))",
+                            background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                          }}
+                        >
+                          <Avatar col={agenda.meuAmigoSecreto} size={42} />
+                          <div>
+                            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
+                            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="presencial-people-grid">
                   <div className="presencial-people-card">
@@ -230,26 +278,28 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond }) {
                     </div>
                   </div>
 
-                  <div className="presencial-people-card">
-                    <div className="presencial-people-title">Talvez</div>
+                  {agenda.amigoSecretoAtivo && (
+                    <div className="presencial-people-card">
+                    <div className="presencial-people-title">No amigo secreto</div>
                     <div className="presencial-people-list">
-                      {talvez.length > 0 ? (
-                        talvez.map((item) => (
+                      {participantesSorteio.length > 0 ? (
+                        participantesSorteio.map((item) => (
                           <div key={item.id} className="presencial-person-row">
                             <Avatar col={item.colaborador} size={34} />
                             <div style={{ minWidth: 0 }}>
                               <div className="presencial-person-name">{item.colaborador?.nome}</div>
-                              <div className="presencial-person-note">{item.observacao || "Ainda vai confirmar"}</div>
+                              <div className="presencial-person-note">{item.observacao || "Participando do sorteio"}</div>
                             </div>
                           </div>
                         ))
                       ) : (
                         <div className="empty-state" style={{ padding: 18 }}>
-                          Sem respostas em talvez.
+                          Ninguém entrou no sorteio ainda.
                         </div>
                       )}
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
