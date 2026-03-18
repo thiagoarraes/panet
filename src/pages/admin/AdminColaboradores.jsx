@@ -282,26 +282,15 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         countQuery = countQuery.or(searchExpression);
       }
 
-      const { data, error } = await rowsQuery;
+      const [{ data, error }, { count, error: countError }] = await Promise.all([rowsQuery, countQuery]);
       if (error) throw error;
 
       const rows = data || [];
       const fallbackTotal = Number(cachedPayload?.total || 0) || from + rows.length;
-      setTotalItems(Math.max(rows.length, fallbackTotal));
+      const resolvedTotal = (!countError && Number.isFinite(count)) ? Number(count) : fallbackTotal;
+      setTotalItems(Math.max(rows.length, resolvedTotal));
       setLista(rows.map((row) => mapProfileToRow(row, currentUserId)));
-      writeCachedAdminColaboradores(queryKey, rows, fallbackTotal);
-      if (showBlockingLoading) setLoading(false);
-
-      try {
-        const { count, error: countError } = await countQuery;
-        if (!countError && Number.isFinite(count)) {
-          const resolvedTotal = Number(count);
-          setTotalItems(Math.max(rows.length, resolvedTotal));
-          writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
-        }
-      } catch (_countErr) {
-        // keep fallback total when count query fails
-      }
+      writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
     } catch (err) {
       if (!cachedPayload || cachedPayload.rows.length === 0) {
         setLista([]);

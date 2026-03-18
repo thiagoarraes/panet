@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal } from "lucide-react";
+import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
 
@@ -204,7 +205,7 @@ export function PostDetalhePage({
                   </div>
                 </div>
 
-                <div className="rich-content" style={{ marginTop: 20, marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: post.descricao || "" }} />
+                <div className="rich-content" style={{ marginTop: 20, marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.descricao || "") }} />
 
                 <div style={{ display: "flex", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
                   <button className={`post-action ${post.userCurtiu ? "liked" : ""}`} onClick={() => onToggleCurtida(post.id)}>

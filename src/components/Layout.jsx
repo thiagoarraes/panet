@@ -35,7 +35,7 @@ const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
 const MURAL_INITIAL_LIMIT = 120;
 const DATA_CACHE_TTL = {
   colaboradores: 5 * 60 * 1000,
-  postagens: 45 * 1000,
+  postagens: 2 * 60 * 1000,
   ferias: 2 * 60 * 1000,
   presencial: 45 * 1000,
   aniversarios: 6 * 60 * 60 * 1000,
@@ -619,6 +619,7 @@ export default function PanetApp() {
   const [postSlug, setPostSlug] = useState("");
   const [authLoading, setAuthLoading] = useState(isSupabaseEnabled);
   const [currentProfile, setCurrentProfile] = useState(null);
+  const [adminServerConfirmed, setAdminServerConfirmed] = useState(false);
 
   const [colaboradores, setColaboradores] = useState(isSupabaseEnabled ? [] : COLABORADORES);
   const [postagens, setPostagens] = useState(isSupabaseEnabled ? [] : POSTAGENS_INIT);
@@ -941,18 +942,26 @@ export default function PanetApp() {
       if (agendasError) throw agendasError;
 
       const agendaIds = (agendasRows || []).map((row) => row.id).filter(Boolean);
-      let confirmacoesRows = [];
-      if (agendaIds.length > 0) {
-        const { data, error } = await supabase
-          .from("presencial_confirmacoes")
-          .select(
-            "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
-          )
-          .in("agenda_id", agendaIds)
-          .order("created_at", { ascending: true });
-        if (error) throw error;
-        confirmacoesRows = data || [];
-      }
+
+      const confirmacoesPromise = agendaIds.length > 0
+        ? supabase
+            .from("presencial_confirmacoes")
+            .select(
+              "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+            )
+            .in("agenda_id", agendaIds)
+            .order("created_at", { ascending: true })
+        : Promise.resolve({ data: [], error: null });
+
+      const [confirmacoesResult, secretResult] = await Promise.all([
+        confirmacoesPromise,
+        supabase.rpc("get_my_amigo_secreto_results"),
+      ]);
+      if (confirmacoesResult.error) throw confirmacoesResult.error;
+      if (secretResult.error) throw secretResult.error;
+
+      const confirmacoesRows = confirmacoesResult.data || [];
+      const secretRows = secretResult.data;
 
       const confirmacoesByAgenda = new Map();
       for (const row of confirmacoesRows) {
@@ -962,8 +971,6 @@ export default function PanetApp() {
       }
 
       let secretResultsByAgenda = new Map();
-      const { data: secretRows, error: secretError } = await supabase.rpc("get_my_amigo_secreto_results");
-      if (secretError) throw secretError;
       if (Array.isArray(secretRows)) {
         secretResultsByAgenda = new Map(
           secretRows.map((row) => [
@@ -1551,6 +1558,7 @@ export default function PanetApp() {
       const resolvedProfile = bypass ? { ...data, primeiro_acesso: false } : data;
       setCurrentProfile(resolvedProfile);
       writeCachedProfile(resolvedProfile);
+      setAdminServerConfirmed(resolvedProfile.perfil === "admin");
       setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
       hydrateBusinessDataFromCache(activeSession.user.id);
       const now = Date.now();
@@ -1694,6 +1702,10 @@ export default function PanetApp() {
         navigateTo("dashboard", "colaboradores", { replace: true });
         return;
       }
+      if (nextPagina === "admin" && !adminServerConfirmed) {
+        setPagina("dashboard");
+        return;
+      }
       setPagina(nextPagina);
       setAdminAba(nextAdminAba);
       setPostSlug(nextPagina === "post_detalhe" ? String(nextPostSlug || "") : "");
@@ -1702,7 +1714,7 @@ export default function PanetApp() {
     const onPopState = () => applyLocation();
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [isAdmin, navigateTo, tela]);
+  }, [isAdmin, adminServerConfirmed, navigateTo, tela]);
 
   useEffect(() => {
     if (!isSupabaseEnabled || tela !== "app" || !currentProfile?.id) return;
@@ -2841,6 +2853,7 @@ export default function PanetApp() {
     clearStoredSupabaseSession();
     setCurrentProfile(null);
     writeCachedProfile(null);
+    setAdminServerConfirmed(false);
     setTela("login");
     setPagina("dashboard");
     setAdminAba("colaboradores");
