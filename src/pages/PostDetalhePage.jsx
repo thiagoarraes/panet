@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal } from "lucide-react";
+import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal, Pencil, Trash2 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
@@ -68,8 +68,11 @@ const getPeriodoFolgaLabel = (item) => {
 export function PostDetalhePage({
   post,
   currentUser,
-  currentUserId,  onToggleCurtida,
+  currentUserId,
+  onToggleCurtida,
   onComentar,
+  onEditarComentario,
+  onDeletarComentario,
   onOpenAniversarios,
   onOpenFolgas,
   onEnviarMensagem,
@@ -81,6 +84,9 @@ export function PostDetalhePage({
 }) {
   const [texto, setTexto] = useState("");
   const [loadingComentario, setLoadingComentario] = useState(false);
+  const [editandoId, setEditandoId] = useState(null);
+  const [textoEdicao, setTextoEdicao] = useState("");
+  const [loadingEdicao, setLoadingEdicao] = useState(false);
   const [textoMural, setTextoMural] = useState("");
   const [enviandoMural, setEnviandoMural] = useState(false);
   const muralListRef = useRef(null);
@@ -160,6 +166,33 @@ export function PostDetalhePage({
     }
   };
 
+  const iniciarEdicao = (c) => {
+    setEditandoId(c.id);
+    setTextoEdicao(c.texto);
+  };
+
+  const cancelarEdicao = () => {
+    setEditandoId(null);
+    setTextoEdicao("");
+  };
+
+  const salvarEdicao = async () => {
+    if (!textoEdicao.trim() || !onEditarComentario) return;
+    try {
+      setLoadingEdicao(true);
+      await onEditarComentario(editandoId, textoEdicao.trim());
+      setEditandoId(null);
+      setTextoEdicao("");
+    } finally {
+      setLoadingEdicao(false);
+    }
+  };
+
+  const deletarComentario = async (comentarioId) => {
+    if (!onDeletarComentario) return;
+    await onDeletarComentario(comentarioId);
+  };
+
   const handleEnviarMural = async () => {
     const valor = textoMural.trim();
     if (!valor || enviandoMural) return;
@@ -218,18 +251,54 @@ export function PostDetalhePage({
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
-                  {post.comentarios.map((c) => (
-                    <div key={c.id} className="comment">
-                      <Avatar col={c.autor} size={32} />
-                      <div className="comment-body">
-                        <div className="comment-head">
-                          <div className="comment-author">{c.autor.nome}</div>
-                          <div className="comment-time">{c.hora}</div>
+                  {post.comentarios.map((c) => {
+                    const isAuthor = String(c.autor.id) === String(currentUserId);
+                    const isEditing = editandoId === c.id;
+                    return (
+                      <div key={c.id} className="comment">
+                        <Avatar col={c.autor} size={32} />
+                        <div className="comment-body">
+                          <div className="comment-head">
+                            <div className="comment-author">{c.autor.nome}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              {c.editado && <span className="comment-edited">editado</span>}
+                              <div className="comment-time">{c.hora}</div>
+                              {isAuthor && !isEditing && (
+                                <div className="comment-actions">
+                                  <button className="comment-action-btn" onClick={() => iniciarEdicao(c)} title="Editar">
+                                    <Pencil size={11} />
+                                  </button>
+                                  <button className="comment-action-btn comment-action-del" onClick={() => deletarComentario(c.id)} title="Excluir">
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {isEditing ? (
+                            <div className="comment-edit-wrap">
+                              <input
+                                className="input-field"
+                                value={textoEdicao}
+                                onChange={(e) => setTextoEdicao(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") salvarEdicao();
+                                  if (e.key === "Escape") cancelarEdicao();
+                                }}
+                                autoFocus
+                              />
+                              <div className="comment-edit-actions">
+                                <button className="btn-primary" style={{ fontSize: 11, padding: "4px 10px" }} onClick={salvarEdicao} disabled={loadingEdicao}>Salvar</button>
+                                <button className="btn-ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={cancelarEdicao}>Cancelar</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="comment-text">{c.texto}</div>
+                          )}
                         </div>
-                        <div className="comment-text">{c.texto}</div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="mural-input">

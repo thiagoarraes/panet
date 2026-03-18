@@ -312,6 +312,7 @@ const mapDbPostToUi = (post, likesRows, commentsRows, currentUserId) => {
     .map((c) => ({
       id: c.id,
       texto: c.texto,
+      editado: Boolean(c.editado),
       hora: new Date(c.created_at).toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -879,7 +880,7 @@ export default function PanetApp() {
       const { data: posts, error: postsError } = await supabase
         .from("postagens")
         .select(
-          "id,titulo,descricao,imagem_url,categoria,data_post,created_at,curtidas(colaborador_id),comentarios(id,postagem_id,texto,created_at,colaborador:colaboradores!comentarios_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github))"
+          "id,titulo,descricao,imagem_url,categoria,data_post,created_at,curtidas(colaborador_id),comentarios(id,postagem_id,texto,editado,created_at,colaborador:colaboradores!comentarios_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github))"
         )
         .order("data_post", { ascending: false })
         .order("created_at", { ascending: false })
@@ -1925,6 +1926,28 @@ export default function PanetApp() {
     loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
   };
 
+  const handleEditarComentario = async (comentarioId, novoTexto) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return;
+    const { error } = await supabase
+      .from("comentarios")
+      .update({ texto: novoTexto, editado: true, updated_at: new Date().toISOString() })
+      .eq("id", comentarioId)
+      .eq("colaborador_id", currentProfile.id);
+    if (error) throw new Error(error.message);
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
+  };
+
+  const handleDeletarComentario = async (comentarioId) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return;
+    const { error } = await supabase
+      .from("comentarios")
+      .delete()
+      .eq("id", comentarioId)
+      .eq("colaborador_id", currentProfile.id);
+    if (error) throw new Error(error.message);
+    loadPostagens(currentProfile.id, { force: true }).catch((err) => console.error("Falha ao atualizar postagens:", err));
+  };
+
   const handleCreatePost = async (payload) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return;
     let imagemUrl = payload.imagem || null;
@@ -2928,6 +2951,8 @@ export default function PanetApp() {
         onVoltar={() => navigateTo("postagens")}
         onToggleCurtida={handleToggleCurtida}
         onComentar={handleComentar}
+        onEditarComentario={handleEditarComentario}
+        onDeletarComentario={handleDeletarComentario}
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
         onEnviarMensagem={handleEnviarMensagem}

@@ -148,6 +148,8 @@ create table public.comentarios (
   postagem_id     uuid not null references public.postagens(id) on delete cascade,
   colaborador_id  uuid not null references public.colaboradores(id) on delete cascade,
   texto           text not null,
+  editado         boolean not null default false,
+  updated_at      timestamptz,
   created_at      timestamptz not null default now()
 );
 
@@ -158,6 +160,11 @@ create policy "comentarios: leitura autenticados"
 
 create policy "comentarios: colaborador insere"
   on public.comentarios for insert
+  with check (auth.uid() = colaborador_id);
+
+create policy "comentarios: dono edita"
+  on public.comentarios for update
+  using (auth.uid() = colaborador_id)
   with check (auth.uid() = colaborador_id);
 
 create policy "comentarios: dono deleta"
