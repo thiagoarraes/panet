@@ -332,13 +332,12 @@ export function DashboardPage({
                         <div className="folga-date-line">
                           <Clock size={12} />
                           {a.fim
-                            ? `até ${new Date(a.fim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                            : a.estimativa ? `~${a.estimativa}` : "sem previsão"}
+                            ? `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} – ${new Date(a.fim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                            : a.estimativa ? `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · ~${a.estimativa}` : `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · sem previsão`}
                         </div>
                       </div>
                     </div>
                   ))}
-                  {proximasFolgas.length > 0 && <div style={{ height: 1, background: "var(--border)", margin: "8px 0" }} />}
                 </div>
               )}
               <div style={{ marginTop: ausentesAgora.length === 0 ? 10 : 0, marginBottom: 12 }}>

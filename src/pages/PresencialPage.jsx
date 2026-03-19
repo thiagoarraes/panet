@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock3, Gift, Info, MapPin, Users } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 
-const formatDateLong = (isoDate) =>
+const formatDateLong = (isoDate, short = false) =>
   new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
-    weekday: "short",
+    weekday: short ? "short" : "long",
     day: "2-digit",
     month: "long",
   });
@@ -112,10 +112,21 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggl
               <CheckCircle2 size={14} />
             </div>
             <div className="presencial-hero-point-content">
-              <div className="presencial-hero-point-label">Confirmado</div>
-              <div className="presencial-hero-point-text">Mostra que sua participação já está confirmada no evento.</div>
+              <div className="presencial-hero-point-label">Passo 1 — Confirme presença</div>
+              <div className="presencial-hero-point-text">Garanta sua participação no evento.</div>
             </div>
           </div>
+          {proximasAgendas.some((a) => a.amigoSecretoAtivo) && (
+            <div className="presencial-hero-point">
+              <div className="presencial-hero-point-icon" style={{ background: "rgba(var(--accent-rgb, 99,102,241),0.14)", color: "var(--accent)" }}>
+                <Gift size={14} />
+              </div>
+              <div className="presencial-hero-point-content">
+                <div className="presencial-hero-point-label">Passo 2 — Amigo secreto</div>
+                <div className="presencial-hero-point-text">Se o evento tiver sorteio, inscreva-se após confirmar presença.</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -133,28 +144,27 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggl
           const isSavingAgenda = savingState.agendaId === agenda.id;
 
           return (
-            <div key={agenda.id} className="presencial-card">
-              <div className="presencial-datebox">
-                <span className="presencial-date-day">{getDayLabel(agenda.dataIso)}</span>
-                <span className="presencial-date-month">{getMonthLabel(agenda.dataIso)}</span>
-              </div>
-
+            <div key={agenda.id} className="presencial-card presencial-card-flat">
               <div className="presencial-main">
                 <div className="presencial-main-head">
                   <div>
                     <div className="presencial-title">{agenda.titulo}</div>
-                    <div className="presencial-subline">
-                      <span>
-                        <CalendarDays size={13} /> {formatDateLong(agenda.dataIso)}
-                      </span>
-                      {agenda.horaIso && (
-                        <span>
-                          <Clock3 size={13} /> {formatTimeLabel(agenda.horaIso)}
+                    <div className="presencial-when-where">
+                      <div className="presencial-ww-item">
+                        <span className="presencial-ww-label">Quando?</span>
+                        <span className="presencial-ww-value">
+                          <CalendarDays size={15} />
+                          <span className="hide-mobile">{formatDateLong(agenda.dataIso)}</span>
+                          <span className="show-mobile">{formatDateLong(agenda.dataIso, true)}</span>
+                          {agenda.horaIso ? ` às ${formatTimeLabel(agenda.horaIso).replace(":", "h").replace(/h00$/, "h")}` : ""}
                         </span>
-                      )}
-                      <span>
-                        <MapPin size={13} /> {renderLocal(agenda)}
-                      </span>
+                      </div>
+                      <div className="presencial-ww-item">
+                        <span className="presencial-ww-label">Onde?</span>
+                        <span className="presencial-ww-value">
+                          <MapPin size={15} /> {renderLocal(agenda)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <span className="presencial-my-status" style={statusMeta.style}>
@@ -183,76 +193,94 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggl
                   )}
                 </div>
 
-                <div className="presencial-actions">
-                  <button
-                    className={`btn-primary ${minhaResposta?.status === "confirmado" || minhaResposta?.status === "talvez" ? "is-active" : ""}`}
-                    onClick={() => handleRespond(agenda.id, "confirmado")}
-                    disabled={isSavingAgenda}
-                  >
-                    {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : "Confirmar presença"}
-                  </button>
-                  {agenda.amigoSecretoAtivo && minhaResposta && (
+                {/* Step 1: Confirmação de presença */}
+                <div className="presencial-step-section">
+                  <div className="presencial-step-header">
+                    <div className="presencial-step-badge" style={{ background: minhaResposta ? "var(--success)" : "var(--muted)" }}>1</div>
+                    <span className="presencial-step-label">Confirme sua presença</span>
+                    {minhaResposta && <CheckCircle2 size={16} style={{ color: "var(--success)" }} />}
+                  </div>
+                  <div className="presencial-actions">
                     <button
-                      className={estouNoSorteio ? "btn-primary is-active" : "btn-primary"}
-                      onClick={() => onToggleSecretSanta?.(agenda.id, !estouNoSorteio)}
-                      disabled={isSavingAgenda || Boolean(agenda.amigoSecretoSorteadoAt)}
+                      className={`btn-primary ${minhaResposta?.status === "confirmado" || minhaResposta?.status === "talvez" ? "is-active" : ""}`}
+                      onClick={() => handleRespond(agenda.id, "confirmado")}
+                      disabled={isSavingAgenda}
                     >
-                      {agenda.amigoSecretoSorteadoAt
-                        ? estouNoSorteio
-                          ? "Inscrição confirmada no sorteio"
-                          : "Sorteio já iniciado"
-                        : estouNoSorteio
-                          ? "Participando do amigo secreto"
-                          : "Entrar no amigo secreto"}
+                      {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : minhaResposta ? "Presença confirmada" : "Confirmar presença"}
                     </button>
-                  )}
-                  <button
-                    className="btn-ghost"
-                    onClick={() => handleRespond(agenda.id, null)}
-                    disabled={isSavingAgenda || !minhaResposta || (Boolean(agenda.amigoSecretoSorteadoAt) && estouNoSorteio)}
-                  >
-                    Remover resposta
-                  </button>
+                    {minhaResposta && (
+                      <button
+                        className="btn-ghost"
+                        onClick={() => handleRespond(agenda.id, null)}
+                        disabled={isSavingAgenda || (Boolean(agenda.amigoSecretoSorteadoAt) && estouNoSorteio)}
+                      >
+                        Remover resposta
+                      </button>
+                    )}
+                  </div>
                 </div>
 
+                {/* Step 2: Amigo secreto (always visible when active, gated by step 1) */}
                 {agenda.amigoSecretoAtivo && (
-                  <div className="card" style={{ marginTop: 14, background: "var(--surface2)", border: "1px solid var(--border)" }}>
-                    <div className="card-body" style={{ padding: 16 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, marginBottom: 8 }}>
-                        <Gift size={16} /> Amigo secreto
-                      </div>
-                      {agenda.amigoSecretoRegras && (
-                        <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
-                          {agenda.amigoSecretoRegras}
-                        </div>
-                      )}
-                      <div style={{ color: "var(--muted)", fontSize: 12 }}>
-                        {agenda.amigoSecretoSorteadoAt
-                          ? "Sorteio concluído. Só você consegue ver o seu resultado."
-                          : "Marque participação no amigo secreto após confirmar presença."}
-                      </div>
-                      {agenda.amigoSecretoSorteadoAt && estouNoSorteio && agenda.meuAmigoSecreto && (
-                        <div
-                          style={{
-                            marginTop: 12,
-                            padding: 14,
-                            borderRadius: 12,
-                            border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--border))",
-                            background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 12,
-                          }}
-                        >
-                          <Avatar col={agenda.meuAmigoSecreto} size={42} />
-                          <div>
-                            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
-                            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
-                          </div>
-                        </div>
-                      )}
+                  <div className={`presencial-secret-santa-section ${!minhaResposta ? "presencial-secret-santa-locked" : ""}`}>
+                    <div className="presencial-step-header">
+                      <div className="presencial-step-badge" style={{ background: estouNoSorteio ? "var(--accent)" : "var(--muted)" }}>2</div>
+                      <span className="presencial-step-label">
+                        <Gift size={15} style={{ verticalAlign: "text-bottom", marginRight: 4 }} />
+                        Amigo secreto
+                      </span>
+                      {estouNoSorteio && <CheckCircle2 size={16} style={{ color: "var(--accent)" }} />}
                     </div>
+
+                    {!minhaResposta && (
+                      <div className="presencial-secret-santa-hint">
+                        Confirme presença primeiro para participar do amigo secreto.
+                      </div>
+                    )}
+
+                    {minhaResposta && (
+                      <div className="presencial-secret-santa-content">
+                        {agenda.amigoSecretoRegras && (
+                          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+                            {agenda.amigoSecretoRegras}
+                          </div>
+                        )}
+
+                        <div className="presencial-actions">
+                          <button
+                            className={`presencial-secret-santa-btn ${estouNoSorteio ? "is-active" : ""}`}
+                            onClick={() => onToggleSecretSanta?.(agenda.id, !estouNoSorteio)}
+                            disabled={isSavingAgenda || Boolean(agenda.amigoSecretoSorteadoAt)}
+                          >
+                            <Gift size={16} />
+                            {agenda.amigoSecretoSorteadoAt
+                              ? estouNoSorteio
+                                ? "Participação confirmada"
+                                : "Sorteio já realizado"
+                              : estouNoSorteio
+                                ? "Participando — clique para sair"
+                                : "Quero participar!"}
+                          </button>
+                        </div>
+
+                        {agenda.amigoSecretoSorteadoAt && (
+                          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 8 }}>
+                            Sorteio concluído — só você pode ver seu resultado.
+                          </div>
+                        )}
+
+                        {agenda.amigoSecretoSorteadoAt && estouNoSorteio && agenda.meuAmigoSecreto && (
+                          <div className="presencial-secret-santa-result">
+                            <Avatar col={agenda.meuAmigoSecreto} size={42} />
+                            <div>
+                              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
+                              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
+                              <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -95,6 +95,9 @@ export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
           </div>
         </div>
       </div>
+      {eventos.length === 0 && (
+        <div className="empty-state">Nenhuma galeria criada ainda.</div>
+      )}
       <div className="galeria-grid stagger">
         {eventos.map((g) => (
           <div key={g.id} className="galeria-card" onClick={() => abrirEvento(g, { syncUrl: true })}>

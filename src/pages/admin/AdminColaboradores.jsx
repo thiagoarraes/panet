@@ -121,7 +121,7 @@ const clearCachedAdminColaboradores = () => {
 const MODULES = [
   { id: "colaboradores", label: "Colaboradores" },
   { id: "postagens", label: "PanNews" },
-  { id: "ferias", label: "Férias & Day Off" },
+  { id: "ferias", label: "PanOff" },
   { id: "presencial", label: "Confirmar presença" },
   { id: "galeria", label: "Galerias" },
   { id: "mural", label: "PanZap" },
