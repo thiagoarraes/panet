@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { CalendarDays, FileText, Images, MessageSquare, Plane, Settings, Users } from "lucide-react";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
@@ -16,9 +16,19 @@ const AdminTabFallback = () => (
   </div>
 );
 
+const ALL_ABAS = [
+  { id: "colaboradores", label: "Colaboradores", icon: Users },
+  { id: "postagens", label: "PanNews", icon: FileText },
+  { id: "ferias", label: "Férias & Day Off", icon: Plane },
+  { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
+  { id: "galeria", label: "Galerias", icon: Images },
+  { id: "mural", label: "PanZap", icon: MessageSquare },
+];
+
 export function AdminPage({
   aba = "colaboradores",
   onChangeAba,
+  currentProfile,
   postagens,
   setPostagens,
   ferias,
@@ -55,14 +65,22 @@ export function AdminPage({
   onUploadGaleriaFotos,
   onSetGaleriaCapa,
 }) {
-  const ABAS = [
-    { id: "colaboradores", label: "Colaboradores", icon: Users },
-    { id: "postagens", label: "PanNews", icon: FileText },
-    { id: "ferias", label: "Férias & Day Off", icon: Plane },
-    { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
-    { id: "galeria", label: "Galerias", icon: Images },
-    { id: "mural", label: "PanZap", icon: MessageSquare },
-  ];
+  // null = super admin (acesso total); array = módulos permitidos
+  const adminModulos = currentProfile?.admin_modulos ?? null;
+  const isSuperAdmin = adminModulos === null;
+
+  const ABAS = isSuperAdmin
+    ? ALL_ABAS
+    : ALL_ABAS.filter((a) => (adminModulos || []).includes(a.id));
+
+  // Redireciona para a primeira aba acessível se a atual não estiver disponível
+  useEffect(() => {
+    if (ABAS.length > 0 && !ABAS.find((a) => a.id === aba)) {
+      onChangeAba?.(ABAS[0].id);
+    }
+  }, [ABAS, aba, onChangeAba]);
+
+  const abaAtiva = ABAS.find((a) => a.id === aba) ? aba : (ABAS[0]?.id || aba);
 
   return (
     <div className="fade-up admin-page">
@@ -76,21 +94,22 @@ export function AdminPage({
       </div>
       <div className="filter-tabs admin-tabs" style={{ marginBottom: 24 }}>
         {ABAS.map((a) => (
-          <button key={a.id} className={`filter-tab ${aba === a.id ? "active" : ""}`} onClick={() => onChangeAba?.(a.id)}>
+          <button key={a.id} className={`filter-tab ${abaAtiva === a.id ? "active" : ""}`} onClick={() => onChangeAba?.(a.id)}>
             <a.icon size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> {a.label}
           </button>
         ))}
       </div>
-      {aba === "colaboradores" && (
+      {abaAtiva === "colaboradores" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminColaboradores
             initialColaboradores={colaboradores}
             currentUserId={currentUserId}
+            isSuperAdmin={isSuperAdmin}
             onDeleteColaborador={onDeleteColaborador}
           />
         </Suspense>
       )}
-      {aba === "postagens" && (
+      {abaAtiva === "postagens" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminPostagens
             postagens={postagens}
@@ -102,7 +121,7 @@ export function AdminPage({
           />
         </Suspense>
       )}
-      {aba === "ferias" && (
+      {abaAtiva === "ferias" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminFerias
             ferias={ferias}
@@ -115,7 +134,7 @@ export function AdminPage({
           />
         </Suspense>
       )}
-      {aba === "galeria" && (
+      {abaAtiva === "galeria" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminGaleria
             eventos={galeriaEventos}
@@ -131,7 +150,7 @@ export function AdminPage({
           />
         </Suspense>
       )}
-      {aba === "presencial" && (
+      {abaAtiva === "presencial" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminPresencial
             agendas={presencialAgendas}
@@ -143,7 +162,7 @@ export function AdminPage({
           />
         </Suspense>
       )}
-      {aba === "mural" && (
+      {abaAtiva === "mural" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminMural
             mensagens={muralMsgs}

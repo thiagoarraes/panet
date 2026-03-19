@@ -118,6 +118,15 @@ const clearCachedAdminColaboradores = () => {
   }
 };
 
+const MODULES = [
+  { id: "colaboradores", label: "Colaboradores" },
+  { id: "postagens", label: "PanNews" },
+  { id: "ferias", label: "Férias & Day Off" },
+  { id: "presencial", label: "Confirmar presença" },
+  { id: "galeria", label: "Galerias" },
+  { id: "mural", label: "PanZap" },
+];
+
 const mapProfileToRow = (profile, currentUserId) => {
   const iniciais = profile.nome
     ?.split(" ")
@@ -136,6 +145,7 @@ const mapProfileToRow = (profile, currentUserId) => {
     cor: profile.cor_avatar || "#11E7E7",
     foto: iniciais || "U",
     perfil: profile.perfil || "colaborador",
+    adminModulos: profile.admin_modulos ?? null,
     isMe: profile.id === currentUserId,
     redes: {
       instagram: profile.instagram || "",
@@ -145,7 +155,7 @@ const mapProfileToRow = (profile, currentUserId) => {
   };
 };
 
-export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, onDeleteColaborador }) {
+export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
     if (!isSupabaseEnabled) return COLABORADORES;
     if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return [];
@@ -267,7 +277,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       const to = from + PAGE_SIZE - 1;
       let rowsQuery = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil")
+        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil,admin_modulos")
         .order("nome", { ascending: true })
         .range(from, to);
 
@@ -329,13 +339,14 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       nome: "",
       email: "",
       perfil: "colaborador",
+      adminModulos: null,
     });
     setErrorMsg("");
     setModal("novo");
   };
 
   const abrirEditar = (col) => {
-    setForm({ ...col });
+    setForm({ ...col, adminModulos: col.adminModulos ?? null });
     setErrorMsg("");
     setModal(col);
   };
@@ -388,6 +399,10 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
           perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
         const data = await invokeAdminFunction("create-collaborator", payload, "Não foi possível criar o colaborador.");
+        // Se super admin definiu módulos específicos para o novo admin, aplica agora
+        if (isSuperAdmin && form.perfil === "admin" && data?.user_id && form.adminModulos !== null) {
+          await supabase.from("colaboradores").update({ admin_modulos: form.adminModulos }).eq("id", data.user_id);
+        }
         setSenhaGerada({
           email: data?.email || form.email,
           senha: data?.temporary_password || "",
@@ -395,14 +410,16 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         });
         setSenhaCopiada(false);
       } else {
-        const { error } = await supabase
-          .from("colaboradores")
-          .update({
-            nome: form.nome,
-            email: normalizedEmail,
-            perfil: form.perfil === "admin" ? "admin" : "colaborador",
-          })
-          .eq("id", form.id);
+        const updatePayload = {
+          nome: form.nome,
+          email: normalizedEmail,
+          perfil: form.perfil === "admin" ? "admin" : "colaborador",
+        };
+        // Apenas super admin pode alterar módulos; ao rebaixar para colaborador, limpa os módulos
+        if (isSuperAdmin) {
+          updatePayload.admin_modulos = form.perfil === "admin" ? (form.adminModulos ?? null) : null;
+        }
+        const { error } = await supabase.from("colaboradores").update(updatePayload).eq("id", form.id);
         if (error) throw error;
       }
       clearCachedAdminColaboradores();
@@ -576,16 +593,27 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                   <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
                   <td style={{ padding: "12px 16px" }}>
                     {col.perfil === "admin" ? (
-                      <span
-                        className="status-chip"
-                        style={{
-                          background: "color-mix(in srgb, var(--accent) 18%, transparent)",
-                          color: "var(--accent)",
-                          border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
-                        }}
-                      >
-                        Administrador
-                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span
+                          className="status-chip"
+                          style={{
+                            background: "color-mix(in srgb, var(--accent) 18%, transparent)",
+                            color: "var(--accent)",
+                            border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
+                          }}
+                        >
+                          Administrador
+                        </span>
+                        {col.adminModulos !== null && (
+                          <span style={{ fontSize: 10, color: "var(--muted)" }}>
+                            {col.adminModulos.length === 0
+                              ? "Sem módulos"
+                              : col.adminModulos.length === MODULES.length
+                              ? "Acesso total"
+                              : `${col.adminModulos.length} módulo(s)`}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="status-chip status-marcado">Colaborador</span>
                     )}
@@ -702,6 +730,47 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                   <input className="form-input" type="text" value="Gerada automaticamente ao cadastrar" readOnly />
                   <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
                     O colaborador será obrigado a trocar no primeiro acesso.
+                  </div>
+                </div>
+              )}
+
+              {isSuperAdmin && form.perfil === "admin" && (
+                <div className="form-group" style={{ marginTop: 8 }}>
+                  <label className="form-label">ACESSO AOS MÓDULOS</label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6, padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={form.adminModulos === null}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            adminModulos: e.target.checked ? null : MODULES.map((m) => m.id),
+                          }))
+                        }
+                      />
+                      <span style={{ fontWeight: 600 }}>Acesso total</span>
+                      <span style={{ color: "var(--muted)", fontSize: 11 }}>(todos os módulos)</span>
+                    </label>
+                    <div style={{ height: 1, background: "var(--border)" }} />
+                    {MODULES.map((m) => {
+                      const isChecked = form.adminModulos === null || (form.adminModulos || []).includes(m.id);
+                      return (
+                        <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, paddingLeft: 4 }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const current = form.adminModulos === null ? MODULES.map((x) => x.id) : [...(form.adminModulos || [])];
+                              const next = e.target.checked ? [...current, m.id] : current.filter((id) => id !== m.id);
+                              const allSelected = MODULES.every((x) => next.includes(x.id));
+                              setForm((p) => ({ ...p, adminModulos: allSelected ? null : next }));
+                            }}
+                          />
+                          {m.label}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}

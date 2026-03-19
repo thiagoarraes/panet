@@ -2986,6 +2986,7 @@ export default function PanetApp() {
       <AdminPage
         aba={adminAba}
         onChangeAba={(aba) => navigateTo("admin", aba)}
+        currentProfile={currentProfile}
         postagens={postagens}
         setPostagens={setPostagens}
         ferias={ferias}
