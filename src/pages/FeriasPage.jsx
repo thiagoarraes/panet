@@ -49,12 +49,13 @@ const formatDisplayDateTime = (isoString) => {
 
 const getAusenciaAtiva = (ausencias) => {
   const now = new Date();
-  return (ausencias || []).filter((a) => {
-    if (!a.inicio) return false;
-    const inicio = new Date(a.inicio);
-    const fim = a.fim ? new Date(a.fim) : null;
-    return inicio <= now && (!fim || fim >= now);
-  });
+  return (ausencias || [])
+    .filter((a) => {
+      if (!a.inicio) return false;
+      const fim = a.fim ? new Date(a.fim) : null;
+      return !fim || fim >= now;
+    })
+    .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
 };
 
 export function FeriasPage({ ferias, dayoff, ausencias }) {

@@ -119,12 +119,14 @@ export function DashboardPage({
   }, [muralOrdenado.length]);
   const ausentesAgora = useMemo(() => {
     const now = new Date();
-    return (ausencias || []).filter((a) => {
-      if (!a.inicio) return false;
-      const inicio = new Date(a.inicio);
-      const fim = a.fim ? new Date(a.fim) : null;
-      return inicio <= now && (!fim || fim >= now);
-    });
+    return (ausencias || [])
+      .filter((a) => {
+        if (!a.inicio) return false;
+        const fim = a.fim ? new Date(a.fim) : null;
+        // mostra ausências que ainda não terminaram (ativas ou futuras próximas)
+        return !fim || fim >= now;
+      })
+      .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
   }, [ausencias]);
 
   const proximasFolgas = useMemo(() => {

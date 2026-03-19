@@ -26,11 +26,13 @@ const formatDateForStore = (date) => {
 };
 
 // Helpers para ausência (datetime)
+// Converte ISO UTC → formato local para datetime-local input
 const formatDateTimeLocal = (isoString) => {
   if (!isoString) return "";
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
+  // usa hora local do browser (não UTC)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
@@ -240,6 +242,13 @@ export function AdminFerias({
     setAusenciaModal("novo");
   };
 
+  // datetime-local dá hora local sem timezone; converte para ISO UTC
+  const localToIso = (localStr) => {
+    if (!localStr) return null;
+    const d = new Date(localStr);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
   const salvarAusencia = async () => {
     if (!ausenciaForm.colaboradorId || !ausenciaForm.motivo || !ausenciaForm.inicio) return;
     try {
@@ -247,8 +256,8 @@ export function AdminFerias({
       const payload = {
         colaborador_id: ausenciaForm.colaboradorId,
         motivo: ausenciaForm.motivo,
-        inicio: ausenciaForm.inicio,
-        fim: ausenciaForm.tipoTempo === "especifico" && ausenciaForm.fim ? ausenciaForm.fim : null,
+        inicio: localToIso(ausenciaForm.inicio),
+        fim: ausenciaForm.tipoTempo === "especifico" && ausenciaForm.fim ? localToIso(ausenciaForm.fim) : null,
         estimativa: ausenciaForm.tipoTempo === "estimativa" && ausenciaForm.estimativa ? ausenciaForm.estimativa : null,
       };
       if (ausenciaModal === "novo") {
