@@ -375,7 +375,6 @@ export function DashboardPage({
                   );
                 })}
               </div>
-              </div>
               <div style={{ marginTop: 8 }}>
                 <button className="btn-aniversarios-ver-todos" onClick={onOpenFolgas}>
                   Ver todos
