@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, Plane } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -25,8 +25,39 @@ const formatDateForStore = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onUpdateFerias, onDeleteFerias, onListFerias }) {
+// Helpers para ausência (datetime)
+const formatDateTimeLocal = (isoString) => {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const formatDisplayDateTime = (isoString) => {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+export function AdminFerias({
+  ferias,
+  dayoff,
+  colaboradores,
+  onCreateFerias,
+  onUpdateFerias,
+  onDeleteFerias,
+  onListFerias,
+  ausencias,
+  onCreateAusencia,
+  onUpdateAusencia,
+  onDeleteAusencia,
+  onListAusencias,
+}) {
   const [sub, setSub] = useState("ferias");
+
+  // ─── Férias / Day Off state ───────────────────────────────────────
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -39,10 +70,23 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   const [serverRows, setServerRows] = useState([]);
   const [serverCount, setServerCount] = useState(0);
   const [serverLoading, setServerLoading] = useState(false);
-  const PAGE_SIZE = 20;
-  const listaBase = sub === "ferias" ? ferias : dayoff;
 
+  // ─── Ausência state ───────────────────────────────────────────────
+  const [ausenciaModal, setAusenciaModal] = useState(null);
+  const [ausenciaForm, setAusenciaForm] = useState({});
+  const [ausenciaConfirmarExcluir, setAusenciaConfirmarExcluir] = useState(null);
+  const [ausenciaSaving, setAusenciaSaving] = useState(false);
+  const [ausenciaSearchInput, setAusenciaSearchInput] = useState("");
+  const [ausenciaSearchTerm, setAusenciaSearchTerm] = useState("");
+  const [ausenciaPage, setAusenciaPage] = useState(1);
+  const [ausenciaPendingDelete, setAusenciaPendingDelete] = useState(new Set());
+  const [ausenciaServerRows, setAusenciaServerRows] = useState([]);
+  const [ausenciaServerCount, setAusenciaServerCount] = useState(0);
+  const [ausenciaServerLoading, setAusenciaServerLoading] = useState(false);
+
+  const PAGE_SIZE = 20;
   const colaboradoresOpts = useMemo(() => colaboradores || [], [colaboradores]);
+  const listaBase = sub === "ferias" ? ferias : dayoff;
   const lista = useMemo(() => listaBase.filter((item) => !hiddenIds.has(item.id)), [hiddenIds, listaBase]);
 
   useEffect(() => {
@@ -54,8 +98,14 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   }, [searchInput]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [sub]);
+    const timer = window.setTimeout(() => {
+      setAusenciaSearchTerm(ausenciaSearchInput.trim().toLowerCase());
+      setAusenciaPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [ausenciaSearchInput]);
+
+  useEffect(() => { setCurrentPage(1); }, [sub]);
 
   useEffect(() => {
     const existingIds = new Set([...(ferias || []), ...(dayoff || [])].map((item) => String(item.id)));
@@ -70,6 +120,7 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     });
   }, [dayoff, ferias]);
 
+  // ─── Férias / Day Off server pagination ──────────────────────────
   const listaFiltrada = useMemo(() => {
     if (!searchTerm) return lista;
     return lista.filter((item) => {
@@ -83,52 +134,62 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
 
   const totalPages = Math.max(1, Math.ceil(listaFiltrada.length / PAGE_SIZE));
   const page = Math.min(currentPage, totalPages);
-
   const listaPaginada = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return listaFiltrada.slice(start, start + PAGE_SIZE);
   }, [listaFiltrada, page]);
 
   useEffect(() => {
-    if (!onListFerias) return;
+    if (!onListFerias || sub === "ausencia") return;
     let active = true;
     setServerLoading(true);
-    onListFerias({
-      tipo: sub === "ferias" ? "ferias" : "dayoff",
-      page: currentPage,
-      pageSize: PAGE_SIZE,
-      search: searchTerm,
-    })
+    onListFerias({ tipo: sub === "ferias" ? "ferias" : "dayoff", page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
       .then((result) => {
         if (!active) return;
         setServerRows(Array.isArray(result?.rows) ? result.rows : []);
         setServerCount(Number(result?.count || 0));
       })
-      .catch((error) => {
-        console.error(error);
-        if (active) {
-          setServerRows([]);
-          setServerCount(0);
-        }
-      })
-      .finally(() => {
-        if (active) setServerLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+      .catch((error) => { console.error(error); if (active) { setServerRows([]); setServerCount(0); } })
+      .finally(() => { if (active) setServerLoading(false); });
+    return () => { active = false; };
   }, [currentPage, onListFerias, searchTerm, sub]);
 
   const hasServerPagination = typeof onListFerias === "function";
   const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm
-      ? serverRows
-      : listaPaginada
+    ? serverRows.length > 0 || currentPage > 1 || searchTerm ? serverRows : listaPaginada
     : listaPaginada;
   const totalItems = hasServerPagination ? serverCount : listaFiltrada.length;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
 
+  // ─── Ausência server pagination ───────────────────────────────────
+  useEffect(() => {
+    if (!onListAusencias || sub !== "ausencia") return;
+    let active = true;
+    setAusenciaServerLoading(true);
+    onListAusencias({ page: ausenciaPage, pageSize: PAGE_SIZE, search: ausenciaSearchTerm })
+      .then((result) => {
+        if (!active) return;
+        setAusenciaServerRows(Array.isArray(result?.rows) ? result.rows : []);
+        setAusenciaServerCount(Number(result?.count || 0));
+      })
+      .catch((error) => { console.error(error); if (active) { setAusenciaServerRows([]); setAusenciaServerCount(0); } })
+      .finally(() => { if (active) setAusenciaServerLoading(false); });
+    return () => { active = false; };
+  }, [ausenciaPage, ausenciaSearchTerm, onListAusencias, sub]);
+
+  const ausenciaRows = ausenciaServerRows.length > 0 || ausenciaPage > 1 || ausenciaSearchTerm
+    ? ausenciaServerRows
+    : (ausencias || []).filter((a) => {
+        if (!ausenciaSearchTerm) return true;
+        const nome = String(a.colaborador?.nome || "").toLowerCase();
+        const motivo = String(a.motivo || "").toLowerCase();
+        return nome.includes(ausenciaSearchTerm) || motivo.includes(ausenciaSearchTerm);
+      });
+  const ausenciaTotalItems = ausenciaServerCount || ausenciaRows.length;
+  const ausenciaTotalPages = Math.max(1, Math.ceil(ausenciaTotalItems / PAGE_SIZE));
+
+  // ─── Férias / Day Off handlers ────────────────────────────────────
   const abrirNovo = () => {
     setForm({ colaboradorId: "", inicio: "", fim: "", status: "marcado" });
     setModal("novo");
@@ -139,21 +200,9 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     try {
       setSaving(true);
       if (modal === "novo") {
-        await onCreateFerias({
-          colaborador_id: form.colaboradorId,
-          inicio: form.inicio,
-          fim: form.fim,
-          status: form.status || "marcado",
-          tipo: sub === "ferias" ? "ferias" : "dayoff",
-        });
+        await onCreateFerias({ colaborador_id: form.colaboradorId, inicio: form.inicio, fim: form.fim, status: form.status || "marcado", tipo: sub === "ferias" ? "ferias" : "dayoff" });
       } else {
-        await onUpdateFerias(form.id, {
-          colaborador_id: form.colaboradorId,
-          inicio: form.inicio,
-          fim: form.fim,
-          status: form.status || "marcado",
-          tipo: sub === "ferias" ? "ferias" : "dayoff",
-        });
+        await onUpdateFerias(form.id, { colaborador_id: form.colaboradorId, inicio: form.inicio, fim: form.fim, status: form.status || "marcado", tipo: sub === "ferias" ? "ferias" : "dayoff" });
       }
       setModal(null);
     } finally {
@@ -164,8 +213,8 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
   const removerRegistro = async () => {
     if (!confirmarExcluir?.id) return;
     const id = confirmarExcluir.id;
-    const snapshotServerRows = [...serverRows];
-    const snapshotServerCount = serverCount;
+    const snapshotRows = [...serverRows];
+    const snapshotCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
       if (hasServerPagination) {
@@ -178,22 +227,58 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) {
-        setServerRows(snapshotServerRows);
-        setServerCount(snapshotServerCount);
-      } else {
-        setHiddenIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
+      if (hasServerPagination) { setServerRows(snapshotRows); setServerCount(snapshotCount); }
+      else { setHiddenIds((prev) => { const next = new Set(prev); next.delete(id); return next; }); }
     } finally {
-      setPendingDeleteIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    }
+  };
+
+  // ─── Ausência handlers ────────────────────────────────────────────
+  const abrirAusenciaNova = () => {
+    setAusenciaForm({ colaboradorId: "", motivo: "", inicio: "", fim: "", estimativa: "", tipoTempo: "especifico" });
+    setAusenciaModal("novo");
+  };
+
+  const salvarAusencia = async () => {
+    if (!ausenciaForm.colaboradorId || !ausenciaForm.motivo || !ausenciaForm.inicio) return;
+    try {
+      setAusenciaSaving(true);
+      const payload = {
+        colaborador_id: ausenciaForm.colaboradorId,
+        motivo: ausenciaForm.motivo,
+        inicio: ausenciaForm.inicio,
+        fim: ausenciaForm.tipoTempo === "especifico" && ausenciaForm.fim ? ausenciaForm.fim : null,
+        estimativa: ausenciaForm.tipoTempo === "estimativa" && ausenciaForm.estimativa ? ausenciaForm.estimativa : null,
+      };
+      if (ausenciaModal === "novo") {
+        await onCreateAusencia(payload);
+      } else {
+        await onUpdateAusencia(ausenciaModal, payload);
+      }
+      setAusenciaModal(null);
+    } finally {
+      setAusenciaSaving(false);
+    }
+  };
+
+  const removerAusencia = async () => {
+    if (!ausenciaConfirmarExcluir?.id) return;
+    const id = ausenciaConfirmarExcluir.id;
+    const snapshotRows = [...ausenciaServerRows];
+    const snapshotCount = ausenciaServerCount;
+    try {
+      setAusenciaPendingDelete((prev) => new Set(prev).add(id));
+      setAusenciaServerRows((prev) => prev.filter((r) => r.id !== id));
+      setAusenciaServerCount((prev) => Math.max(0, prev - 1));
+      await onDeleteAusencia(id);
+      setAusenciaConfirmarExcluir(null);
+    } catch (error) {
+      console.error(error);
+      setAusenciaServerRows(snapshotRows);
+      setAusenciaServerCount(snapshotCount);
+    } finally {
+      setAusenciaPendingDelete((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
   };
 
@@ -207,143 +292,146 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
           <button className={`filter-tab ${sub === "dayoff" ? "active" : ""}`} onClick={() => setSub("dayoff")}>
             <CalendarDays size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> Day Off
           </button>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input
-            className="form-input"
-            style={{ maxWidth: 320 }}
-            placeholder="Buscar por colaborador, cargo ou período"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button className="btn-primary" onClick={abrirNovo}>
-            + Adicionar
+          <button className={`filter-tab ${sub === "ausencia" ? "active" : ""}`} onClick={() => setSub("ausencia")}>
+            <UserMinus size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> Ausência
           </button>
         </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {sub !== "ausencia" ? (
+            <>
+              <input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por colaborador, cargo ou período" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+              <button className="btn-primary" onClick={abrirNovo}>+ Adicionar</button>
+            </>
+          ) : (
+            <>
+              <input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por colaborador ou motivo" value={ausenciaSearchInput} onChange={(e) => setAusenciaSearchInput(e.target.value)} />
+              <button className="btn-primary" onClick={abrirAusenciaNova}>+ Registrar ausência</button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {rows.map((item) => (
-          <div key={item.id} className="card" style={{ padding: 16 }}>
-            <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Avatar col={item.colaborador} size={40} />
-              <div className="admin-ferias-main" style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{item.colaborador.cargo}</div>
-                <div className="admin-ferias-dates" style={{ fontSize: 12, marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  <CalendarDays size={12} /> {item.inicio} - {item.fim}
+      {/* ─── Férias / Day Off list ─────────────────────────────────── */}
+      {sub !== "ausencia" && (
+        <>
+          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {rows.map((item) => (
+              <div key={item.id} className="card" style={{ padding: 16 }}>
+                <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <Avatar col={item.colaborador} size={40} />
+                  <div className="admin-ferias-main" style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{item.colaborador.cargo}</div>
+                    <div className="admin-ferias-dates" style={{ fontSize: 12, marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <CalendarDays size={12} /> {item.inicio} - {item.fim}
+                    </div>
+                  </div>
+                  {sub === "ferias" && (
+                    <span className={`status-chip admin-ferias-status ${item.status === "em_andamento" ? "status-andamento" : "status-marcado"}`}>
+                      {item.status === "em_andamento" ? "De férias" : "Agendado"}
+                    </span>
+                  )}
+                  <div className="admin-ferias-actions" style={{ display: "flex", gap: 6 }}>
+                    <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => { setForm({ id: item.id, colaboradorId: String(item.colaborador.id), inicio: toIso(item.inicio), fim: toIso(item.fim), status: item.status || "marcado" }); setModal(item.id); }}>
+                      Editar
+                    </button>
+                    <button onClick={() => setConfirmarExcluir(item)} style={{ background: "rgba(255,107,107,0.1)", border: "1px solid rgba(255,107,107,0.3)", color: "var(--danger)", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }} disabled={pendingDeleteIds.has(item.id)}>
+                      {pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
+                    </button>
+                  </div>
                 </div>
               </div>
-              {sub === "ferias" && (
-                <span className={`status-chip admin-ferias-status ${item.status === "em_andamento" ? "status-andamento" : "status-marcado"}`}>
-                  {item.status === "em_andamento" ? "De férias" : "Agendado"}
-                </span>
-              )}
-              <div className="admin-ferias-actions" style={{ display: "flex", gap: 6 }}>
-                <button
-                  className="btn-ghost"
-                  style={{ padding: "4px 10px", fontSize: 12 }}
-                  onClick={() => {
-                    setForm({
-                      id: item.id,
-                      colaboradorId: String(item.colaborador.id),
-                      inicio: toIso(item.inicio),
-                      fim: toIso(item.fim),
-                      status: item.status || "marcado",
-                    });
-                    setModal(item.id);
-                  }}
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => setConfirmarExcluir(item)}
-                  style={{
-                    background: "rgba(255,107,107,0.1)",
-                    border: "1px solid rgba(255,107,107,0.3)",
-                    color: "var(--danger)",
-                    borderRadius: 6,
-                    padding: "4px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                  disabled={pendingDeleteIds.has(item.id)}
-                >
-                  {pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
-                </button>
+            ))}
+            {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhum registro encontrado."}</div>}
+          </div>
+          {totalItems > PAGE_SIZE && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>Anterior</button>
+                <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>Próxima</button>
               </div>
             </div>
-          </div>
-        ))}
-        {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhum registro encontrado."}</div>}
-      </div>
-
-      {totalItems > PAGE_SIZE && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
-              Anterior
-            </button>
-            <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.min(uiTotalPages, p + 1))} disabled={uiPage >= uiTotalPages}>
-              Próxima
-            </button>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
-      {modal !== null && (
+      {/* ─── Ausência list ────────────────────────────────────────── */}
+      {sub === "ausencia" && (
+        <>
+          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {ausenciaRows.map((item) => (
+              <div key={item.id} className="card" style={{ padding: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <Avatar col={item.colaborador} size={40} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{item.colaborador.cargo}</div>
+                    <div style={{ fontSize: 12, marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <Clock size={12} />
+                      {formatDisplayDateTime(item.inicio)}
+                      {item.fim ? ` → ${formatDisplayDateTime(item.fim)}` : item.estimativa ? ` · ~${item.estimativa}` : " · sem previsão"}
+                    </div>
+                    <div style={{ marginTop: 6, padding: "6px 10px", background: "var(--surface2)", borderRadius: 6, fontSize: 12, borderLeft: "3px solid var(--accent)" }}>
+                      <span style={{ color: "var(--muted)", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Motivo · </span>
+                      {item.motivo}
+                    </div>
+                  </div>
+                  <span className="status-chip" style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    Ausente
+                  </span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => {
+                      setAusenciaForm({ colaboradorId: String(item.colaborador.id), motivo: item.motivo, inicio: formatDateTimeLocal(item.inicio), fim: formatDateTimeLocal(item.fim), estimativa: item.estimativa || "", tipoTempo: item.fim ? "especifico" : "estimativa" });
+                      setAusenciaModal(item.id);
+                    }}>Editar</button>
+                    <button onClick={() => setAusenciaConfirmarExcluir(item)} style={{ background: "rgba(255,107,107,0.1)", border: "1px solid rgba(255,107,107,0.3)", color: "var(--danger)", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer" }} disabled={ausenciaPendingDelete.has(item.id)}>
+                      {ausenciaPendingDelete.has(item.id) ? "Removendo..." : "Remover"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {ausenciaRows.length === 0 && <div className="empty-state">{ausenciaServerLoading ? "Carregando..." : "Nenhuma ausência registrada."}</div>}
+          </div>
+          {ausenciaTotalItems > PAGE_SIZE && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--muted)" }}>Página {ausenciaPage} de {ausenciaTotalPages} · {ausenciaTotalItems} item(ns)</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn-ghost" onClick={() => setAusenciaPage((p) => Math.max(1, p - 1))} disabled={ausenciaPage <= 1}>Anterior</button>
+                <button className="btn-ghost" onClick={() => setAusenciaPage((p) => Math.min(ausenciaTotalPages, p + 1))} disabled={ausenciaPage >= ausenciaTotalPages}>Próxima</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ─── Férias / Day Off modal ───────────────────────────────── */}
+      {modal !== null && sub !== "ausencia" && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
           <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
                 {modal === "novo" ? `Adicionar ${sub === "ferias" ? "Férias" : "Day Off"}` : "Editar registro"}
               </div>
-              <button className="modal-close" onClick={() => setModal(null)}>
-                ×
-              </button>
+              <button className="modal-close" onClick={() => setModal(null)}>×</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
                 <label className="form-label">COLABORADOR *</label>
                 <select className="form-input" value={form.colaboradorId || ""} onChange={(e) => setForm((p) => ({ ...p, colaboradorId: e.target.value }))}>
                   <option value="">Selecione...</option>
-                  {colaboradoresOpts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
+                  {colaboradoresOpts.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
               </div>
               <div className="grid-2">
                 <div className="form-group">
                   <label className="form-label">INÍCIO *</label>
-                  <DatePicker
-                    selected={parseIsoToDate(form.inicio)}
-                    onChange={(date) => setForm((p) => ({ ...p, inicio: formatDateForStore(date) }))}
-                    locale={ptBR}
-                    dateFormat="dd/MM/yyyy"
-                    placeholderText="dd/mm/aaaa"
-                    className="form-input datepicker-input"
-                    calendarClassName="panet-datepicker"
-                    popperClassName="panet-datepicker-popper"
-                  />
+                  <DatePicker selected={parseIsoToDate(form.inicio)} onChange={(date) => setForm((p) => ({ ...p, inicio: formatDateForStore(date) }))} locale={ptBR} dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa" className="form-input datepicker-input" calendarClassName="panet-datepicker" popperClassName="panet-datepicker-popper" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">FIM *</label>
-                  <DatePicker
-                    selected={parseIsoToDate(form.fim)}
-                    onChange={(date) => setForm((p) => ({ ...p, fim: formatDateForStore(date) }))}
-                    locale={ptBR}
-                    dateFormat="dd/MM/yyyy"
-                    placeholderText="dd/mm/aaaa"
-                    className="form-input datepicker-input"
-                    calendarClassName="panet-datepicker"
-                    popperClassName="panet-datepicker-popper"
-                    minDate={parseIsoToDate(form.inicio)}
-                  />
+                  <DatePicker selected={parseIsoToDate(form.fim)} onChange={(date) => setForm((p) => ({ ...p, fim: formatDateForStore(date) }))} locale={ptBR} dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa" className="form-input datepicker-input" calendarClassName="panet-datepicker" popperClassName="panet-datepicker-popper" minDate={parseIsoToDate(form.inicio)} />
                 </div>
               </div>
               {sub === "ferias" && (
@@ -356,47 +444,101 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
                 </div>
               )}
               <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="btn-ghost" onClick={() => setModal(null)}>
-                  Cancelar
-                </button>
-                <button className="btn-primary" onClick={salvar} disabled={saving}>
-                  Salvar
-                </button>
+                <button className="btn-ghost" onClick={() => setModal(null)}>Cancelar</button>
+                <button className="btn-primary" onClick={salvar} disabled={saving}>Salvar</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* ─── Ausência modal ───────────────────────────────────────── */}
+      {ausenciaModal !== null && (
+        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setAusenciaModal(null)}>
+          <div className="modal" style={{ maxWidth: 500 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+                {ausenciaModal === "novo" ? "Registrar ausência" : "Editar ausência"}
+              </div>
+              <button className="modal-close" onClick={() => setAusenciaModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">COLABORADOR *</label>
+                <select className="form-input" value={ausenciaForm.colaboradorId || ""} onChange={(e) => setAusenciaForm((p) => ({ ...p, colaboradorId: e.target.value }))}>
+                  <option value="">Selecione...</option>
+                  {colaboradoresOpts.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">MOTIVO REAL *</label>
+                <input className="form-input" placeholder="Ex: Médico, problema no carro, buscar filho..." value={ausenciaForm.motivo || ""} onChange={(e) => setAusenciaForm((p) => ({ ...p, motivo: e.target.value }))} />
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Visível apenas para administradores.</div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">INÍCIO *</label>
+                <input type="datetime-local" className="form-input" value={ausenciaForm.inicio || ""} onChange={(e) => setAusenciaForm((p) => ({ ...p, inicio: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">TEMPO DE RETORNO</label>
+                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
+                    <input type="radio" name="tipoTempo" checked={ausenciaForm.tipoTempo === "especifico"} onChange={() => setAusenciaForm((p) => ({ ...p, tipoTempo: "especifico", estimativa: "" }))} />
+                    Horário específico
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
+                    <input type="radio" name="tipoTempo" checked={ausenciaForm.tipoTempo === "estimativa"} onChange={() => setAusenciaForm((p) => ({ ...p, tipoTempo: "estimativa", fim: "" }))} />
+                    Estimativa
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
+                    <input type="radio" name="tipoTempo" checked={ausenciaForm.tipoTempo === "indefinido"} onChange={() => setAusenciaForm((p) => ({ ...p, tipoTempo: "indefinido", fim: "", estimativa: "" }))} />
+                    Indefinido
+                  </label>
+                </div>
+                {ausenciaForm.tipoTempo === "especifico" && (
+                  <input type="datetime-local" className="form-input" value={ausenciaForm.fim || ""} min={ausenciaForm.inicio || ""} onChange={(e) => setAusenciaForm((p) => ({ ...p, fim: e.target.value }))} />
+                )}
+                {ausenciaForm.tipoTempo === "estimativa" && (
+                  <input className="form-input" placeholder='Ex: "~2h", "tarde toda", "1h30"' value={ausenciaForm.estimativa || ""} onChange={(e) => setAusenciaForm((p) => ({ ...p, estimativa: e.target.value }))} />
+                )}
+              </div>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn-ghost" onClick={() => setAusenciaModal(null)}>Cancelar</button>
+                <button className="btn-primary" onClick={salvarAusencia} disabled={ausenciaSaving}>Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Confirmar exclusão (Férias/Day Off) ─────────────────── */}
       {confirmarExcluir !== null && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setConfirmarExcluir(null)}>
           <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
-              <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
-                <AlertTriangle size={36} />
-              </div>
+              <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}><AlertTriangle size={36} /></div>
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Remover registro?</div>
               <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>Essa ação não pode ser desfeita.</div>
               <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
-                  Cancelar
-                </button>
-                <button
-                  onClick={removerRegistro}
-                  style={{
-                    background: "var(--danger)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 20px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                  disabled={pendingDeleteIds.has(confirmarExcluir.id)}
-                >
-                  Remover
-                </button>
+                <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>Cancelar</button>
+                <button onClick={removerRegistro} style={{ background: "var(--danger)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 13 }} disabled={pendingDeleteIds.has(confirmarExcluir.id)}>Remover</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Confirmar exclusão (Ausência) ───────────────────────── */}
+      {ausenciaConfirmarExcluir !== null && (
+        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setAusenciaConfirmarExcluir(null)}>
+          <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
+              <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}><AlertTriangle size={36} /></div>
+              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Remover ausência?</div>
+              <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>Essa ação não pode ser desfeita.</div>
+              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                <button className="btn-ghost" onClick={() => setAusenciaConfirmarExcluir(null)}>Cancelar</button>
+                <button onClick={removerAusencia} style={{ background: "var(--danger)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 13 }} disabled={ausenciaPendingDelete.has(ausenciaConfirmarExcluir.id)}>Remover</button>
               </div>
             </div>
           </div>
@@ -405,4 +547,3 @@ export function AdminFerias({ ferias, dayoff, colaboradores, onCreateFerias, onU
     </div>
   );
 }
-

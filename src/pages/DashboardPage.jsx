@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { Cake, CalendarDays, Heart, MessageSquare, SendHorizonal, Plane } from "lucide-react";
+import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal, UserMinus } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
@@ -65,6 +65,7 @@ export function DashboardPage({
   currentUserId,
   ferias,
   dayoff,
+  ausencias,
 }) {
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
@@ -116,6 +117,16 @@ export function DashboardPage({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [muralOrdenado.length]);
+  const ausentesAgora = useMemo(() => {
+    const now = new Date();
+    return (ausencias || []).filter((a) => {
+      if (!a.inicio) return false;
+      const inicio = new Date(a.inicio);
+      const fim = a.fim ? new Date(a.fim) : null;
+      return inicio <= now && (!fim || fim >= now);
+    });
+  }, [ausencias]);
+
   const proximasFolgas = useMemo(() => {
     const hoje = new Date();
     const hojeNoon = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 12, 0, 0);
@@ -298,11 +309,37 @@ export function DashboardPage({
           <div className="card">
             <div className="card-header">
               <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <Plane size={14} /> Férias & Day Off
+                <Plane size={14} /> PanOff
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              <div style={{ marginTop: 10, marginBottom: 12 }}>
+              {ausentesAgora.length > 0 && (
+                <div style={{ marginTop: 10, marginBottom: 8 }}>
+                  {ausentesAgora.map((a) => (
+                    <div key={`ausente-${a.id}`} className="folga-entry is-ausencia">
+                      <div className="folga-avatar-wrap">
+                        <Avatar col={a.colaborador} size={32} />
+                      </div>
+                      <div className="folga-content">
+                        <div className="folga-user">{a.colaborador.nome.split(" ")[0]}</div>
+                        <div className="folga-status">
+                          <span className="status-chip" style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            Ausente
+                          </span>
+                        </div>
+                        <div className="folga-date-line">
+                          <Clock size={12} />
+                          {a.fim
+                            ? `até ${new Date(a.fim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                            : a.estimativa ? `~${a.estimativa}` : "sem previsão"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {proximasFolgas.length > 0 && <div style={{ height: 1, background: "var(--border)", margin: "8px 0" }} />}
+                </div>
+              )}
+              <div style={{ marginTop: ausentesAgora.length === 0 ? 10 : 0, marginBottom: 12 }}>
                 {proximasFolgas.map((item) => {
                   const badge = item.tipo === "ferias" ? (
                     <span
@@ -337,6 +374,7 @@ export function DashboardPage({
                   </div>
                   );
                 })}
+              </div>
               </div>
               <div style={{ marginTop: 8 }}>
                 <button className="btn-aniversarios-ver-todos" onClick={onOpenFolgas}>

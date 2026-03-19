@@ -19,7 +19,7 @@ const AdminTabFallback = () => (
 const ALL_ABAS = [
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "postagens", label: "PanNews", icon: FileText },
-  { id: "ferias", label: "Férias & Day Off", icon: Plane },
+  { id: "ferias", label: "PanOff", icon: Plane },
   { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
   { id: "galeria", label: "Galerias", icon: Images },
   { id: "mural", label: "PanZap", icon: MessageSquare },
@@ -44,6 +44,11 @@ export function AdminPage({
   onUpdateFerias,
   onDeleteFerias,
   onListFerias,
+  ausencias,
+  onCreateAusencia,
+  onUpdateAusencia,
+  onDeleteAusencia,
+  onListAusencias,
   presencialAgendas,
   onCreatePresencialAgenda,
   onUpdatePresencialAgenda,
@@ -131,6 +136,11 @@ export function AdminPage({
             onUpdateFerias={onUpdateFerias}
             onDeleteFerias={onDeleteFerias}
             onListFerias={onListFerias}
+            ausencias={ausencias}
+            onCreateAusencia={onCreateAusencia}
+            onUpdateAusencia={onUpdateAusencia}
+            onDeleteAusencia={onDeleteAusencia}
+            onListAusencias={onListAusencias}
           />
         </Suspense>
       )}

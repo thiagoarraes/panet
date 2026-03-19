@@ -179,7 +179,7 @@ const NAV_ITEMS = [
   { id: "postagens", label: "PanNews", icon: FileText },
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "aniversarios", label: "Aniversários", icon: Cake },
-  { id: "ferias", label: "Férias & Day Off", icon: Plane },
+  { id: "ferias", label: "PanOff", icon: Plane },
   { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
   { id: "galeria", label: "Galerias", icon: Images },
 ];
@@ -627,6 +627,7 @@ export default function PanetApp() {
   const [aniversariantes, setAniversariantes] = useState(isSupabaseEnabled ? [] : ANIVERSARIANTES_INIT);
   const [ferias, setFerias] = useState(isSupabaseEnabled ? [] : FERIAS_INIT);
   const [dayoff, setDayoff] = useState(isSupabaseEnabled ? [] : DAYOFF_INIT);
+  const [ausencias, setAusencias] = useState([]);
   const [presencialAgendas, setPresencialAgendas] = useState(isSupabaseEnabled ? [] : PRESENCIAL_INIT);
   const [galeriaEventos, setGaleriaEventos] = useState(isSupabaseEnabled ? [] : GALERIA_EVENTOS);
   const [muralMsgs, setMuralMsgs] = useState(isSupabaseEnabled ? [] : MURAL_INIT);
@@ -806,6 +807,9 @@ export default function PanetApp() {
       setDayoff(cachedFerias.dayoff);
     }
 
+    const cachedAusencias = readCachedDomain(userId, "ausencias", Infinity);
+    if (Array.isArray(cachedAusencias)) setAusencias(cachedAusencias);
+
     const cachedAniversarios = readCachedDomain(userId, "aniversarios", Infinity);
     if (Array.isArray(cachedAniversarios)) setAniversariantes(cachedAniversarios);
 
@@ -824,7 +828,7 @@ export default function PanetApp() {
 
   const invalidateUserBusinessCaches = useCallback((userId) => {
     if (!userId) return;
-    ["colaboradores", "ferias", "presencial", "aniversarios", "mural", "postagens", "galeria"].forEach((domain) => {
+    ["colaboradores", "ferias", "ausencias", "presencial", "aniversarios", "mural", "postagens", "galeria"].forEach((domain) => {
       invalidateCachedDomain(userId, domain);
     });
   }, []);
@@ -920,6 +924,36 @@ export default function PanetApp() {
       const payload = { ferias: mappedFerias, dayoff: mappedDayoff };
       writeCachedDomain(currentUserId, "ferias", payload);
       return payload;
+    });
+  }, []);
+
+  const loadAusencias = useCallback(async (currentUserId, options = {}) => {
+    if (!isSupabaseEnabled || !currentUserId) return [];
+    const { force = false } = options;
+    if (!force) {
+      const cached = readCachedDomain(currentUserId, "ausencias", DATA_CACHE_TTL.ferias);
+      if (Array.isArray(cached)) {
+        setAusencias(cached);
+        return cached;
+      }
+    }
+    return runDedupedRequest(`ausencias:${currentUserId}`, async () => {
+      const { data, error } = await supabase
+        .from("ausencias")
+        .select("id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)")
+        .order("inicio", { ascending: false });
+      if (error) throw error;
+      const mapped = (data || []).map((item) => ({
+        id: item.id,
+        motivo: item.motivo,
+        inicio: item.inicio,
+        fim: item.fim || null,
+        estimativa: item.estimativa || null,
+        colaborador: toAvatar(item.colaborador),
+      }));
+      setAusencias(mapped);
+      writeCachedDomain(currentUserId, "ausencias", mapped);
+      return mapped;
     });
   }, []);
 
@@ -1167,6 +1201,7 @@ export default function PanetApp() {
       setTimeout(() => {
         Promise.allSettled([
           loadFerias(currentUserId, { force }),
+          loadAusencias(currentUserId, { force }),
           loadPresencial(currentUserId, { force }),
           loadAniversarios(currentUserId, { force }),
         ]).catch(() => {});
@@ -1180,7 +1215,7 @@ export default function PanetApp() {
         ]).catch(() => {});
       }, 120);
     },
-    [loadAniversarios, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens, loadPresencial]
+    [loadAniversarios, loadAusencias, loadColaboradores, loadFerias, loadGaleria, loadMural, loadPostagens, loadPresencial]
   );
 
   const listAdminPostagens = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
@@ -1342,6 +1377,60 @@ export default function PanetApp() {
       return payload;
     });
   }, [colaboradores, currentProfile?.id, getAdminListCache, setAdminListCache]);
+
+  const listAdminAusencias = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
+    if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const term = String(search || "").trim();
+    const cacheKey = `ausencias:${currentProfile.id}:${safePage}:${safePageSize}:${term.toLowerCase()}`;
+    const cached = getAdminListCache(cacheKey);
+    if (cached) return cached;
+
+    return runDedupedRequest(`admin-list:${cacheKey}`, async () => {
+      let rowsQuery = supabase
+        .from("ausencias")
+        .select("id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)")
+        .order("inicio", { ascending: false });
+
+      let countQuery = supabase.from("ausencias").select("id", { count: "exact", head: true });
+
+      if (term) {
+        const escaped = escapeIlikeTerm(term);
+        const { data: cols } = await supabase
+          .from("colaboradores")
+          .select("id")
+          .ilike("nome", `%${escaped}%`)
+          .limit(300);
+        const ids = (cols || []).map((row) => row.id);
+        if (ids.length > 0) {
+          rowsQuery = rowsQuery.in("colaborador_id", ids);
+          countQuery = countQuery.in("colaborador_id", ids);
+        } else {
+          rowsQuery = rowsQuery.ilike("motivo", `%${escaped}%`);
+          countQuery = countQuery.ilike("motivo", `%${escaped}%`);
+        }
+      }
+
+      const [{ data, error }, { count }] = await Promise.all([rowsQuery.range(from, to), countQuery]);
+      if (error) throw new Error(error.message);
+
+      const rows = (data || []).map((item) => ({
+        id: item.id,
+        motivo: item.motivo,
+        inicio: item.inicio,
+        fim: item.fim || null,
+        estimativa: item.estimativa || null,
+        colaborador: toAvatar(item.colaborador),
+      }));
+      const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
+      const payload = { rows, count: safeCount };
+      setAdminListCache(cacheKey, payload);
+      return payload;
+    });
+  }, [currentProfile?.id, getAdminListCache, setAdminListCache]);
 
   const listAdminPresencial = useCallback(async ({ page = 1, pageSize = 20, search = "" } = {}) => {
     if (!isSupabaseEnabled || !currentProfile?.id) return { rows: [], count: 0 };
@@ -2080,6 +2169,27 @@ export default function PanetApp() {
     if (error) throw new Error(error.message);
     invalidateAdminListCache();
     loadFerias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar férias:", err));
+  };
+
+  const handleCreateAusencia = async (payload) => {
+    if (!isSupabaseEnabled) return;
+    const { error } = await supabase.from("ausencias").insert(payload);
+    if (error) throw new Error(error.message);
+    loadAusencias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar ausências:", err));
+  };
+
+  const handleUpdateAusencia = async (id, payload) => {
+    if (!isSupabaseEnabled) return;
+    const { error } = await supabase.from("ausencias").update(payload).eq("id", id);
+    if (error) throw new Error(error.message);
+    loadAusencias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar ausências:", err));
+  };
+
+  const handleDeleteAusencia = async (id) => {
+    if (!isSupabaseEnabled) return;
+    const { error } = await supabase.from("ausencias").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    loadAusencias(currentProfile?.id, { force: true }).catch((err) => console.error("Falha ao atualizar ausências:", err));
   };
 
   const handleCreatePresencialAgenda = async (payload) => {
@@ -2940,6 +3050,7 @@ export default function PanetApp() {
         currentUserId={currentProfile?.id || eu.id}
         ferias={ferias}
         dayoff={dayoff}
+        ausencias={ausencias}
       />
     ),
     postagens: <PostagensPage onOpen={handleOpenPost} onToggleCurtida={handleToggleCurtida} postagens={postagens} />,
@@ -2971,7 +3082,7 @@ export default function PanetApp() {
         colaboradores={colaboradores}
       />
     ),
-    ferias: <FeriasPage ferias={ferias} dayoff={dayoff} />,
+    ferias: <FeriasPage ferias={ferias} dayoff={dayoff} ausencias={ausencias} />,
     presencial: (
       <PresencialPage
         agendas={presencialAgendas}
@@ -3001,6 +3112,11 @@ export default function PanetApp() {
         onUpdateFerias={handleUpdateFerias}
         onDeleteFerias={handleDeleteFerias}
         onListFerias={listAdminFerias}
+        ausencias={ausencias}
+        onCreateAusencia={handleCreateAusencia}
+        onUpdateAusencia={handleUpdateAusencia}
+        onDeleteAusencia={handleDeleteAusencia}
+        onListAusencias={listAdminAusencias}
         presencialAgendas={presencialAgendas}
         onCreatePresencialAgenda={handleCreatePresencialAgenda}
         onUpdatePresencialAgenda={handleUpdatePresencialAgenda}
