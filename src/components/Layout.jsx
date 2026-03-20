@@ -2940,9 +2940,6 @@ export default function PanetApp() {
         colaboradores={colaboradores}
         currentUser={eu}
         currentUserId={currentProfile?.id || eu.id}
-        ferias={ferias}
-        dayoff={dayoff}
-        ausencias={ausencias}
       />
     ),
     postagens: <PostagensPage onOpen={handleOpenPost} currentUserId={currentProfile?.id} />,
@@ -2974,7 +2971,7 @@ export default function PanetApp() {
         colaboradores={colaboradores}
       />
     ),
-    ferias: <FeriasPage ferias={ferias} dayoff={dayoff} ausencias={ausencias} />,
+    ferias: <FeriasPage currentUserId={currentProfile?.id} />,
     presencial: (
       <PresencialPage
         agendas={presencialAgendas}

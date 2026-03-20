@@ -7,6 +7,8 @@ import { useMural } from "../hooks/queries/useMural";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 import { usePostagens } from "../hooks/queries/usePostagens";
 import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
+import { useFerias } from "../hooks/queries/useFerias";
+import { useAusencias } from "../hooks/queries/useAusencias";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -63,14 +65,15 @@ export function DashboardPage({
   colaboradores,
   currentUser,
   currentUserId,
-  ferias,
-  dayoff,
-  ausencias,
 }) {
   const { data: postagens = [] } = usePostagens(currentUserId);
   const toggleCurtida = useToggleCurtida();
   const { data: muralMsgs = [] } = useMural(currentUserId);
   const enviarMensagem = useEnviarMensagem(currentUserId);
+  const { data: feriasData } = useFerias(currentUserId);
+  const ferias = feriasData?.ferias || [];
+  const dayoff = feriasData?.dayoff || [];
+  const { data: ausencias = [] } = useAusencias(currentUserId);
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
