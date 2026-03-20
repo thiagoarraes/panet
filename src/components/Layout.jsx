@@ -3074,7 +3074,7 @@ export default function PanetApp() {
         dayoff={dayoff}
       />
     ),
-    colaboradores: <ColaboradoresPage colaboradores={colaboradores} />,
+    colaboradores: <ColaboradoresPage currentUserId={currentProfile?.id} />,
     aniversarios: (
       <AniversariosPage
         aniversariantes={aniversariantes}
