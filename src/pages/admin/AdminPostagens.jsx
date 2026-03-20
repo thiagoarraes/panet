@@ -1,6 +1,8 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { AlertTriangle, Heart, MessageCircle } from "lucide-react";
 import { Badge } from "../../components/Badge";
+import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
+import { useCreatePost, useUpdatePost, useDeletePost } from "../../hooks/mutations/usePostMutations.js";
 
 const loadAdminPostagemModal = () => import("./AdminPostagemModal");
 const AdminPostagemModal = lazy(() => loadAdminPostagemModal().then((m) => ({ default: m.AdminPostagemModal })));
@@ -21,7 +23,7 @@ const stripHtml = (html) =>
     .replace(/\s+/g, " ")
     .trim();
 
-export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdatePost, onDeletePost, onListPostagens }) {
+export function AdminPostagens({ currentUserId }) {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
@@ -30,12 +32,10 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
-  const [serverRows, setServerRows] = useState([]);
-  const [serverCount, setServerCount] = useState(0);
-  const [serverLoading, setServerLoading] = useState(false);
   const CATS = ["Notícia", "Comunicado", "Evento"];
   const PAGE_SIZE = 20;
 
+  // Debounce search
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearchTerm(searchInput.trim().toLowerCase());
@@ -44,58 +44,15 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  const postagensFiltradas = useMemo(() => {
-    if (!searchTerm) return postagens;
-    return postagens.filter((post) => {
-      const titulo = String(post.titulo || "").toLowerCase();
-      const categoria = String(post.categoria || "").toLowerCase();
-      const descricao = stripHtml(post.descricao || "").toLowerCase();
-      return titulo.includes(searchTerm) || categoria.includes(searchTerm) || descricao.includes(searchTerm);
-    });
-  }, [postagens, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(postagensFiltradas.length / PAGE_SIZE));
-  const page = Math.min(currentPage, totalPages);
-
-  const postagensPaginadas = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return postagensFiltradas.slice(start, start + PAGE_SIZE);
-  }, [page, postagensFiltradas]);
-
-  useEffect(() => {
-    if (!onListPostagens) return;
-    let active = true;
-    setServerLoading(true);
-    onListPostagens({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
-      .then((result) => {
-        if (!active) return;
-        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => {
-        console.error(error);
-        if (active) {
-          setServerRows([]);
-          setServerCount(0);
-        }
-      })
-      .finally(() => {
-        if (active) setServerLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [currentPage, onListPostagens, searchTerm]);
-
-  const hasServerPagination = typeof onListPostagens === "function";
-  const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm
-      ? serverRows
-      : postagensPaginadas
-    : postagensPaginadas;
-  const totalItems = hasServerPagination ? serverCount : postagensFiltradas.length;
+  const { data, isLoading } = useAdminPostagens({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
+  const rows = data?.rows || [];
+  const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
+
+  const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
+  const deletePost = useDeletePost();
 
   const abrirNovo = () => {
     loadAdminPostagemModal().catch(() => {});
@@ -122,15 +79,14 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
     try {
       setSaving(true);
       if (modal === "novo") {
-        if (onCreatePost) {
-          await onCreatePost(form);
-        } else {
-          setPostagens((p) => [{ ...form, id: Date.now() }, ...p]);
-        }
-      } else if (onUpdatePost) {
-        await onUpdatePost(form.id, form);
+        await createPost.mutateAsync({ payload: { ...form }, userId: currentUserId });
       } else {
-        setPostagens((p) => p.map((x) => (x.id === form.id ? form : x)));
+        await updatePost.mutateAsync({
+          postId: form.id,
+          payload: { ...form },
+          userId: currentUserId,
+          previousImageUrl: modal?.imagem || null,
+        });
       }
       setModal(null);
     } finally {
@@ -139,29 +95,12 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
   };
 
   const excluir = async (post) => {
-    const snapshot = [...postagens];
-    const snapshotServerRows = [...serverRows];
-    const snapshotServerCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(post.id));
-      if (hasServerPagination) {
-        setServerRows((prev) => prev.filter((x) => x.id !== post.id));
-        setServerCount((prev) => Math.max(0, prev - 1));
-      } else {
-        setPostagens((p) => p.filter((x) => x.id !== post.id));
-      }
-      if (onDeletePost) {
-        await onDeletePost(post.id);
-      }
+      await deletePost.mutateAsync({ postId: post.id, previousImageUrl: post.imagem || null });
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) {
-        setServerRows(snapshotServerRows);
-        setServerCount(snapshotServerCount);
-      } else {
-        setPostagens(snapshot);
-      }
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
@@ -238,7 +177,7 @@ export function AdminPostagens({ postagens, setPostagens, onCreatePost, onUpdate
         ))}
         {rows.length === 0 && (
           <div className="empty-state">
-            {serverLoading ? "Carregando..." : searchTerm ? "Nenhuma postagem encontrada para este filtro." : "Sem postagens."}
+            {isLoading ? "Carregando..." : searchTerm ? "Nenhuma postagem encontrada para este filtro." : "Sem postagens."}
           </div>
         )}
       </div>

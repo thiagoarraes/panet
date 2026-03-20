@@ -2975,46 +2975,7 @@ export default function PanetApp() {
         aba={adminAba}
         onChangeAba={(aba) => navigateTo("admin", aba)}
         currentProfile={currentProfile}
-        postagens={postagens}
-        setPostagens={setPostagens}
-        ferias={ferias}
-        dayoff={dayoff}
-        colaboradores={colaboradores}
-        currentUserId={currentProfile?.id}
-        onCreatePost={handleCreatePost}
-        onUpdatePost={handleUpdatePost}
-        onDeletePost={handleDeletePost}
-        onListPostagens={listAdminPostagens}
-        onCreateFerias={handleCreateFerias}
-        onUpdateFerias={handleUpdateFerias}
-        onDeleteFerias={handleDeleteFerias}
-        onListFerias={listAdminFerias}
-        ausencias={ausencias}
-        onCreateAusencia={handleCreateAusencia}
-        onUpdateAusencia={handleUpdateAusencia}
-        onDeleteAusencia={handleDeleteAusencia}
-        onListAusencias={listAdminAusencias}
-        presencialAgendas={presencialAgendas}
-        onCreatePresencialAgenda={handleCreatePresencialAgenda}
-        onUpdatePresencialAgenda={handleUpdatePresencialAgenda}
-        onDeletePresencialAgenda={handleDeletePresencialAgenda}
-        onListPresencial={listAdminPresencial}
-        onRunPresencialSecretSanta={handleRunPresencialSecretSanta}
-        galeriaEventos={galeriaEventos}
-        onCreateGaleriaEvento={handleCreateGaleriaEvento}
-        onUpdateGaleriaEvento={handleUpdateGaleriaEvento}
-        onDeleteGaleriaEvento={handleDeleteGaleriaEvento}
-        onListGaleria={listAdminGaleria}
-        onAddGaleriaFoto={handleAddGaleriaFoto}
-        onUpdateGaleriaFoto={handleUpdateGaleriaFoto}
-        onDeleteGaleriaFoto={handleDeleteGaleriaFoto}
-        onUploadGaleriaFotos={handleUploadGaleriaFotos}
-        onSetGaleriaCapa={handleSetGaleriaCapa}
-        muralMsgs={muralMsgs}
-        onDeleteMuralMensagem={handleDeleteMuralMensagem}
-        onDeleteMuralMensagens={handleDeleteMuralMensagens}
-        onDeleteColaborador={handleDeleteColaborador}
-        onListMural={listAdminMural}
+        currentUserId={currentProfile?.id || eu.id}
       />
     ),
   };

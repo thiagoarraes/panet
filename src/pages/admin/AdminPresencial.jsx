@@ -3,6 +3,13 @@ import { AlertTriangle, CalendarDays, Clock3, Gift, MapPin, Users } from "lucide
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
+import { useAdminPresencial } from "../../hooks/queries/admin/useAdminPresencial.js";
+import {
+  useCreatePresencialAgenda,
+  useUpdatePresencialAgenda,
+  useDeletePresencialAgenda,
+  useRunSecretSanta,
+} from "../../hooks/mutations/usePresencialMutations.js";
 
 const parseIsoToDate = (isoDate) => {
   if (!isoDate) return null;
@@ -36,7 +43,7 @@ const normalizeTimeInput = (rawValue) => {
 };
 const isValidTime24h = (value) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(String(value || ""));
 
-export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, onDeleteAgenda, onListPresencial, onRunSecretSanta }) {
+export function AdminPresencial() {
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -45,9 +52,6 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [serverRows, setServerRows] = useState([]);
-  const [serverCount, setServerCount] = useState(0);
-  const [serverLoading, setServerLoading] = useState(false);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -58,48 +62,16 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  useEffect(() => {
-    if (!onListPresencial) return;
-    let active = true;
-    setServerLoading(true);
-    onListPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
-      .then((result) => {
-        if (!active) return;
-        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => {
-        console.error(error);
-        if (active) {
-          setServerRows([]);
-          setServerCount(0);
-        }
-      })
-      .finally(() => {
-        if (active) setServerLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [currentPage, onListPresencial, searchTerm]);
-
-  const localRows = useMemo(() => {
-    if (!searchTerm) return agendas;
-    return agendas.filter((agenda) => {
-      const haystack = `${agenda.titulo || ""} ${agenda.local || ""} ${agenda.observacao || ""}`.toLowerCase();
-      return haystack.includes(searchTerm);
-    });
-  }, [agendas, searchTerm]);
-
-  const hasServerPagination = typeof onListPresencial === "function";
-  const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm
-      ? serverRows
-      : localRows.slice(0, PAGE_SIZE)
-    : localRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const totalItems = hasServerPagination ? serverCount : localRows.length;
+  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
+  const rows = data?.rows || [];
+  const totalItems = data?.count || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, totalPages);
+
+  const createAgenda = useCreatePresencialAgenda();
+  const updateAgenda = useUpdatePresencialAgenda();
+  const deleteAgenda = useDeletePresencialAgenda();
+  const runSecretSanta = useRunSecretSanta();
 
   const openNew = () => {
     setForm({
@@ -154,18 +126,9 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
         status: form.status || "aberto",
       };
       if (modal === "novo") {
-        const created = await onCreateAgenda?.(payload);
-        if (created && typeof onListPresencial === "function" && currentPage === 1 && !searchTerm) {
-          setServerRows((prev) => [created, ...(Array.isArray(prev) ? prev : [])].slice(0, PAGE_SIZE));
-          setServerCount((prev) => Number(prev || 0) + 1);
-        }
+        await createAgenda.mutateAsync(payload);
       } else {
-        const updated = await onUpdateAgenda?.(form.id, payload);
-        if (updated && typeof onListPresencial === "function") {
-          setServerRows((prev) =>
-            (Array.isArray(prev) ? prev : []).map((row) => (String(row.id) === String(form.id) ? updated : row))
-          );
-        }
+        await updateAgenda.mutateAsync({ id: form.id, payload });
       }
       setModal(null);
     } finally {
@@ -177,11 +140,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
     if (!confirmarExcluir?.id) return;
     try {
       setRemovingId(confirmarExcluir.id);
-      await onDeleteAgenda?.(confirmarExcluir.id);
-      if (typeof onListPresencial === "function") {
-        setServerRows((prev) => (Array.isArray(prev) ? prev.filter((row) => String(row.id) !== String(confirmarExcluir.id)) : []));
-        setServerCount((prev) => Math.max(0, Number(prev || 0) - 1));
-      }
+      await deleteAgenda.mutateAsync(confirmarExcluir.id);
       setConfirmarExcluir(null);
     } finally {
       setRemovingId("");
@@ -259,8 +218,8 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
                     {agenda.amigoSecretoAtivo && (
                       <button
                         className="btn-ghost"
-                        onClick={() => onRunSecretSanta?.(agenda.id)}
-                        disabled={!onRunSecretSanta || Boolean(agenda.amigoSecretoSorteadoAt) || participantesSorteio < 2}
+                        onClick={() => runSecretSanta.mutate(agenda.id)}
+                        disabled={runSecretSanta.isPending || Boolean(agenda.amigoSecretoSorteadoAt) || participantesSorteio < 2}
                       >
                         {agenda.amigoSecretoSorteadoAt ? "Sorteio iniciado" : "Iniciar sorteio"}
                       </button>
@@ -282,7 +241,7 @@ export function AdminPresencial({ agendas = [], onCreateAgenda, onUpdateAgenda, 
             </div>
           );
         })}
-        {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhum dia presencial encontrado."}</div>}
+        {rows.length === 0 && <div className="empty-state">{isLoading ? "Carregando..." : "Nenhum dia presencial encontrado."}</div>}
       </div>
 
       {totalItems > PAGE_SIZE && (

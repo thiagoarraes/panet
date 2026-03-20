@@ -1,6 +1,8 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, CheckSquare, MessageSquare, Minus, Trash2 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
+import { useAdminMural } from "../../hooks/queries/admin/useAdminMural.js";
+import { useDeleteMuralMensagem, useDeleteMuralMensagens } from "../../hooks/mutations/useMuralMutations.js";
 
 const getPanetCheckboxStyle = ({ checked = false, disabled = false }) => ({
   width: 20,
@@ -21,7 +23,7 @@ const getPanetCheckboxStyle = ({ checked = false, disabled = false }) => ({
   padding: 0,
 });
 
-export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens, onListMural }) {
+export function AdminMural() {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [confirmarExcluirLote, setConfirmarExcluirLote] = useState(false);
@@ -30,10 +32,6 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [hiddenMensagemIds, setHiddenMensagemIds] = useState(new Set());
-  const [serverRows, setServerRows] = useState([]);
-  const [serverCount, setServerCount] = useState(0);
-  const [serverLoading, setServerLoading] = useState(false);
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -44,78 +42,15 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  useEffect(() => {
-    const existingIds = new Set(mensagens.map((m) => String(m.id)));
-    setHiddenMensagemIds((prev) => {
-      let changed = false;
-      const next = new Set();
-      for (const id of prev) {
-        if (existingIds.has(String(id))) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [mensagens]);
-
-  const mensagensVisiveis = useMemo(() => {
-    const base = mensagens.filter((m) => !hiddenMensagemIds.has(m.id));
-    if (!searchTerm) return base;
-    return base.filter((m) => {
-      const nome = String(m.colaborador?.nome || "").toLowerCase();
-      const texto = String(m.texto || "").toLowerCase();
-      const dataHora = `${m.data || ""} ${m.hora || ""}`.toLowerCase();
-      return nome.includes(searchTerm) || texto.includes(searchTerm) || dataHora.includes(searchTerm);
-    });
-  }, [hiddenMensagemIds, mensagens, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(mensagensVisiveis.length / PAGE_SIZE));
-  const page = Math.min(currentPage, totalPages);
-
-  const mensagensPaginadas = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return mensagensVisiveis.slice(start, start + PAGE_SIZE);
-  }, [mensagensVisiveis, page]);
-
-  useEffect(() => {
-    if (!onListMural) return;
-    let active = true;
-    let loadingFallbackTimer = null;
-    setServerLoading(true);
-    loadingFallbackTimer = window.setTimeout(() => {
-      if (active) setServerLoading(false);
-    }, 6000);
-    onListMural({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
-      .then((result) => {
-        if (!active) return;
-        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => {
-        console.error(error);
-        if (active) {
-          setServerRows([]);
-          setServerCount(0);
-        }
-      })
-      .finally(() => {
-        if (loadingFallbackTimer) window.clearTimeout(loadingFallbackTimer);
-        if (active) setServerLoading(false);
-      });
-    return () => {
-      active = false;
-      if (loadingFallbackTimer) window.clearTimeout(loadingFallbackTimer);
-    };
-  }, [currentPage, onListMural, searchTerm]);
-
-  const hasServerPagination = typeof onListMural === "function";
-  const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm
-      ? serverRows
-      : mensagensPaginadas
-    : mensagensPaginadas;
-  const totalItems = hasServerPagination ? serverCount : mensagensVisiveis.length;
+  const { data, isLoading } = useAdminMural({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
+  const rows = data?.rows || [];
+  const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
+
+  const deleteMensagem = useDeleteMuralMensagem();
+  const deleteMensagens = useDeleteMuralMensagens();
+
   const visibleIds = useMemo(() => rows.map((row) => row.id), [rows]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const someVisibleSelected = !allVisibleSelected && visibleIds.some((id) => selectedIds.has(id));
@@ -133,31 +68,13 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
 
   const handleDelete = async () => {
     if (!confirmarExcluir) return;
-    const snapshotServerRows = [...serverRows];
-    const snapshotServerCount = serverCount;
     const id = confirmarExcluir.id;
     try {
       setDeletingId(id);
-      if (hasServerPagination) {
-        setServerRows((prev) => prev.filter((row) => row.id !== id));
-        setServerCount((prev) => Math.max(0, prev - 1));
-      } else {
-        setHiddenMensagemIds((prev) => new Set(prev).add(id));
-      }
-      await onDeleteMensagem?.(id);
+      await deleteMensagem.mutateAsync(id);
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) {
-        setServerRows(snapshotServerRows);
-        setServerCount(snapshotServerCount);
-      } else {
-        setHiddenMensagemIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
     } finally {
       setDeletingId(null);
     }
@@ -192,42 +109,13 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
   const handleDeleteBulk = async () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    const snapshotServerRows = [...serverRows];
-    const snapshotServerCount = serverCount;
     try {
       setDeletingBulk(true);
-      if (hasServerPagination) {
-        const idSet = new Set(ids);
-        setServerRows((prev) => prev.filter((row) => !idSet.has(row.id)));
-        setServerCount((prev) => Math.max(0, prev - ids.length));
-      } else {
-        setHiddenMensagemIds((prev) => {
-          const next = new Set(prev);
-          ids.forEach((id) => next.add(id));
-          return next;
-        });
-      }
-
-      if (typeof onDeleteMensagens === "function") {
-        await onDeleteMensagens(ids);
-      } else {
-        await Promise.all(ids.map((id) => onDeleteMensagem?.(id)));
-      }
-      setServerLoading(false);
+      await deleteMensagens.mutateAsync(ids);
       setConfirmarExcluirLote(false);
       clearSelection();
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) {
-        setServerRows(snapshotServerRows);
-        setServerCount(snapshotServerCount);
-      } else {
-        setHiddenMensagemIds((prev) => {
-          const next = new Set(prev);
-          ids.forEach((id) => next.delete(id));
-          return next;
-        });
-      }
     } finally {
       setDeletingBulk(false);
     }
@@ -391,7 +279,7 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
             </div>
           ))}
           {rows.length === 0 && (
-            <div className="empty-state">{serverLoading && totalItems > 0 ? "Carregando..." : "Nenhuma mensagem no PanZap."}</div>
+            <div className="empty-state">{isLoading && totalItems > 0 ? "Carregando..." : "Nenhuma mensagem no PanZap."}</div>
           )}
         </div>
       </div>
@@ -510,4 +398,3 @@ export function AdminMural({ mensagens = [], onDeleteMensagem, onDeleteMensagens
     </div>
   );
 }
-
