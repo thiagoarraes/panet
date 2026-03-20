@@ -16,6 +16,7 @@ const toAvatar = (profile) => {
     id: profile.id,
     nome: profile.nome,
     cargo: profile.cargo,
+    perfil: profile.perfil || "colaborador",
     email: profile.email,
     telefone: profile.telefone,
     aniversario: profile.aniversario || null,
@@ -45,10 +46,104 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
+  visibilidadeRestrita: false,
+  selectedColaboradorIds: [],
+  colaboradoresSelecionados: [],
   minhaSugestaoAmigoSecreto: "",
   meuAmigoSecretoSugestao: "",
   confirmacoes,
 });
+
+const AGENDA_SELECT_FIELDS =
+  "id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at";
+
+const normalizeAudienceIds = (value) =>
+  Array.from(
+    new Set(
+      (Array.isArray(value) ? value : [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )
+  );
+
+const normalizeAgendaPayload = (payload) => ({
+  titulo: payload?.titulo || "Dia presencial",
+  dataIso: payload?.dataIso || "",
+  horaIso: String(payload?.horaIso || "").slice(0, 5),
+  amigoSecretoAtivo: Boolean(payload?.amigoSecretoAtivo),
+  amigoSecretoRegras: payload?.amigoSecretoRegras || "",
+  local: payload?.local || "Escritorio Pan",
+  mapsUrl: payload?.mapsUrl || "",
+  vagas: Number(payload?.vagas || 0),
+  observacao: payload?.observacao || "",
+  status: payload?.status || "aberto",
+  selectedColaboradorIds: normalizeAudienceIds(payload?.selectedColaboradorIds),
+});
+
+const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
+  const normalizedIds = normalizeAudienceIds(selectedColaboradorIds);
+
+  if (!agendaId || !isSupabaseEnabled || !supabase) return normalizedIds;
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("presencial_agenda_convidados")
+    .select("colaborador_id")
+    .eq("agenda_id", agendaId);
+
+  if (existingError) throw new Error(existingError.message);
+
+  const currentIds = (existingRows || []).map((row) => String(row.colaborador_id || "")).filter(Boolean);
+  const currentSet = new Set(currentIds);
+  const nextSet = new Set(normalizedIds);
+  const idsToInsert = normalizedIds.filter((id) => !currentSet.has(id));
+  const idsToRemove = currentIds.filter((id) => !nextSet.has(id));
+
+  if (normalizedIds.length === 0) {
+    if (currentIds.length > 0) {
+      const { error: deleteAudienceError } = await supabase
+        .from("presencial_agenda_convidados")
+        .delete()
+        .eq("agenda_id", agendaId);
+      if (deleteAudienceError) throw new Error(deleteAudienceError.message);
+    }
+    return normalizedIds;
+  }
+
+  if (idsToInsert.length > 0) {
+    const { error: insertAudienceError } = await supabase.from("presencial_agenda_convidados").insert(
+      idsToInsert.map((colaboradorId) => ({
+        agenda_id: agendaId,
+        colaborador_id: colaboradorId,
+      }))
+    );
+    if (insertAudienceError) throw new Error(insertAudienceError.message);
+  }
+
+  if (idsToRemove.length > 0) {
+    const { error: deleteAudienceError } = await supabase
+      .from("presencial_agenda_convidados")
+      .delete()
+      .eq("agenda_id", agendaId)
+      .in("colaborador_id", idsToRemove);
+    if (deleteAudienceError) throw new Error(deleteAudienceError.message);
+
+    const { error: deleteConfirmacoesError } = await supabase
+      .from("presencial_confirmacoes")
+      .delete()
+      .eq("agenda_id", agendaId)
+      .in("colaborador_id", idsToRemove);
+    if (deleteConfirmacoesError) throw new Error(deleteConfirmacoesError.message);
+
+    const { error: deleteSuggestionsError } = await supabase
+      .from("presencial_amigo_secreto_sugestoes")
+      .delete()
+      .eq("agenda_id", agendaId)
+      .in("colaborador_id", idsToRemove);
+    if (deleteSuggestionsError) throw new Error(deleteSuggestionsError.message);
+  }
+
+  return normalizedIds;
+};
 
 const invalidatePresencial = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["presencial"] });
@@ -64,18 +159,7 @@ export function useCreatePresencialAgenda() {
 
   return useMutation({
     mutationFn: async (payload) => {
-      const normalized = {
-        titulo: payload?.titulo || "Dia presencial",
-        dataIso: payload?.dataIso || "",
-        horaIso: String(payload?.horaIso || "").slice(0, 5),
-        amigoSecretoAtivo: Boolean(payload?.amigoSecretoAtivo),
-        amigoSecretoRegras: payload?.amigoSecretoRegras || "",
-        local: payload?.local || "Escritorio Pan",
-        mapsUrl: payload?.mapsUrl || "",
-        vagas: Number(payload?.vagas || 0),
-        observacao: payload?.observacao || "",
-        status: payload?.status || "aberto",
-      };
+      const normalized = normalizeAgendaPayload(payload);
 
       if (!isSupabaseEnabled || !supabase) {
         return { id: `presencial-${Date.now()}`, ...normalized, confirmacoes: [] };
@@ -95,12 +179,24 @@ export function useCreatePresencialAgenda() {
           observacao: normalized.observacao || null,
           status: normalized.status,
         })
-        .select(
-          "id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at"
-        )
+        .select(AGENDA_SELECT_FIELDS)
         .single();
       if (error) throw new Error(error.message);
-      return mapDbPresencialAgendaToUi(data, []);
+
+      try {
+        await syncAgendaAudience(data.id, normalized.selectedColaboradorIds);
+      } catch (syncError) {
+        if (normalized.selectedColaboradorIds.length > 0) {
+          await supabase.from("presencial_agendas").delete().eq("id", data.id);
+        }
+        throw syncError;
+      }
+
+      return {
+        ...mapDbPresencialAgendaToUi(data, []),
+        visibilidadeRestrita: normalized.selectedColaboradorIds.length > 0,
+        selectedColaboradorIds: normalized.selectedColaboradorIds,
+      };
     },
     onSettled: () => invalidatePresencial(queryClient),
   });
@@ -115,18 +211,7 @@ export function useUpdatePresencialAgenda() {
 
   return useMutation({
     mutationFn: async ({ id, payload }) => {
-      const normalized = {
-        titulo: payload?.titulo || "Dia presencial",
-        dataIso: payload?.dataIso || "",
-        horaIso: String(payload?.horaIso || "").slice(0, 5),
-        amigoSecretoAtivo: Boolean(payload?.amigoSecretoAtivo),
-        amigoSecretoRegras: payload?.amigoSecretoRegras || "",
-        local: payload?.local || "Escritorio Pan",
-        mapsUrl: payload?.mapsUrl || "",
-        vagas: Number(payload?.vagas || 0),
-        observacao: payload?.observacao || "",
-        status: payload?.status || "aberto",
-      };
+      const normalized = normalizeAgendaPayload(payload);
 
       if (!isSupabaseEnabled || !supabase) return normalized;
 
@@ -144,13 +229,18 @@ export function useUpdatePresencialAgenda() {
           observacao: normalized.observacao || null,
           status: normalized.status,
         })
-        .select(
-          "id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at"
-        )
+        .select(AGENDA_SELECT_FIELDS)
         .eq("id", id);
       if (error) throw new Error(error.message);
+
+      await syncAgendaAudience(id, normalized.selectedColaboradorIds);
+
       const row = Array.isArray(data) ? data[0] : data;
-      return mapDbPresencialAgendaToUi(row, []);
+      return {
+        ...mapDbPresencialAgendaToUi(row, []),
+        visibilidadeRestrita: normalized.selectedColaboradorIds.length > 0,
+        selectedColaboradorIds: normalized.selectedColaboradorIds,
+      };
     },
     onSuccess: () => invalidatePresencial(queryClient),
   });

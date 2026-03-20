@@ -292,6 +292,14 @@ create table public.presencial_amigo_secreto_sugestoes (
   check (char_length(btrim(sugestao)) between 1 and 280)
 );
 
+create table public.presencial_agenda_convidados (
+  id              uuid primary key default gen_random_uuid(),
+  agenda_id       uuid not null references public.presencial_agendas(id) on delete cascade,
+  colaborador_id  uuid not null references public.colaboradores(id) on delete cascade,
+  created_at      timestamptz not null default now(),
+  unique(agenda_id, colaborador_id)
+);
+
 create index presencial_agendas_data_idx on public.presencial_agendas(data_presencial desc);
 create index presencial_confirmacoes_agenda_idx on public.presencial_confirmacoes(agenda_id, status);
 create index presencial_confirmacoes_colaborador_idx on public.presencial_confirmacoes(colaborador_id);
@@ -299,38 +307,168 @@ create index presencial_amigo_secreto_agenda_idx on public.presencial_amigo_secr
 create index presencial_amigo_secreto_colaborador_idx on public.presencial_amigo_secreto(colaborador_id);
 create index presencial_amigo_secreto_sugestoes_colaborador_agenda_idx
   on public.presencial_amigo_secreto_sugestoes(colaborador_id, agenda_id);
+create index presencial_agenda_convidados_agenda_idx on public.presencial_agenda_convidados(agenda_id);
+create index presencial_agenda_convidados_colaborador_idx on public.presencial_agenda_convidados(colaborador_id);
 
 alter table public.presencial_agendas enable row level security;
 alter table public.presencial_confirmacoes enable row level security;
 alter table public.presencial_amigo_secreto enable row level security;
 alter table public.presencial_amigo_secreto_sugestoes enable row level security;
+alter table public.presencial_agenda_convidados enable row level security;
 
-create policy "presencial_agendas: leitura autenticados"
+create or replace function public.can_access_presencial_agenda(p_agenda_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (
+    auth.uid() is not null
+    and (
+      exists (
+        select 1
+        from public.colaboradores c
+        where c.id = auth.uid()
+          and c.perfil = 'admin'::public.perfil_acesso
+      )
+      or not exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+      )
+      or exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+          and pac.colaborador_id = auth.uid()
+      )
+    )
+  );
+$$;
+
+create or replace function public.can_participate_presencial_agenda(p_agenda_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (
+    auth.uid() is not null
+    and (
+      not exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+      )
+      or exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+          and pac.colaborador_id = auth.uid()
+      )
+    )
+  );
+$$;
+
+create policy presencial_agendas_leitura_autorizados
   on public.presencial_agendas for select
-  using (auth.role() = 'authenticated');
+  to authenticated
+  using (public.can_access_presencial_agenda(id));
 
-create policy "presencial_agendas: admin gerencia"
+create policy presencial_agendas_admin_gerencia
   on public.presencial_agendas for all
+  to authenticated
   using (
     exists (
-      select 1 from public.colaboradores
-      where id = auth.uid() and perfil = 'admin'
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
     )
   );
 
-create policy "presencial_confirmacoes: leitura autenticados"
+create policy presencial_confirmacoes_leitura_autorizados
   on public.presencial_confirmacoes for select
-  using (auth.role() = 'authenticated');
+  to authenticated
+  using (public.can_access_presencial_agenda(agenda_id));
 
-create policy "presencial_confirmacoes: colaborador gerencia propria"
+create policy presencial_confirmacoes_colaborador_gerencia_propria
   on public.presencial_confirmacoes for all
-  using (auth.uid() = colaborador_id)
-  with check (auth.uid() = colaborador_id);
+  to authenticated
+  using (
+    auth.uid() = colaborador_id
+    and public.can_participate_presencial_agenda(agenda_id)
+  )
+  with check (
+    auth.uid() = colaborador_id
+    and public.can_participate_presencial_agenda(agenda_id)
+  );
+
+create policy presencial_confirmacoes_admin_remove
+  on public.presencial_confirmacoes for delete
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
+    )
+  );
 
 create policy presencial_amigo_secreto_sugestoes_colaborador_gerencia_propria
   on public.presencial_amigo_secreto_sugestoes for all
-  using (auth.uid() = colaborador_id)
-  with check (auth.uid() = colaborador_id);
+  to authenticated
+  using (
+    auth.uid() = colaborador_id
+    and public.can_participate_presencial_agenda(agenda_id)
+  )
+  with check (
+    auth.uid() = colaborador_id
+    and public.can_participate_presencial_agenda(agenda_id)
+  );
+
+create policy presencial_amigo_secreto_sugestoes_admin_remove
+  on public.presencial_amigo_secreto_sugestoes for delete
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
+    )
+  );
+
+create policy presencial_agenda_convidados_admin_gerencia
+  on public.presencial_agenda_convidados for all
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.colaboradores c
+      where c.id = auth.uid()
+        and c.perfil = 'admin'::public.perfil_acesso
+    )
+  );
 
 create or replace function public.run_amigo_secreto_draw(p_agenda_id uuid)
 returns integer
@@ -369,11 +507,24 @@ begin
     raise exception 'O sorteio já foi iniciado neste evento.';
   end if;
 
-  select coalesce(array_agg(colaborador_id order by random()), '{}'::uuid[])
+  select coalesce(array_agg(pc.colaborador_id order by random()), '{}'::uuid[])
   into participantes
-  from public.presencial_confirmacoes
-  where agenda_id = p_agenda_id
-    and status = 'talvez';
+  from public.presencial_confirmacoes pc
+  where pc.agenda_id = p_agenda_id
+    and pc.status = 'talvez'
+    and (
+      not exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+      )
+      or exists (
+        select 1
+        from public.presencial_agenda_convidados pac
+        where pac.agenda_id = p_agenda_id
+          and pac.colaborador_id = pc.colaborador_id
+      )
+    );
 
   participante_count := coalesce(array_length(participantes, 1), 0);
 
@@ -436,9 +587,12 @@ as $$
   left join public.presencial_amigo_secreto_sugestoes sgs
     on sgs.agenda_id = s.agenda_id
    and sgs.colaborador_id = s.tirou_colaborador_id
-  where s.colaborador_id = auth.uid();
+  where s.colaborador_id = auth.uid()
+    and public.can_access_presencial_agenda(s.agenda_id);
 $$;
 
+grant execute on function public.can_access_presencial_agenda(uuid) to authenticated;
+grant execute on function public.can_participate_presencial_agenda(uuid) to authenticated;
 grant execute on function public.run_amigo_secreto_draw(uuid) to authenticated;
 grant execute on function public.get_my_amigo_secreto_results() to authenticated;
 

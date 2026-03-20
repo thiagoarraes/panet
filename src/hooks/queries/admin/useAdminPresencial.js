@@ -16,6 +16,7 @@ const toAvatar = (profile) => {
     id: profile.id,
     nome: profile.nome,
     cargo: profile.cargo,
+    perfil: profile.perfil || "colaborador",
     email: profile.email,
     telefone: profile.telefone,
     aniversario: profile.aniversario || null,
@@ -35,7 +36,7 @@ const mapDbPresencialConfirmacaoToUi = (item) => ({
   colaborador: toAvatar(item.colaborador),
 });
 
-const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
+const mapDbPresencialAgendaToUi = (item, confirmacoes = [], colaboradoresSelecionados = []) => ({
   id: item.id,
   titulo: item.titulo || "Dia presencial",
   dataIso: item.data_presencial,
@@ -49,6 +50,9 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
+  visibilidadeRestrita: colaboradoresSelecionados.length > 0,
+  selectedColaboradorIds: colaboradoresSelecionados.map((colaborador) => colaborador.id),
+  colaboradoresSelecionados,
   confirmacoes,
 });
 
@@ -90,16 +94,30 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "" } = {}
 
       const agendaIds = (data || []).map((row) => row.id).filter(Boolean);
       let confirmacoesRows = [];
+      let audienceRows = [];
       if (agendaIds.length > 0) {
-        const { data: rows, error: confirmacoesError } = await supabase
-          .from("presencial_confirmacoes")
-          .select(
-            "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
-          )
-          .in("agenda_id", agendaIds)
-          .order("created_at", { ascending: true });
+        const [{ data: confirmacoesData, error: confirmacoesError }, { data: audienceData, error: audienceError }] =
+          await Promise.all([
+            supabase
+              .from("presencial_confirmacoes")
+              .select(
+                "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,perfil,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+              )
+              .in("agenda_id", agendaIds)
+              .order("created_at", { ascending: true }),
+            supabase
+              .from("presencial_agenda_convidados")
+              .select(
+                "agenda_id,colaborador:colaboradores!presencial_agenda_convidados_colaborador_id_fkey(id,nome,cargo,perfil,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+              )
+              .in("agenda_id", agendaIds),
+          ]);
+
         if (confirmacoesError) throw new Error(confirmacoesError.message);
-        confirmacoesRows = rows || [];
+        if (audienceError) throw new Error(audienceError.message);
+
+        confirmacoesRows = confirmacoesData || [];
+        audienceRows = audienceData || [];
       }
 
       const confirmacoesByAgenda = new Map();
@@ -109,9 +127,27 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "" } = {}
         confirmacoesByAgenda.set(String(row.agenda_id), list);
       }
 
-      const mappedRows = (data || []).map((row) =>
-        mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || [])
-      );
+      const audienceByAgenda = new Map();
+      for (const row of audienceRows) {
+        if (!row?.colaborador?.id) continue;
+        const list = audienceByAgenda.get(String(row.agenda_id)) || [];
+        list.push(toAvatar(row.colaborador));
+        audienceByAgenda.set(String(row.agenda_id), list);
+      }
+
+      const mappedRows = (data || []).map((row) => {
+        const agendaId = String(row.id);
+        const colaboradoresSelecionados = audienceByAgenda.get(agendaId) || [];
+        const selectedIds = new Set(colaboradoresSelecionados.map((colaborador) => String(colaborador.id)));
+        const confirmacoes =
+          colaboradoresSelecionados.length > 0
+            ? (confirmacoesByAgenda.get(agendaId) || []).filter((item) =>
+                selectedIds.has(String(item.colaborador?.id || ""))
+              )
+            : confirmacoesByAgenda.get(agendaId) || [];
+
+        return mapDbPresencialAgendaToUi(row, confirmacoes, colaboradoresSelecionados);
+      });
       const safeCount = Number.isFinite(count) ? Number(count) : from + mappedRows.length;
       return { rows: mappedRows, count: safeCount };
     },

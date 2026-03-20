@@ -14,6 +14,7 @@ const toAvatar = (profile) => {
     id: profile.id,
     nome: profile.nome,
     cargo: profile.cargo,
+    perfil: profile.perfil || "colaborador",
     email: profile.email,
     telefone: profile.telefone,
     aniversario: profile.aniversario || null,
@@ -34,8 +35,8 @@ export function useColaboradores(userId, options = {}) {
   const summaryOnly = Boolean(options?.summaryOnly);
   const queryEnabled = options?.enabled ?? true;
   const selectFields = summaryOnly
-    ? "id,nome,cargo,cor_avatar,foto_url,aniversario"
-    : "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,aniversario";
+    ? "id,nome,cargo,perfil,cor_avatar,foto_url,aniversario"
+    : "id,nome,cargo,perfil,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,aniversario";
 
   const query = useQuery({
     queryKey: ["colaboradores", userId, summaryOnly ? "summary" : "full"],

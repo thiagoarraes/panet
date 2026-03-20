@@ -90,7 +90,7 @@ export function AdminPage({
       )}
       {abaAtiva === "presencial" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminPresencial />
+          <AdminPresencial currentUserId={currentUserId} />
         </Suspense>
       )}
       {abaAtiva === "mural" && (

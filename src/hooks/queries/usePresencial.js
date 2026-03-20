@@ -18,6 +18,7 @@ const toAvatar = (profile) => {
     id: profile.id,
     nome: profile.nome,
     cargo: profile.cargo,
+    perfil: profile.perfil || "colaborador",
     email: profile.email,
     telefone: profile.telefone,
     aniversario: profile.aniversario || null,
@@ -55,6 +56,9 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
+  visibilidadeRestrita: false,
+  selectedColaboradorIds: [],
+  colaboradoresSelecionados: [],
   minhaSugestaoAmigoSecreto: "",
   meuAmigoSecretoSugestao: "",
   confirmacoes,
@@ -99,7 +103,7 @@ export function usePresencial(userId) {
           ? supabase
               .from("presencial_confirmacoes")
               .select(
-                "id,agenda_id,colaborador_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+                "id,agenda_id,colaborador_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,perfil,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
               )
               .in("agenda_id", agendaIds)
               .order("created_at", { ascending: true })

@@ -1095,6 +1095,173 @@
     background: color-mix(in srgb, #5B8DEF 12%, transparent);
     box-shadow: 0 0 0 3px color-mix(in srgb, #5B8DEF 14%, transparent);
   }
+  .admin-presencial-audience-summary,
+  .admin-presencial-audience-panel {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface2) 86%, transparent), color-mix(in srgb, var(--surface) 96%, transparent));
+  }
+  .admin-presencial-audience-badge,
+  .admin-presencial-audience-pill {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+  }
+  .admin-presencial-audience-text,
+  .admin-presencial-audience-note,
+  .admin-presencial-audience-public,
+  .admin-presencial-audience-lock,
+  .admin-presencial-form-error {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .admin-presencial-audience-text,
+  .admin-presencial-audience-note,
+  .admin-presencial-audience-public {
+    color: var(--muted);
+  }
+  .admin-presencial-audience-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .admin-presencial-audience-preview.is-modal {
+    margin-top: 12px;
+  }
+  .admin-presencial-audience-preview-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    background: color-mix(in srgb, var(--surface2) 84%, transparent);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .admin-presencial-audience-more {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .admin-presencial-audience-panel-head,
+  .admin-presencial-audience-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .admin-presencial-audience-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .admin-presencial-audience-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    max-height: 260px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .admin-presencial-audience-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface2) 84%, transparent);
+    color: var(--text);
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  }
+  .admin-presencial-audience-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
+  }
+  .admin-presencial-audience-card.is-selected {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .admin-presencial-audience-card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .admin-presencial-audience-card-copy {
+    min-width: 0;
+    flex: 1;
+  }
+  .admin-presencial-audience-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .admin-presencial-audience-card-role {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .admin-presencial-audience-card-state {
+    display: inline-flex;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .admin-presencial-audience-card-state.is-selected {
+    color: var(--accent);
+  }
+  .admin-presencial-audience-empty,
+  .admin-presencial-audience-public {
+    border: 1px dashed color-mix(in srgb, var(--accent) 18%, var(--border));
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .admin-presencial-audience-empty {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .admin-presencial-audience-lock,
+  .admin-presencial-form-error {
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .admin-presencial-audience-lock {
+    border: 1px solid color-mix(in srgb, #5B8DEF 28%, var(--border));
+    background: color-mix(in srgb, #5B8DEF 10%, var(--surface));
+    color: #5B8DEF;
+  }
+  .admin-presencial-form-error {
+    border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+    color: var(--danger);
+  }
 
   /* Galeria */
   .galeria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -1851,6 +2018,17 @@
     }
     .admin-presencial-actions .btn-ghost {
       flex: 1 1 auto;
+    }
+    .admin-presencial-audience-panel-head,
+    .admin-presencial-audience-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .admin-presencial-audience-switch {
+      white-space: normal;
+    }
+    .admin-presencial-audience-grid {
+      grid-template-columns: 1fr;
     }
     .admin-mural-item {
       align-items: flex-start !important;
