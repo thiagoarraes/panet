@@ -3041,11 +3041,9 @@ export default function PanetApp() {
         onParabenizar={handleParabenizarAniversario}
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
-        onEnviarMensagem={handleEnviarMensagem}
         postagens={postagens}
         aniversariantes={aniversariantes}
         colaboradores={colaboradores}
-        muralMsgs={muralMsgs}
         currentUser={eu}
         currentUserId={currentProfile?.id || eu.id}
         ferias={ferias}

@@ -3,6 +3,8 @@ import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal, 
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
+import { useMural } from "../hooks/queries/useMural";
+import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -56,17 +58,17 @@ export function DashboardPage({
   onParabenizar,
   onOpenAniversarios,
   onOpenFolgas,
-  onEnviarMensagem,
   postagens,
   aniversariantes,
   colaboradores,
-  muralMsgs,
   currentUser,
   currentUserId,
   ferias,
   dayoff,
   ausencias,
 }) {
+  const { data: muralMsgs = [] } = useMural(currentUserId);
+  const enviarMensagem = useEnviarMensagem(currentUserId);
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
@@ -171,13 +173,17 @@ export function DashboardPage({
     if (!texto || enviandoMural) return;
     setEnviandoMural(true);
     setTextoMural("");
-    Promise.resolve(onEnviarMensagem?.(texto))
-      .catch(() => {
-        setTextoMural((prev) => prev || texto);
-      })
-      .finally(() => {
-        setEnviandoMural(false);
-      });
+    enviarMensagem.mutate(
+      { texto, currentProfile: currentUser },
+      {
+        onError: () => {
+          setTextoMural((prev) => prev || texto);
+        },
+        onSettled: () => {
+          setEnviandoMural(false);
+        },
+      }
+    );
   };
 
   return (
