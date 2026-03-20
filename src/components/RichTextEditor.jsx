@@ -10,7 +10,10 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        // Link is configured explicitly below to avoid duplicate extension registration.
+        link: false,
+      }),
       Link.configure({
         openOnClick: false,
         autolink: true,

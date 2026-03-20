@@ -1,19 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PostCard } from "../components/PostCard";
 import { usePostagens } from "../hooks/queries/usePostagens";
 import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 
 export function PostagensPage({ onOpen, currentUserId }) {
-  const { data: postagens = [] } = usePostagens(currentUserId);
   const toggleCurtida = useToggleCurtida();
   const [filtro, setFiltro] = useState("Todos");
+  const [buscaInput, setBuscaInput] = useState("");
   const [busca, setBusca] = useState("");
   const cats = ["Todos", "Notícia", "Comunicado", "Evento"];
-  const filtradas = postagens.filter(
-    (p) =>
-      (filtro === "Todos" || p.categoria === filtro) &&
-      (busca === "" || p.titulo.toLowerCase().includes(busca.toLowerCase()))
-  );
+  const categoriaSelecionada = filtro === "Todos" ? "" : filtro;
+
+  useEffect(() => {
+    const timer = setTimeout(() => setBusca(buscaInput.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [buscaInput]);
+
+  const postagensQuery = usePostagens(currentUserId, {
+    category: categoriaSelecionada,
+    search: busca,
+  });
+  const filtradas = postagensQuery.data || [];
 
   const handleToggleCurtida = (post) => {
     toggleCurtida.mutate({
@@ -25,10 +32,18 @@ export function PostagensPage({ onOpen, currentUserId }) {
 
   return (
     <div className="fade-up postagens-page">
+      {postagensQuery.isError && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar PanNews</div>
+            <div className="section-sub">{postagensQuery.error?.message || "Não foi possível carregar as postagens agora."}</div>
+          </div>
+        </div>
+      )}
       <div className="section-header">
         <div>
           <div className="section-title">PanNews</div>
-          <div className="section-sub">{postagens.length} {postagens.length === 1 ? "publicação" : "publicações"}</div>
+          <div className="section-sub">{filtradas.length} {filtradas.length === 1 ? "publicação" : "publicações"}</div>
         </div>
       </div>
       <div
@@ -54,22 +69,27 @@ export function PostagensPage({ onOpen, currentUserId }) {
         <input
           className="search-input"
           placeholder="Buscar postagem..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
+          value={buscaInput}
+          onChange={(e) => setBuscaInput(e.target.value)}
           style={{ width: 200 }}
         />
       </div>
-      <div className="grid-3 stagger">
-        {filtradas.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onOpen={onOpen}
-            curtido={post.userCurtiu}
-            onToggleCurtida={() => handleToggleCurtida(post)}
-          />
-        ))}
-      </div>
+      {postagensQuery.isLoading && filtradas.length === 0 ? (
+        <div className="empty-state">Carregando postagens...</div>
+      ) : (
+        <div className="grid-3 stagger">
+          {filtradas.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onOpen={onOpen}
+              curtido={post.userCurtiu}
+              onToggleCurtida={() => handleToggleCurtida(post)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+

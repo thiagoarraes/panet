@@ -51,7 +51,8 @@ const getSecretSantaParticipants = (agenda) =>
   (agenda?.confirmacoes || []).filter((item) => item.status === "talvez");
 
 export function PresencialPage({ currentUserId }) {
-  const { data: agendas = [] } = usePresencial(currentUserId);
+  const presencialQuery = usePresencial(currentUserId);
+  const agendas = presencialQuery.data || [];
   const respondMutation = useRespondPresencial(currentUserId);
   const toggleSecretSantaMutation = useToggleSecretSanta(currentUserId);
 
@@ -92,6 +93,14 @@ export function PresencialPage({ currentUserId }) {
 
   return (
     <div className="fade-up presencial-page">
+      {presencialQuery.isError && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar presença</div>
+            <div className="section-sub">{presencialQuery.error?.message || "Não foi possível carregar os eventos presenciais."}</div>
+          </div>
+        </div>
+      )}
       <div className="section-header">
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -137,6 +146,13 @@ export function PresencialPage({ currentUserId }) {
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {presencialQuery.isLoading && proximasAgendas.length === 0 && (
+          <div className="card">
+            <div className="card-body">
+              <div className="empty-state">Carregando eventos presenciais...</div>
+            </div>
+          </div>
+        )}
         {proximasAgendas.map((agenda) => {
           const confirmados = getConfirmedParticipants(agenda);
           const participantesSorteio = getSecretSantaParticipants(agenda);

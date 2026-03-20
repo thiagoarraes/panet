@@ -3,7 +3,8 @@ import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, S
 import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
-import { usePostagens } from "../hooks/queries/usePostagens";
+import { usePostagemDetalhe } from "../hooks/queries/usePostagemDetalhe";
+import { usePostagensSlugIndex } from "../hooks/queries/usePostagensSlugIndex";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useMural } from "../hooks/queries/useMural";
@@ -97,11 +98,16 @@ export function PostDetalhePage({
   const [enviandoMural, setEnviandoMural] = useState(false);
   const muralListRef = useRef(null);
 
-  const { data: postagens = [] } = usePostagens(currentUserId);
-  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
-  const { data: colaboradores = [] } = useColaboradores(currentUserId);
-  const { data: muralMsgs = [] } = useMural(currentUserId);
-  const { data: feriasData } = useFerias(currentUserId);
+  const postSlugIndexQuery = usePostagensSlugIndex(currentUserId);
+  const postagensIndex = postSlugIndexQuery.data || [];
+  const aniversariosQuery = useAniversarios(currentUserId);
+  const aniversariantes = aniversariosQuery.data || [];
+  const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
+  const colaboradores = colaboradoresQuery.data || [];
+  const muralQuery = useMural(currentUserId);
+  const muralMsgs = muralQuery.data || [];
+  const feriasQuery = useFerias(currentUserId, { summaryOnly: true });
+  const feriasData = feriasQuery.data;
   const ferias = feriasData?.ferias || [];
   const dayoff = feriasData?.dayoff || [];
 
@@ -111,10 +117,16 @@ export function PostDetalhePage({
   const deletarComentarioMutation = useDeletarComentario();
   const enviarMensagemMutation = useEnviarMensagem(currentUserId);
 
-  const post = useMemo(
-    () => postagens.find((p) => toPostSlug(p.titulo) === postSlug) || null,
-    [postagens, postSlug]
+  const postResumo = useMemo(
+    () => postagensIndex.find((p) => toPostSlug(p.titulo) === postSlug) || null,
+    [postagensIndex, postSlug]
   );
+  const postDetalheQuery = usePostagemDetalhe(currentUserId, postResumo?.id);
+  const post = postDetalheQuery.data || null;
+  const postLookupError = postSlugIndexQuery.error || postDetalheQuery.error;
+  const postEmCarregamento =
+    postSlugIndexQuery.isLoading || (Boolean(postResumo?.id) && postDetalheQuery.isLoading && !post);
+  const postNaoEncontrado = !postEmCarregamento && !postLookupError && !post;
 
   const eu = useMemo(() => currentUser || { nome: "Você", foto: "U", cor: "#11E7E7" }, [currentUser]);
   const dateBox = useMemo(() => (post ? getDateBoxParts(post.data) : { day: "--", month: "---", year: "----" }), [post]);
@@ -179,6 +191,12 @@ export function PostDetalhePage({
       .sort((a, b) => a._anchorDate.getTime() - b._anchorDate.getTime())
       .slice(0, 5);
   }, [dayoff, ferias]);
+  const sideIssues = [
+    { label: "Aniversários", error: aniversariosQuery.error },
+    { label: "Colaboradores", error: colaboradoresQuery.error },
+    { label: "PanZap", error: muralQuery.error },
+    { label: "PanOff", error: feriasQuery.error },
+  ].filter((item) => Boolean(item.error));
 
   const comentar = async () => {
     if (!post || !texto.trim()) return;
@@ -241,9 +259,33 @@ export function PostDetalhePage({
 
   return (
     <div className="fade-up">
+      {sideIssues.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar dados auxiliares</div>
+            <div className="section-sub">
+              {sideIssues.map((item) => `${item.label}: ${item.error?.message || "erro de consulta"}`).join(" | ")}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="dash-layout">
         <div>
-          {!post ? (
+          {postEmCarregamento ? (
+            <div className="card">
+              <div className="card-body" style={{ padding: 24 }}>
+                <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Carregando post...</div>
+                <div className="section-sub">Buscando conteúdo da publicação selecionada.</div>
+              </div>
+            </div>
+          ) : postLookupError ? (
+            <div className="card">
+              <div className="card-body" style={{ padding: 24 }}>
+                <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Falha ao carregar post</div>
+                <div className="section-sub">{postLookupError?.message || "Não foi possível carregar esta publicação agora."}</div>
+              </div>
+            </div>
+          ) : postNaoEncontrado ? (
             <div className="card">
               <div className="card-body" style={{ padding: 24 }}>
                 <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Post não encontrado</div>

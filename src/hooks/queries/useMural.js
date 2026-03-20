@@ -77,12 +77,20 @@ const mapDbMuralToUi = (item) => {
   };
 };
 
+const getCachedColaboradores = (queryClient, userId) =>
+  queryClient.getQueryData(["colaboradores", userId, "full"]) ||
+  queryClient.getQueryData(["colaboradores", userId, "summary"]) ||
+  queryClient.getQueryData(["colaboradores", userId]) ||
+  [];
+
 // ---------------------------------------------------------------------------
 // useMural
 // ---------------------------------------------------------------------------
 
-export function useMural(userId) {
+export function useMural(userId, options = {}) {
   const queryClient = useQueryClient();
+  const MURAL_FETCH_LIMIT = 60;
+  const queryEnabled = options?.enabled ?? true;
 
   const query = useQuery({
     queryKey: ["mural", userId],
@@ -91,48 +99,23 @@ export function useMural(userId) {
 
       const { data, error } = await supabase
         .from("mural")
-        .select("id,texto,created_at,colaborador_id")
-        .order("created_at", { ascending: false })
-        .limit(120);
-      if (error) throw error;
-
-      // Build local lookup from React Query cache first
-      const cachedColaboradores = queryClient.getQueryData(["colaboradores", userId]) || [];
-      const localLookup = new Map(
-        cachedColaboradores.map((col) => [String(col.id), toDbLikeColaboradorFromUi(col)])
-      );
-
-      // Find missing colaborador ids
-      const missingIds = Array.from(
-        new Set(
-          (data || [])
-            .map((row) => String(row.colaborador_id || ""))
-            .filter((id) => id && !localLookup.has(id))
+        .select(
+          "id,texto,created_at,colaborador_id,colaborador:colaboradores!mural_colaborador_id_fkey(id,nome,cargo,cor_avatar,foto_url)"
         )
-      );
-
-      if (missingIds.length > 0) {
-        const { data: missingCols, error: missingColsError } = await supabase
-          .from("colaboradores")
-          .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github")
-          .in("id", missingIds);
-        if (!missingColsError) {
-          (missingCols || []).forEach((row) => {
-            localLookup.set(String(row.id), row);
-          });
-        }
-      }
+        .order("created_at", { ascending: false })
+        .limit(MURAL_FETCH_LIMIT);
+      if (error) throw error;
 
       return (data || []).map((row) =>
         mapDbMuralToUi({
           ...row,
           colaborador:
-            localLookup.get(String(row.colaborador_id || "")) ||
+            row.colaborador ||
             toDbLikeColaboradorFromUi({ id: row.colaborador_id, nome: "Colaborador" }),
         })
       );
     },
-    enabled: !!userId || !isSupabaseEnabled,
+    enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
     staleTime: 30 * 1000,
   });
 
@@ -140,18 +123,18 @@ export function useMural(userId) {
   // Realtime subscription
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!isSupabaseEnabled || !supabase || !userId) return;
+    if (!queryEnabled || !isSupabaseEnabled || !supabase || !userId) return;
 
     const resolveColaborador = async (colaboradorId) => {
       // Try React Query cache first
-      const cachedColaboradores = queryClient.getQueryData(["colaboradores", userId]) || [];
+      const cachedColaboradores = getCachedColaboradores(queryClient, userId);
       const local = cachedColaboradores.find((col) => String(col.id) === String(colaboradorId));
       if (local) return toDbLikeColaboradorFromUi(local);
 
       // Fall back to DB fetch
       const { data, error } = await supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github")
+        .select("id,nome,cargo,cor_avatar,foto_url")
         .eq("id", colaboradorId)
         .maybeSingle();
       if (error || !data) return getUnknownColaboradorFallback(colaboradorId);
@@ -220,7 +203,7 @@ export function useMural(userId) {
     return () => {
       channel.unsubscribe();
     };
-  }, [userId, queryClient]);
+  }, [userId, queryClient, queryEnabled]);
 
   return query;
 }

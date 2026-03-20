@@ -66,8 +66,10 @@ const sortByMesDia = (a, b) => {
 };
 
 export function AniversariosPage({ currentUserId }) {
-  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
-  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const aniversariosQuery = useAniversarios(currentUserId);
+  const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
+  const aniversariantes = aniversariosQuery.data || [];
+  const colaboradores = colaboradoresQuery.data || [];
   const mesAtualIndex = new Date().getMonth();
   const [mesSelecionado, setMesSelecionado] = useState("todos");
 
@@ -147,9 +149,21 @@ export function AniversariosPage({ currentUserId }) {
 
   return (
     <div className="fade-up">
+      {(aniversariosQuery.isError || colaboradoresQuery.isError) && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar aniversários</div>
+            <div className="section-sub">
+              {aniversariosQuery.error?.message || colaboradoresQuery.error?.message || "Não foi possível carregar os dados agora."}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="section-title" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: 8 }}>
         <Cake size={22} /> Aniversários
       </div>
+      {(aniversariosQuery.isLoading || colaboradoresQuery.isLoading) &&
+        aniversariantesTodos.length === 0 && <div className="empty-state" style={{ marginBottom: 14 }}>Carregando aniversários...</div>}
 
       <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
@@ -203,4 +217,3 @@ export function AniversariosPage({ currentUserId }) {
     </div>
   );
 }
-

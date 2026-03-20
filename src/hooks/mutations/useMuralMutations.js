@@ -1,10 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 
-// ---------------------------------------------------------------------------
-// Helpers (mirrors Layout.jsx + useMural.js)
-// ---------------------------------------------------------------------------
-
 const toAvatar = (profile) => {
   const initials = profile?.nome
     ?.split(" ")
@@ -12,6 +8,7 @@ const toAvatar = (profile) => {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+
   return {
     id: profile.id,
     nome: profile.nome,
@@ -31,9 +28,14 @@ const toAvatar = (profile) => {
   };
 };
 
-// ---------------------------------------------------------------------------
-// useEnviarMensagem
-// ---------------------------------------------------------------------------
+const pushMuralMessageToSnapshot = (snapshot, message) => {
+  if (!snapshot || typeof snapshot !== "object") return snapshot;
+  const mural = Array.isArray(snapshot.mural) ? snapshot.mural : [];
+  return {
+    ...snapshot,
+    mural: [message, ...mural].slice(0, 200),
+  };
+};
 
 export function useEnviarMensagem(userId) {
   const queryClient = useQueryClient();
@@ -47,14 +49,11 @@ export function useEnviarMensagem(userId) {
       });
       if (error) throw new Error(error.message);
     },
-
     onMutate: async ({ texto, currentProfile }) => {
-      // Cancel any in-flight refetches so they don't overwrite the optimistic update
       await queryClient.cancelQueries({ queryKey: ["mural", userId] });
+      await queryClient.cancelQueries({ queryKey: ["dashboard-snapshot", userId] });
 
-      // Snapshot previous state for rollback on error
       const previousMural = queryClient.getQueryData(["mural", userId]);
-
       const now = new Date();
       const optimisticId = `optimistic-${now.getTime()}`;
       const optimisticMsg = {
@@ -66,38 +65,49 @@ export function useEnviarMensagem(userId) {
         pending: true,
       };
 
-      queryClient.setQueryData(["mural", userId], (prev) => {
-        return [optimisticMsg, ...(Array.isArray(prev) ? prev : [])];
-      });
+      queryClient.setQueryData(["mural", userId], (prev) => [
+        optimisticMsg,
+        ...(Array.isArray(prev) ? prev : []),
+      ]);
+      queryClient.setQueriesData(
+        { queryKey: ["dashboard-snapshot", userId] },
+        (prev) => pushMuralMessageToSnapshot(prev, optimisticMsg)
+      );
 
       return { previousMural, optimisticId };
     },
+    onError: (_err, _vars, context) => {
+      if (!context?.optimisticId) return;
 
-    onError: (_err, { texto }, context) => {
-      // Mark the optimistic message as failed instead of removing it
-      if (context?.optimisticId) {
-        queryClient.setQueryData(["mural", userId], (prev) =>
-          (Array.isArray(prev) ? prev : []).map((row) =>
+      queryClient.setQueryData(["mural", userId], (prev) =>
+        (Array.isArray(prev) ? prev : []).map((row) =>
+          row.id === context.optimisticId
+            ? { ...row, pending: false, erroEnvio: true }
+            : row
+        )
+      );
+      queryClient.setQueriesData({ queryKey: ["dashboard-snapshot", userId] }, (prev) => {
+        if (!prev || typeof prev !== "object") return prev;
+        const mural = Array.isArray(prev.mural) ? prev.mural : [];
+        return {
+          ...prev,
+          mural: mural.map((row) =>
             row.id === context.optimisticId
               ? { ...row, pending: false, erroEnvio: true }
               : row
-          )
-        );
-      }
+          ),
+        };
+      });
     },
-
     onSettled: () => {
-      // Fallback sync after 5s — mirrors scheduleMuralSync(5000)
+      queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot", userId] });
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["mural", userId] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot", userId] });
       }, 5000);
     },
   });
 }
-
-// ---------------------------------------------------------------------------
-// useDeleteMuralMensagem
-// ---------------------------------------------------------------------------
 
 export function useDeleteMuralMensagem() {
   const queryClient = useQueryClient();
@@ -110,13 +120,10 @@ export function useDeleteMuralMensagem() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mural"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot"] });
     },
   });
 }
-
-// ---------------------------------------------------------------------------
-// useDeleteMuralMensagens
-// ---------------------------------------------------------------------------
 
 export function useDeleteMuralMensagens() {
   const queryClient = useQueryClient();
@@ -131,6 +138,7 @@ export function useDeleteMuralMensagens() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mural"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot"] });
     },
   });
 }

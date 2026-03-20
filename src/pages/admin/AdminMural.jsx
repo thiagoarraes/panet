@@ -43,7 +43,7 @@ export function AdminMural() {
   }, [searchInput]);
 
   const { data, isLoading } = useAdminMural({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
-  const rows = data?.rows || [];
+  const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data?.rows]);
   const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
@@ -59,9 +59,12 @@ export function AdminMural() {
     setSelectedIds((prev) => {
       const available = new Set(rows.map((row) => row.id));
       const next = new Set();
+      let changed = false;
       prev.forEach((id) => {
         if (available.has(id)) next.add(id);
+        else changed = true;
       });
+      if (!changed && next.size === prev.size) return prev;
       return next;
     });
   }, [rows]);

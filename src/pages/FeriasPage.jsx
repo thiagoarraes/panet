@@ -61,10 +61,12 @@ const getAusenciaAtiva = (ausencias) => {
 };
 
 export function FeriasPage({ currentUserId }) {
-  const { data: feriasData } = useFerias(currentUserId);
+  const feriasQuery = useFerias(currentUserId, { summaryOnly: true });
+  const feriasData = feriasQuery.data;
   const ferias = feriasData?.ferias || [];
   const dayoff = feriasData?.dayoff || [];
-  const { data: ausencias = [] } = useAusencias(currentUserId);
+  const ausenciasQuery = useAusencias(currentUserId, { summaryOnly: true });
+  const ausencias = ausenciasQuery.data || [];
   const ausenciasAtivas = getAusenciaAtiva(ausencias);
   const ausenciasVisiveis = (ausencias || [])
     .filter((a) => {
@@ -79,9 +81,23 @@ export function FeriasPage({ currentUserId }) {
 
   return (
     <div className="fade-up">
+      {(feriasQuery.isError || ausenciasQuery.isError) && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar PanOff</div>
+            <div className="section-sub">
+              {feriasQuery.error?.message || ausenciasQuery.error?.message || "Não foi possível carregar os dados agora."}
+            </div>
+          </div>
+        </div>
+      )}
       <div className="section-title" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: 8 }}>
         <Plane size={22} /> PanOff
       </div>
+      {(feriasQuery.isLoading || ausenciasQuery.isLoading) &&
+        ferias.length === 0 &&
+        dayoff.length === 0 &&
+        ausencias.length === 0 && <div className="empty-state" style={{ marginBottom: 14 }}>Carregando folgas e ausências...</div>}
 
       {/* Ausências ativas no topo */}
       {ausenciasAtivas.length > 0 && (

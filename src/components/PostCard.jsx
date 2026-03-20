@@ -23,6 +23,11 @@ const getDateBoxParts = (iso) => {
 
 export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais = false }) {
   const dateBox = getDateBoxParts(post.data);
+  const commentsCount = Number.isFinite(post?.comentariosCount)
+    ? Number(post.comentariosCount)
+    : Array.isArray(post?.comentarios)
+      ? post.comentarios.length
+      : 0;
 
   return (
     <div className="post-card">
@@ -52,7 +57,7 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
           <Heart size={14} fill={curtido ? "currentColor" : "none"} /> {post.curtidas.length}
         </button>
         <button className="post-action" onClick={() => onOpen(post)}>
-          <MessageCircle size={14} /> {post.comentarios.length}
+          <MessageCircle size={14} /> {commentsCount}
         </button>
         {showVerMais && (
           <button className="post-action" onClick={() => onOpen(post)} style={{ marginLeft: "auto" }}>

@@ -21,10 +21,13 @@ const AdminPage = lazy(() => import("../pages/admin/AdminPage").then((m) => ({ d
 const mockMe = COLABORADORES.find((c) => c.isMe);
 const THEME_KEY = "panet.theme";
 const PROFILE_CACHE_KEY = "panet.profile.cache";
-const AUTH_TIMEOUT_MS = 12000;
+const AUTH_TIMEOUT_MS = 5000;
+const PROFILE_DEDUP_WINDOW_MS = 3000;
+const PROFILE_BACKGROUND_REFRESH_DELAY_MS = 12000;
 const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
 const PANZAP_METRICS_STORAGE_KEY = "panet.metrics.panzap.v1";
 const PANZAP_METRICS_LIMIT = 200;
+const globalProfileLoadState = { userId: null, promise: null, loadedAt: 0 };
 
 
 const getFreshSessionAccessToken = async () => {
@@ -294,6 +297,7 @@ export default function PanetApp() {
   const [postSlug, setPostSlug] = useState("");
   const [authLoading, setAuthLoading] = useState(isSupabaseEnabled);
   const [currentProfile, setCurrentProfile] = useState(null);
+  const [sessionUserId, setSessionUserId] = useState(null);
   const [adminServerConfirmed, setAdminServerConfirmed] = useState(false);
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -302,6 +306,8 @@ export default function PanetApp() {
   const userMenuRef = useRef(null);
   const panzapPendingRef = useRef(new Map());
   const initialDataLoadRef = useRef({ userId: null, at: 0 });
+  const profileLoadInFlightRef = useRef({ userId: null, promise: null });
+  const profileBackgroundRefreshRef = useRef(null);
   const firstAccessBypassRef = useRef({ userId: null, expiresAt: 0 });
   const telaRef = useRef(tela);
   const currentProfileIdRef = useRef(currentProfile?.id || null);
@@ -335,7 +341,11 @@ export default function PanetApp() {
     }
   }, []);
 
-  const eu = useMemo(() => (currentProfile ? toAvatar(currentProfile) : mockMe), [currentProfile]);
+  const effectiveUserId = currentProfile?.id || sessionUserId || null;
+  const eu = useMemo(() => {
+    if (currentProfile) return toAvatar(currentProfile);
+    return { ...mockMe, id: effectiveUserId || mockMe.id };
+  }, [currentProfile, effectiveUserId]);
   const isAdmin = currentProfile?.perfil === "admin";
 
   const getPathForState = useCallback((nextPagina, nextAdminAba) => {
@@ -367,26 +377,79 @@ export default function PanetApp() {
   const loadProfileAndRoute = useCallback(
     async (activeSession) => {
       if (!activeSession?.user?.id) {
+        initialDataLoadRef.current = { userId: null, at: 0 };
+        profileLoadInFlightRef.current = { userId: null, promise: null };
+        globalProfileLoadState.userId = null;
+        globalProfileLoadState.promise = null;
+        globalProfileLoadState.loadedAt = 0;
+        setSessionUserId(null);
         setCurrentProfile(null);
+        setAdminServerConfirmed(false);
         writeCachedProfile(null);
         setTela("login");
         return;
       }
-      const { data, error } = await withTimeout(
-        supabase.from("colaboradores").select("*").eq("id", activeSession.user.id).maybeSingle(),
-        AUTH_TIMEOUT_MS,
-        "profile_timeout"
-      );
-      if (error) throw new Error("Não foi possível carregar o perfil do colaborador.");
-      if (!data) throw new Error("Seu usuário não está vinculado na tabela de colaboradores.");
-      const bypass =
-        firstAccessBypassRef.current.userId === activeSession.user.id &&
-        Date.now() < Number(firstAccessBypassRef.current.expiresAt || 0);
-      const resolvedProfile = bypass ? { ...data, primeiro_acesso: false } : data;
-      setCurrentProfile(resolvedProfile);
-      writeCachedProfile(resolvedProfile);
-      setAdminServerConfirmed(resolvedProfile.perfil === "admin");
-      setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
+      const userId = String(activeSession.user.id);
+      setSessionUserId(userId);
+      const globalInFlightForSameUser =
+        String(globalProfileLoadState.userId || "") === userId && globalProfileLoadState.promise;
+      if (globalInFlightForSameUser) {
+        await globalInFlightForSameUser;
+        return;
+      }
+      const inFlightForSameUser =
+        String(profileLoadInFlightRef.current.userId || "") === userId && profileLoadInFlightRef.current.promise;
+      if (inFlightForSameUser) {
+        await inFlightForSameUser;
+        return;
+      }
+
+      const now = Date.now();
+      const globalRecentLoad =
+        String(globalProfileLoadState.userId || "") === userId &&
+        now - Number(globalProfileLoadState.loadedAt || 0) < PROFILE_DEDUP_WINDOW_MS;
+      if (globalRecentLoad) return;
+
+      const recentLoad =
+        String(initialDataLoadRef.current.userId || "") === userId &&
+        now - Number(initialDataLoadRef.current.at || 0) < 2000;
+      if (recentLoad) return;
+
+      const loadPromise = (async () => {
+        const { data, error } = await withTimeout(
+          supabase.from("colaboradores").select("*").eq("id", userId).maybeSingle(),
+          AUTH_TIMEOUT_MS,
+          "profile_timeout"
+        );
+        if (error) throw new Error("Não foi possível carregar o perfil do colaborador.");
+        if (!data) throw new Error("Seu usuário não está vinculado na tabela de colaboradores.");
+        const bypass =
+          firstAccessBypassRef.current.userId === activeSession.user.id &&
+          Date.now() < Number(firstAccessBypassRef.current.expiresAt || 0);
+        const resolvedProfile = bypass ? { ...data, primeiro_acesso: false } : data;
+        setCurrentProfile(resolvedProfile);
+        writeCachedProfile(resolvedProfile);
+        setAdminServerConfirmed(resolvedProfile.perfil === "admin");
+        setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
+        const loadedAt = Date.now();
+        initialDataLoadRef.current = { userId, at: loadedAt };
+        globalProfileLoadState.userId = userId;
+        globalProfileLoadState.loadedAt = loadedAt;
+      })();
+
+      profileLoadInFlightRef.current = { userId, promise: loadPromise };
+      globalProfileLoadState.userId = userId;
+      globalProfileLoadState.promise = loadPromise;
+      try {
+        await loadPromise;
+      } finally {
+        if (profileLoadInFlightRef.current.promise === loadPromise) {
+          profileLoadInFlightRef.current = { userId: null, promise: null };
+        }
+        if (globalProfileLoadState.promise === loadPromise) {
+          globalProfileLoadState.promise = null;
+        }
+      }
     },
     []
   );
@@ -399,15 +462,28 @@ export default function PanetApp() {
 
     let isMounted = true;
 
+    const scheduleProfileBackgroundRefresh = (session) => {
+      if (!session?.user?.id) return;
+      if (profileBackgroundRefreshRef.current) {
+        clearTimeout(profileBackgroundRefreshRef.current);
+      }
+      profileBackgroundRefreshRef.current = setTimeout(() => {
+        loadProfileAndRoute(session).catch((err) => {
+          if (!isTransientAuthTimeout(err)) {
+            console.warn("Falha ao sincronizar perfil em background:", err?.message || err);
+          }
+        });
+      }, PROFILE_BACKGROUND_REFRESH_DELAY_MS);
+    };
+
     const bootstrapAuth = async () => {
-      const hasLocalSession = hasStoredSupabaseSession();
-      if (hasLocalSession && isMounted) {
+      const cachedProfile = readCachedProfile();
+      if (cachedProfile && isMounted) {
         // Open immediately on refresh; confirm session/profile in background.
-        const cachedProfile = readCachedProfile();
-        if (cachedProfile) {
-          setCurrentProfile(cachedProfile);
-        }
-        setTela("app");
+        setSessionUserId(String(cachedProfile.id || ""));
+        setCurrentProfile(cachedProfile);
+        setAdminServerConfirmed(cachedProfile.perfil === "admin");
+        setTela(cachedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
         setAuthLoading(false);
       }
       try {
@@ -416,20 +492,36 @@ export default function PanetApp() {
         if (!isMounted) return;
         const session = data.session;
         if (!session?.user?.id) {
+          setSessionUserId(null);
           setCurrentProfile(null);
+          setAdminServerConfirmed(false);
           writeCachedProfile(null);
+          profileLoadInFlightRef.current = { userId: null, promise: null };
+          globalProfileLoadState.userId = null;
+          globalProfileLoadState.promise = null;
+          globalProfileLoadState.loadedAt = 0;
           setTela("login");
+          return;
+        }
+        const sessionId = String(session.user.id);
+        setSessionUserId(sessionId);
+        if (cachedProfile && String(cachedProfile.id || "") === sessionId) {
+          scheduleProfileBackgroundRefresh(session);
           return;
         }
         await loadProfileAndRoute(session);
       } catch (err) {
-        if (!isTransientAuthTimeout(err)) {
+        const transientAuthFailure = isTransientAuthTimeout(err);
+        if (!transientAuthFailure) {
           console.error("Falha no bootstrap de autenticação:", err);
         }
         if (isMounted) {
-          if (!hasLocalSession) {
+          if (!cachedProfile || !transientAuthFailure) {
+            clearStoredSupabaseSession();
             setTela("login");
+            setSessionUserId(null);
             setCurrentProfile(null);
+            setAdminServerConfirmed(false);
             writeCachedProfile(null);
           }
         }
@@ -442,8 +534,13 @@ export default function PanetApp() {
 
     const { data: subscriptionData } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if (!isMounted) return;
+      if (event === "INITIAL_SESSION") {
+        // bootstrapAuth already reconciles the initial session state.
+        return;
+      }
       if (!nextSession) {
         if (event === "SIGNED_OUT") {
+          setSessionUserId(null);
           setCurrentProfile(null);
           writeCachedProfile(null);
           setTela("login");
@@ -461,10 +558,26 @@ export default function PanetApp() {
           // falha transitória de recheck: não altera UI nem polui console
         }
         if (!hasStoredSupabaseSession()) {
+          setSessionUserId(null);
           setCurrentProfile(null);
           writeCachedProfile(null);
+          profileLoadInFlightRef.current = { userId: null, promise: null };
+          globalProfileLoadState.userId = null;
+          globalProfileLoadState.promise = null;
+          globalProfileLoadState.loadedAt = 0;
           setTela("login");
         }
+        return;
+      }
+
+      setSessionUserId(String(nextSession?.user?.id || ""));
+
+      if (
+        event === "SIGNED_IN" &&
+        currentProfileIdRef.current &&
+        String(currentProfileIdRef.current) === String(nextSession?.user?.id || "") &&
+        (telaRef.current === "primeiro_acesso" || telaRef.current === "app")
+      ) {
         return;
       }
 
@@ -500,6 +613,10 @@ export default function PanetApp() {
 
     return () => {
       isMounted = false;
+      if (profileBackgroundRefreshRef.current) {
+        clearTimeout(profileBackgroundRefreshRef.current);
+        profileBackgroundRefreshRef.current = null;
+      }
       subscriptionData.subscription.unsubscribe();
     };
   }, [loadProfileAndRoute]);
@@ -559,7 +676,6 @@ export default function PanetApp() {
       setTela("primeiro_acesso");
       return;
     }
-    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       const msg = error.message || "Não foi possível salvar o perfil.";
@@ -567,6 +683,7 @@ export default function PanetApp() {
     }
     const activeSession = data?.session || (await supabase.auth.getSession()).data.session;
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
+    setSessionUserId(String(activeSession?.user?.id || ""));
     await loadProfileAndRoute(activeSession);
   };
 
@@ -704,7 +821,17 @@ export default function PanetApp() {
   };
 
   const handleLogout = () => {
+    initialDataLoadRef.current = { userId: null, at: 0 };
+    profileLoadInFlightRef.current = { userId: null, promise: null };
+    globalProfileLoadState.userId = null;
+    globalProfileLoadState.promise = null;
+    globalProfileLoadState.loadedAt = 0;
+    if (profileBackgroundRefreshRef.current) {
+      clearTimeout(profileBackgroundRefreshRef.current);
+      profileBackgroundRefreshRef.current = null;
+    }
     clearStoredSupabaseSession();
+    setSessionUserId(null);
     setCurrentProfile(null);
     writeCachedProfile(null);
     setAdminServerConfirmed(false);
@@ -761,35 +888,35 @@ export default function PanetApp() {
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
         currentUser={eu}
-        currentUserId={currentProfile?.id || eu.id}
+        currentUserId={effectiveUserId}
       />
     ),
-    postagens: <PostagensPage onOpen={handleOpenPost} currentUserId={currentProfile?.id} />,
+    postagens: <PostagensPage onOpen={handleOpenPost} currentUserId={effectiveUserId} />,
     post_detalhe: (
       <PostDetalhePage
         currentUser={eu}
-        currentUserId={currentProfile?.id || eu.id}
+        currentUserId={effectiveUserId}
         postSlug={postSlug}
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
       />
     ),
-    colaboradores: <ColaboradoresPage currentUserId={currentProfile?.id} />,
+    colaboradores: <ColaboradoresPage currentUserId={effectiveUserId} />,
     aniversarios: (
       <AniversariosPage
-        currentUserId={currentProfile?.id || eu.id}
+        currentUserId={effectiveUserId}
       />
     ),
-    ferias: <FeriasPage currentUserId={currentProfile?.id} />,
-    presencial: <PresencialPage currentUserId={currentProfile?.id || eu.id} />,
-    galeria: <GaleriaPage currentUserId={currentProfile?.id} />,
+    ferias: <FeriasPage currentUserId={effectiveUserId} />,
+    presencial: <PresencialPage currentUserId={effectiveUserId} />,
+    galeria: <GaleriaPage currentUserId={effectiveUserId} />,
     perfil: <PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />,
     admin: (
       <AdminPage
         aba={adminAba}
         onChangeAba={(aba) => navigateTo("admin", aba)}
         currentProfile={currentProfile}
-        currentUserId={currentProfile?.id || eu.id}
+        currentUserId={effectiveUserId}
       />
     ),
   };
@@ -890,7 +1017,3 @@ export default function PanetApp() {
     </>
   );
 }
-
-
-
-

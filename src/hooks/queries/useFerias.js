@@ -42,9 +42,15 @@ const mapDbFeriasToUi = (item) => ({
   colaborador: toAvatar(item.colaborador),
 });
 
-export function useFerias(userId) {
+export function useFerias(userId, options = {}) {
+  const summaryOnly = Boolean(options?.summaryOnly);
+  const queryEnabled = options?.enabled ?? true;
+  const colaboradorFields = summaryOnly
+    ? "id,nome,cargo,cor_avatar,foto_url"
+    : "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github";
+
   return useQuery({
-    queryKey: ["ferias", userId],
+    queryKey: ["ferias", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) {
         return { ferias: FERIAS_INIT, dayoff: DAYOFF_INIT };
@@ -52,7 +58,7 @@ export function useFerias(userId) {
       const { data, error } = await supabase
         .from("ferias")
         .select(
-          "id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+          `id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(${colaboradorFields})`
         )
         .order("inicio", { ascending: true });
       if (error) throw error;
@@ -63,6 +69,6 @@ export function useFerias(userId) {
       };
     },
     staleTime: 2 * 60 * 1000,
-    enabled: !!userId || !isSupabaseEnabled,
+    enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
   });
 }

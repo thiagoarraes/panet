@@ -7,7 +7,10 @@ const isDataImageUrl = (value) =>
 
 const invalidatePostagens = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["postagens"] });
+  queryClient.invalidateQueries({ queryKey: ["postagens-slug-index"] });
+  queryClient.invalidateQueries({ queryKey: ["postagem"] });
   queryClient.invalidateQueries({ queryKey: ["admin", "postagens"] });
+  queryClient.invalidateQueries({ queryKey: ["dashboard-snapshot"] });
 };
 
 export function useToggleCurtida() {

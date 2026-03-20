@@ -12,6 +12,8 @@ import { useAusencias } from "../hooks/queries/useAusencias";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
+import { useDashboardSnapshot } from "../hooks/queries/useDashboardSnapshot";
+import { isSupabaseEnabled } from "../lib/supabase.js";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -66,16 +68,46 @@ export function DashboardPage({
   currentUser,
   currentUserId,
 }) {
-  const { data: postagens = [] } = usePostagens(currentUserId);
+  const dashboardSnapshotQuery = useDashboardSnapshot(currentUserId, {
+    postsLimit: 20,
+    muralLimit: 60,
+  });
+  const hasSnapshotData = Boolean(dashboardSnapshotQuery.data);
+  const useLegacyQueries = !isSupabaseEnabled || dashboardSnapshotQuery.isError;
+
+  const postagensQuery = usePostagens(currentUserId, { limit: 20, enabled: useLegacyQueries });
   const toggleCurtida = useToggleCurtida();
-  const { data: muralMsgs = [] } = useMural(currentUserId);
+  const muralQuery = useMural(currentUserId, { enabled: useLegacyQueries });
   const enviarMensagem = useEnviarMensagem(currentUserId);
-  const { data: feriasData } = useFerias(currentUserId);
+  const feriasQuery = useFerias(currentUserId, { summaryOnly: true, enabled: useLegacyQueries });
+  const ausenciasQuery = useAusencias(currentUserId, { summaryOnly: true, enabled: useLegacyQueries });
+  const aniversariosQuery = useAniversarios(currentUserId, { enabled: useLegacyQueries });
+  const colaboradoresQuery = useColaboradores(currentUserId, {
+    summaryOnly: true,
+    enabled: useLegacyQueries,
+  });
+
+  const postagens = hasSnapshotData
+    ? dashboardSnapshotQuery.data.postagens
+    : (postagensQuery.data || []);
+  const muralMsgs = hasSnapshotData
+    ? dashboardSnapshotQuery.data.mural
+    : (muralQuery.data || []);
+  const feriasData = hasSnapshotData
+    ? dashboardSnapshotQuery.data.feriasData
+    : feriasQuery.data;
   const ferias = feriasData?.ferias || [];
   const dayoff = feriasData?.dayoff || [];
-  const { data: ausencias = [] } = useAusencias(currentUserId);
-  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
-  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const ausencias = hasSnapshotData
+    ? dashboardSnapshotQuery.data.ausencias
+    : (ausenciasQuery.data || []);
+  const aniversariantes = hasSnapshotData
+    ? dashboardSnapshotQuery.data.aniversariantes
+    : (aniversariosQuery.data || []);
+  const colaboradores = hasSnapshotData
+    ? dashboardSnapshotQuery.data.colaboradores
+    : (colaboradoresQuery.data || []);
+
   const parabenizarMutation = useParabenizarAniversario(currentUserId);
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
@@ -86,6 +118,15 @@ export function DashboardPage({
   const POR_PAGINA = 5;
   const totalPags = Math.ceil(postagens.length / POR_PAGINA);
   const postsPag = postagens.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+  const dashboardIssues = useLegacyQueries
+    ? [
+        { label: "PanNews", error: postagensQuery.error },
+        { label: "PanZap", error: muralQuery.error },
+        { label: "PanOff", error: feriasQuery.error || ausenciasQuery.error },
+        { label: "Aniversários", error: aniversariosQuery.error },
+        { label: "Colaboradores", error: colaboradoresQuery.error },
+      ].filter((item) => Boolean(item.error))
+    : [];
 
   const aniversariantesTodos = useMemo(() => {
     const byId = new Map((aniversariantes || []).map((item) => [String(item?.colaborador?.id || item?.id), item]));
@@ -200,6 +241,16 @@ export function DashboardPage({
   return (
     <div className="fade-up">
       <canvas ref={canvasRef} className="confetti-canvas" />
+      {dashboardIssues.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar parte dos dados</div>
+            <div className="section-sub">
+              {dashboardIssues.map((item) => `${item.label}: ${item.error?.message || "erro de consulta"}`).join(" | ")}
+            </div>
+          </div>
+        </div>
+      )}
       {today && (
         <div
           style={{
@@ -271,6 +322,9 @@ export function DashboardPage({
               <div className="section-sub">Últimas notícias, comunicados e eventos</div>
             </div>
           </div>
+          {postagens.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && postagensQuery.isLoading)) && (
+            <div className="empty-state" style={{ marginBottom: 12 }}>Carregando feed...</div>
+          )}
           <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {postsPag.map((post) => (
               <PostCard
@@ -466,6 +520,3 @@ export function DashboardPage({
     </div>
   );
 }
-
-
-

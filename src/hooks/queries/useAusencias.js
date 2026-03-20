@@ -27,15 +27,21 @@ const toAvatar = (profile) => {
   };
 };
 
-export function useAusencias(userId) {
+export function useAusencias(userId, options = {}) {
+  const summaryOnly = Boolean(options?.summaryOnly);
+  const queryEnabled = options?.enabled ?? true;
+  const colaboradorFields = summaryOnly
+    ? "id,nome,cargo,cor_avatar,foto_url"
+    : "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github";
+
   return useQuery({
-    queryKey: ["ausencias", userId],
+    queryKey: ["ausencias", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return [];
       const { data, error } = await supabase
         .from("ausencias")
         .select(
-          "id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+          `id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(${colaboradorFields})`
         )
         .order("inicio", { ascending: false });
       if (error) throw error;
@@ -49,6 +55,6 @@ export function useAusencias(userId) {
       }));
     },
     staleTime: 2 * 60 * 1000,
-    enabled: !!userId || !isSupabaseEnabled,
+    enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
   });
 }

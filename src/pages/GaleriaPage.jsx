@@ -23,7 +23,8 @@ const getSlugFromPath = (pathname) => {
 };
 
 export function GaleriaPage({ currentUserId }) {
-  const { data: eventos = [] } = useGalerias(currentUserId);
+  const galeriasQuery = useGalerias(currentUserId);
+  const eventos = galeriasQuery.data || [];
   const [eventoAberto, setEventoAberto] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
 
@@ -89,6 +90,14 @@ export function GaleriaPage({ currentUserId }) {
 
   return (
     <div className="fade-up">
+      {galeriasQuery.isError && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar galeria</div>
+            <div className="section-sub">{galeriasQuery.error?.message || "Não foi possível carregar os eventos de galeria."}</div>
+          </div>
+        </div>
+      )}
       <div className="section-header">
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -96,7 +105,10 @@ export function GaleriaPage({ currentUserId }) {
           </div>
         </div>
       </div>
-      {eventos.length === 0 && (
+      {galeriasQuery.isLoading && eventos.length === 0 && (
+        <div className="empty-state">Carregando galerias...</div>
+      )}
+      {!galeriasQuery.isLoading && eventos.length === 0 && (
         <div className="empty-state">Nenhuma galeria criada ainda.</div>
       )}
       <div className="galeria-grid stagger">

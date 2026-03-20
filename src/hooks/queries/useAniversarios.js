@@ -52,7 +52,8 @@ const mapColaboradorBirthdayToUi = (item) => {
   };
 };
 
-export function useAniversarios(userId) {
+export function useAniversarios(userId, options = {}) {
+  const queryEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: ["aniversarios", userId],
     queryFn: async () => {
@@ -67,7 +68,7 @@ export function useAniversarios(userId) {
       mapped.sort((a, b) => a.diasRestantes - b.diasRestantes);
       return mapped;
     },
-    enabled: !!userId || !isSupabaseEnabled,
+    enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
     staleTime: 6 * 60 * 60 * 1000,
   });
 }

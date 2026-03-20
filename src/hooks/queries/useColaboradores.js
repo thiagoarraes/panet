@@ -29,18 +29,21 @@ const toAvatar = (profile) => {
   };
 };
 
-export function useColaboradores(userId) {
+export function useColaboradores(userId, options = {}) {
   const queryClient = useQueryClient();
+  const summaryOnly = Boolean(options?.summaryOnly);
+  const queryEnabled = options?.enabled ?? true;
+  const selectFields = summaryOnly
+    ? "id,nome,cargo,cor_avatar,foto_url,aniversario"
+    : "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,aniversario";
 
   const query = useQuery({
-    queryKey: ["colaboradores", userId],
+    queryKey: ["colaboradores", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return COLABORADORES;
       const { data, error } = await supabase
         .from("colaboradores")
-        .select(
-          "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,aniversario"
-        )
+        .select(selectFields)
         .order("nome", { ascending: true });
       if (error) throw error;
       return (data || []).map((row) => ({
@@ -48,12 +51,12 @@ export function useColaboradores(userId) {
         isMe: row.id === userId,
       }));
     },
-    enabled: !!userId || !isSupabaseEnabled,
+    enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
     staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
-    if (!isSupabaseEnabled || !supabase || !userId) return;
+    if (!queryEnabled || !isSupabaseEnabled || !supabase || !userId) return;
 
     const channel = supabase
       .channel(`colaboradores-live-${userId}`)
@@ -71,7 +74,7 @@ export function useColaboradores(userId) {
     return () => {
       channel.unsubscribe();
     };
-  }, [userId, queryClient]);
+  }, [userId, queryClient, queryEnabled]);
 
   return query;
 }

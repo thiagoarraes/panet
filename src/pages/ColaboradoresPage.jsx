@@ -49,7 +49,8 @@ const getZodiacInfo = (isoDate) => {
 };
 
 export function ColaboradoresPage({ currentUserId }) {
-  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const colaboradoresQuery = useColaboradores(currentUserId);
+  const colaboradores = colaboradoresQuery.data || [];
   const [selected, setSelected] = useState(null);
   const signo = getZodiacInfo(selected?.aniversario);
   const signoHref = signo
@@ -58,6 +59,14 @@ export function ColaboradoresPage({ currentUserId }) {
 
   return (
     <div className="fade-up">
+      {colaboradoresQuery.isError && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-body">
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar colaboradores</div>
+            <div className="section-sub">{colaboradoresQuery.error?.message || "Não foi possível carregar os dados agora."}</div>
+          </div>
+        </div>
+      )}
       <div className="section-header">
         <div>
           <div className="section-title">Colaboradores</div>
@@ -82,7 +91,12 @@ export function ColaboradoresPage({ currentUserId }) {
         ))}
       </div>
 
-      {colaboradores.length === 0 && <div className="empty-state">Nenhum colaborador encontrado.</div>}
+      {colaboradoresQuery.isLoading && colaboradores.length === 0 && (
+        <div className="empty-state">Carregando colaboradores...</div>
+      )}
+      {!colaboradoresQuery.isLoading && colaboradores.length === 0 && (
+        <div className="empty-state">Nenhum colaborador encontrado.</div>
+      )}
 
       {selected && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setSelected(null)}>

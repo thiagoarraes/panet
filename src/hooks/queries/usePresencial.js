@@ -92,27 +92,55 @@ export function usePresencial(userId) {
           ? supabase
               .from("presencial_confirmacoes")
               .select(
-                "id,agenda_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+                "id,agenda_id,colaborador_id,status,observacao,created_at,colaborador:colaboradores!presencial_confirmacoes_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
               )
               .in("agenda_id", agendaIds)
               .order("created_at", { ascending: true })
           : Promise.resolve({ data: [], error: null });
 
-      const [confirmacoesResult, secretResult] = await Promise.all([
-        confirmacoesPromise,
-        supabase.rpc("get_my_amigo_secreto_results"),
-      ]);
-      if (confirmacoesResult.error) throw confirmacoesResult.error;
-      if (secretResult.error) throw secretResult.error;
+      const confirmacoesResult = await confirmacoesPromise;
+      if (confirmacoesResult.error) {
+        // Do not block the full page if attendee list fails temporarily.
+        console.warn("Falha ao carregar confirmações presencial:", confirmacoesResult.error.message);
+      }
 
       const confirmacoesRows = confirmacoesResult.data || [];
-      const secretRows = secretResult.data;
 
       const confirmacoesByAgenda = new Map();
       for (const row of confirmacoesRows) {
         const list = confirmacoesByAgenda.get(String(row.agenda_id)) || [];
         list.push(mapDbPresencialConfirmacaoToUi(row));
         confirmacoesByAgenda.set(String(row.agenda_id), list);
+      }
+
+      const userIdStr = String(userId || "");
+      const sortedSecretAgendaIds = new Set(
+        (agendasRows || [])
+          .filter((row) => Boolean(row?.amigo_secreto_ativo) && Boolean(row?.amigo_secreto_sorteado_at))
+          .map((row) => String(row.id))
+      );
+
+      const userEligibleAgendaIds = new Set(
+        (confirmacoesRows || [])
+          .filter((row) => {
+            if (String(row?.status || "") !== "talvez") return false;
+            const rowUserId = String(row?.colaborador_id || row?.colaborador?.id || "");
+            return rowUserId && rowUserId === userIdStr;
+          })
+          .map((row) => String(row.agenda_id))
+      );
+
+      let secretRows = [];
+      if (sortedSecretAgendaIds.size > 0 && userEligibleAgendaIds.size > 0) {
+        const secretResult = await supabase.rpc("get_my_amigo_secreto_results");
+        if (secretResult.error) {
+          // Secret Santa data is optional for rendering the agenda list.
+          console.warn("Falha ao carregar resultado do amigo secreto:", secretResult.error.message);
+        } else if (Array.isArray(secretResult.data)) {
+          secretRows = secretResult.data.filter((row) =>
+            userEligibleAgendaIds.has(String(row?.agenda_id || ""))
+          );
+        }
       }
 
       let secretResultsByAgenda = new Map();
@@ -146,6 +174,7 @@ export function usePresencial(userId) {
       return sortPresencialAgendas(mapped);
     },
     enabled: !!userId || !isSupabaseEnabled,
-    staleTime: 45 * 1000,
+    staleTime: 90 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
