@@ -131,10 +131,14 @@ export function useMural(userId) {
   const queryClient = useQueryClient()
 
   // Realtime — atualiza cache cirurgicamente (como o Layout já faz hoje)
+  // IMPORTANTE: Os handlers de INSERT/UPDATE devem aplicar a mesma transformação
+  // de dados que o queryFn usa (mapMuralRow). Definir uma função compartilhada
+  // `mapMuralRow(row)` usada tanto no queryFn quanto nos handlers realtime.
+  // Preservar a lógica de resolveColaborador e métricas de latência (panzapPendingRef).
   useEffect(() => {
     if (!userId) return
     const channel = supabase
-      .channel('mural-changes')
+      .channel(`mural-live-${userId}`) // nome por user (como o Layout atual)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'mural' },
         (payload) => {
@@ -197,7 +201,7 @@ export function useColaboradores(userId) {
   useEffect(() => {
     if (!userId) return
     const channel = supabase
-      .channel('colaboradores-changes')
+      .channel(`colaboradores-live-${userId}`) // nome por user (como o Layout atual)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'colaboradores' },
         () => {
