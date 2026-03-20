@@ -10,15 +10,15 @@ O Layout.jsx (~3200 linhas) centraliza toda a lógica de data fetching, caching 
 
 - Cache com TTL Infinity na hidratação (dados stale no reload)
 - N+1 queries em galerias e presencial
-- Zero real-time (mural usa polling com 1.2s delay)
-- Prop drilling massivo (AdminPage recebe 50+ props)
+- Realtime existente no mural e colaboradores acoplado ao Layout (difícil de reusar/testar)
+- Prop drilling massivo (AdminPage recebe ~44 props)
 - Código difícil de manter e testar
 
 ## Decisões de Design
 
 1. **React Query (TanStack Query)** substitui businessCache.js por completo
 2. **Hooks por domínio** — cada página busca seus dados via hooks, sem props do Layout
-3. **Realtime** apenas no Mural (via Supabase Realtime + invalidação do React Query)
+3. **Realtime** migrar subscriptions existentes (mural + colaboradores) para dentro dos hooks
 4. **2 RPCs novas** para eliminar N+1 em presencial e galerias
 5. **Migração domain-by-domain** — incremental, testável, reversível
 6. **Ordem:** colaboradores → mural → postagens → férias/ausências → presencial → galerias → aniversários
@@ -42,6 +42,13 @@ src/
       usePresencial.js
       useGalerias.js
       useAniversarios.js
+      admin/
+        useAdminPostagens.js
+        useAdminFerias.js
+        useAdminAusencias.js
+        useAdminPresencial.js
+        useAdminGaleria.js
+        useAdminMural.js
     mutations/
       usePostMutations.js       ← curtida, comentário, CRUD post
       useMuralMutations.js      ← enviar/deletar mensagem
@@ -87,7 +94,7 @@ import { queryClient } from './lib/queryClient'
 |---------|-----------|---------------|
 | colaboradores | 5min | Muda raramente |
 | postagens | 2min | Feed social |
-| mural | 0s | Chat — realtime cuida da invalidação |
+| mural | 30s | Chat — realtime atualiza via setQueryData, staleTime evita refetch desnecessário no focus |
 | ferias | 2min | Dados moderados |
 | ausencias | 2min | Similar a férias |
 | presencial | 45s | Confirmações mudam durante eventos |
@@ -99,7 +106,7 @@ import { queryClient } from './lib/queryClient'
 ### Padrão geral
 
 ```js
-export function useDomain() {
+export function useDomain(userId) {
   return useQuery({
     queryKey: ['domain'],
     queryFn: async () => {
@@ -108,26 +115,58 @@ export function useDomain() {
       return data
     },
     staleTime: DOMAIN_STALE_TIME,
+    enabled: !!userId, // só busca quando autenticado
   })
 }
 ```
 
-### Mural com Realtime
+### Mural com Realtime (migração da lógica existente)
+
+O Layout.jsx já possui subscriptions Realtime para mural (INSERT/UPDATE/DELETE) e colaboradores.
+A migração **move** essa lógica para dentro dos hooks, usando `setQueryData` para atualização
+cirúrgica do cache (sem refetch completo a cada evento).
 
 ```js
-export function useMural() {
+export function useMural(userId) {
   const queryClient = useQueryClient()
 
+  // Realtime — atualiza cache cirurgicamente (como o Layout já faz hoje)
   useEffect(() => {
+    if (!userId) return
     const channel = supabase
       .channel('mural-changes')
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'mural' },
-        () => queryClient.invalidateQueries({ queryKey: ['mural'] })
+        { event: 'INSERT', schema: 'public', table: 'mural' },
+        (payload) => {
+          queryClient.setQueryData(['mural'], (old) => {
+            if (!old) return old
+            // Evita duplicata se a mensagem já foi inserida otimisticamente
+            if (old.some(m => m.id === payload.new.id)) {
+              return old.map(m => m.id === payload.new.id ? payload.new : m)
+            }
+            return [payload.new, ...old]
+          })
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'mural' },
+        (payload) => {
+          queryClient.setQueryData(['mural'], (old) =>
+            old?.map(m => m.id === payload.new.id ? payload.new : m)
+          )
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'mural' },
+        (payload) => {
+          queryClient.setQueryData(['mural'], (old) =>
+            old?.filter(m => m.id !== payload.old.id)
+          )
+        }
       )
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [queryClient])
+  }, [userId, queryClient])
 
   return useQuery({
     queryKey: ['mural'],
@@ -140,7 +179,50 @@ export function useMural() {
       if (error) throw error
       return data
     },
-    staleTime: 0,
+    staleTime: 30 * 1000, // realtime cuida da freshness, staleTime evita refetch no focus
+    enabled: !!userId,
+  })
+}
+```
+
+### Colaboradores com Realtime (migração da subscription existente)
+
+O Layout.jsx também tem uma subscription Realtime em colaboradores que cascateia
+reloads para férias e aniversários. Essa lógica é movida para o hook:
+
+```js
+export function useColaboradores(userId) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel('colaboradores-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'colaboradores' },
+        () => {
+          // Invalida colaboradores + domínios dependentes
+          queryClient.invalidateQueries({ queryKey: ['colaboradores'] })
+          queryClient.invalidateQueries({ queryKey: ['ferias'] })
+          queryClient.invalidateQueries({ queryKey: ['aniversarios'] })
+        }
+      )
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [userId, queryClient])
+
+  return useQuery({
+    queryKey: ['colaboradores'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('colaboradores')
+        .select('id, nome, email, cargo, setor, avatar_url, perfil, telefone, aniversario')
+        .order('nome')
+      if (error) throw error
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !!userId,
   })
 }
 ```
@@ -219,7 +301,52 @@ export function useEnviarMensagem() {
 | confirmar presencial | `['presencial']` |
 | upload foto galeria | `['galerias']` |
 | parabenizar aniversário | `['aniversarios']` |
-| editar colaborador (nome/avatar) | `['colaboradores', 'postagens', 'mural', 'presencial']` |
+| editar colaborador (nome/avatar) | `['colaboradores', 'postagens', 'mural', 'presencial', 'ferias', 'aniversarios']` |
+
+## Loading e Error States
+
+### Estratégia
+
+Usar `isLoading` / `isError` em cada componente (sem Suspense boundaries — mais controle).
+
+**Dashboard** — consome múltiplos domínios. Cada card exibe seu próprio loading/error state
+independentemente, permitindo renderização progressiva (cards que carregam primeiro aparecem
+primeiro, sem bloquear os demais):
+
+```jsx
+function DashboardPage() {
+  const { data: postagens, isLoading: loadingPosts } = usePostagens(userId)
+  const { data: muralMsgs, isLoading: loadingMural } = useMural(userId)
+  // ...
+  return (
+    <>
+      <PostagensCard data={postagens} loading={loadingPosts} />
+      <MuralCard data={muralMsgs} loading={loadingMural} />
+    </>
+  )
+}
+```
+
+**Páginas simples** — loading spinner enquanto `isLoading`, fallback de erro com retry:
+
+```jsx
+if (isLoading) return <Spinner />
+if (isError) return <ErrorCard onRetry={refetch} />
+```
+
+### DevTools (apenas em dev)
+
+Instalar `@tanstack/react-query-devtools` para debug durante a migração:
+
+```jsx
+// main.jsx (só em desenvolvimento)
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
+<QueryClientProvider client={queryClient}>
+  <App />
+  <ReactQueryDevtools initialIsOpen={false} />
+</QueryClientProvider>
+```
 
 ## Simplificação do Layout
 
@@ -292,7 +419,7 @@ Arquivo deletado por completo. Mapeamento de substituição:
 
 1. **Infraestrutura** — instalar React Query, criar queryClient, adicionar Provider
 2. **Colaboradores** — base de tudo, primeiro hook + migrar páginas que usam
-3. **Mural** — adicionar Realtime + hook + optimistic updates
+3. **Mural** — migrar Realtime existente para hook + optimistic updates com setQueryData
 4. **Postagens** — hook + mutations (curtida, comentário, CRUD)
 5. **Férias + Ausências** — hooks similares, migrar juntos
 6. **Presencial** — hook + RPC get_presencial_completo
@@ -306,7 +433,7 @@ Arquivo deletado por completo. Mapeamento de substituição:
 |---------|-------|--------|
 | Requests redundantes | Frequentes | -40-60% (dedup + staleTime) |
 | Latência presencial/galerias | 3 queries sequenciais | 1 RPC call |
-| Mural update delay | 1.2s+ polling | Instantâneo (Realtime) |
+| Mural realtime | Acoplado ao Layout | Encapsulado no hook useMural |
 | Layout.jsx | ~3200 linhas | ~1500 linhas |
-| Prop drilling | 50+ props no AdminPage | 0 (hooks diretos) |
+| Prop drilling | ~44 props no AdminPage | 0 (hooks diretos) |
 | businessCache.js | 107 linhas manual | Deletado |
