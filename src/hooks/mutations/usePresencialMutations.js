@@ -45,6 +45,8 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
+  minhaSugestaoAmigoSecreto: "",
+  meuAmigoSecretoSugestao: "",
   confirmacoes,
 });
 
@@ -100,7 +102,7 @@ export function useCreatePresencialAgenda() {
       if (error) throw new Error(error.message);
       return mapDbPresencialAgendaToUi(data, []);
     },
-    onSuccess: () => invalidatePresencial(queryClient),
+    onSettled: () => invalidatePresencial(queryClient),
   });
 }
 
@@ -269,12 +271,14 @@ export function useToggleSecretSanta(userId) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ agendaId, shouldParticipate, currentProfile }) => {
+    mutationFn: async ({ agendaId, shouldParticipate, currentProfile, suggestion }) => {
       const effectiveUserId = currentProfile?.id || userId;
       if (!effectiveUserId || !agendaId) return;
       if (!isSupabaseEnabled || !supabase) return;
 
       const nextStatus = shouldParticipate ? "talvez" : "confirmado";
+      const normalizedSuggestion = String(suggestion || "").trim();
+
       const { error } = await supabase.from("presencial_confirmacoes").upsert(
         {
           agenda_id: agendaId,
@@ -287,9 +291,33 @@ export function useToggleSecretSanta(userId) {
         }
       );
       if (error) throw new Error(error.message);
+
+      if (shouldParticipate && normalizedSuggestion) {
+        const { error: suggestionError } = await supabase
+          .from("presencial_amigo_secreto_sugestoes")
+          .upsert(
+            {
+              agenda_id: agendaId,
+              colaborador_id: effectiveUserId,
+              sugestao: normalizedSuggestion,
+            },
+            {
+              onConflict: "agenda_id,colaborador_id",
+              ignoreDuplicates: false,
+            }
+          );
+        if (suggestionError) throw new Error(suggestionError.message);
+      } else {
+        const { error: deleteSuggestionError } = await supabase
+          .from("presencial_amigo_secreto_sugestoes")
+          .delete()
+          .eq("agenda_id", agendaId)
+          .eq("colaborador_id", effectiveUserId);
+        if (deleteSuggestionError) throw new Error(deleteSuggestionError.message);
+      }
     },
 
-    onMutate: async ({ agendaId, shouldParticipate, currentProfile }) => {
+    onMutate: async ({ agendaId, shouldParticipate, currentProfile, suggestion }) => {
       await queryClient.cancelQueries({ queryKey: ["presencial", userId] });
       const previous = queryClient.getQueryData(["presencial", userId]);
 
@@ -299,12 +327,17 @@ export function useToggleSecretSanta(userId) {
           if (String(agenda.id) !== String(agendaId)) return agenda;
           const effectiveUserId = currentProfile?.id || userId;
           const nextStatus = shouldParticipate ? "talvez" : "confirmado";
+          const normalizedSuggestion = shouldParticipate ? String(suggestion || "").trim() : "";
           const confirmacoes = (agenda.confirmacoes || []).map((c) =>
             String(c.colaborador?.id) === String(effectiveUserId)
               ? { ...c, status: nextStatus }
               : c
           );
-          return { ...agenda, confirmacoes };
+          return {
+            ...agenda,
+            confirmacoes,
+            minhaSugestaoAmigoSecreto: normalizedSuggestion,
+          };
         });
       });
 
@@ -332,8 +365,54 @@ export function useRunSecretSanta() {
     mutationFn: async (agendaId) => {
       if (!agendaId) return;
       if (!isSupabaseEnabled || !supabase) return;
-      const { error } = await supabase.rpc("run_amigo_secreto_draw", { p_agenda_id: agendaId });
+      const { data, error } = await supabase.rpc("run_amigo_secreto_draw", { p_agenda_id: agendaId });
       if (error) throw new Error(error.message);
+      return Number(data || 0);
+    },
+    onMutate: async (agendaId) => {
+      const optimisticTimestamp = new Date().toISOString();
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["presencial"] }),
+        queryClient.cancelQueries({ queryKey: ["admin", "presencial"] }),
+      ]);
+
+      const previousPresencial = queryClient.getQueriesData({ queryKey: ["presencial"] });
+      const previousAdminPresencial = queryClient.getQueriesData({ queryKey: ["admin", "presencial"] });
+
+      queryClient.setQueriesData({ queryKey: ["presencial"] }, (prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((agenda) =>
+          String(agenda?.id) === String(agendaId)
+            ? { ...agenda, amigoSecretoSorteadoAt: optimisticTimestamp }
+            : agenda
+        );
+      });
+
+      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (prev) => {
+        if (!prev || !Array.isArray(prev?.rows)) return prev;
+        return {
+          ...prev,
+          rows: prev.rows.map((agenda) =>
+            String(agenda?.id) === String(agendaId)
+              ? { ...agenda, amigoSecretoSorteadoAt: optimisticTimestamp }
+              : agenda
+          ),
+        };
+      });
+
+      return {
+        previousPresencial,
+        previousAdminPresencial,
+      };
+    },
+    onError: (_err, _agendaId, context) => {
+      for (const [queryKey, data] of context?.previousPresencial || []) {
+        queryClient.setQueryData(queryKey, data);
+      }
+      for (const [queryKey, data] of context?.previousAdminPresencial || []) {
+        queryClient.setQueryData(queryKey, data);
+      }
     },
     onSuccess: () => invalidatePresencial(queryClient),
   });

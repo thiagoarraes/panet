@@ -33,6 +33,17 @@ const formatDateLabel = (isoDate) =>
     year: "numeric",
   });
 
+const formatDateTimeLabel = (isoDateTime) => {
+  if (!isoDateTime) return "";
+  return new Date(isoDateTime).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const formatTimeLabel = (timeValue) => String(timeValue || "").slice(0, 5);
 const normalizeTimeInput = (rawValue) => {
   const digits = String(rawValue || "")
@@ -52,7 +63,22 @@ export function AdminPresencial() {
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [drawState, setDrawState] = useState({ agendaId: "", status: "idle", message: "" });
   const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    if (drawState.status !== "success" && drawState.status !== "error") return undefined;
+
+    const timer = window.setTimeout(() => {
+      setDrawState((current) =>
+        current.status === "success" || current.status === "error"
+          ? { agendaId: "", status: "idle", message: "" }
+          : current
+      );
+    }, 6000);
+
+    return () => window.clearTimeout(timer);
+  }, [drawState]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -147,6 +173,31 @@ export function AdminPresencial() {
     }
   };
 
+  const handleRunSecretSanta = async (agenda) => {
+    if (!agenda?.id) return;
+
+    setDrawState({
+      agendaId: agenda.id,
+      status: "pending",
+      message: "Realizando o sorteio e travando novas inscricoes. Isso pode levar alguns segundos.",
+    });
+
+    try {
+      const participantCount = await runSecretSanta.mutateAsync(agenda.id);
+      setDrawState({
+        agendaId: agenda.id,
+        status: "success",
+        message: `Sorteio iniciado com ${participantCount} participante(s). O evento ja foi atualizado para evitar clique duplo.`,
+      });
+    } catch (error) {
+      setDrawState({
+        agendaId: agenda.id,
+        status: "error",
+        message: error?.message || "Nao foi possivel iniciar o sorteio agora. Tente novamente em instantes.",
+      });
+    }
+  };
+
   return (
     <div>
       <div className="admin-toolbar" style={{ marginBottom: 16 }}>
@@ -175,6 +226,9 @@ export function AdminPresencial() {
           const confirmados = (agenda.confirmacoes || []).filter((item) => item.status === "confirmado" || item.status === "talvez").length;
           const participantesSorteio = (agenda.confirmacoes || []).filter((item) => item.status === "talvez").length;
           const vagas = Number(agenda.vagas || 0);
+          const isDrawingThisAgenda = drawState.agendaId === agenda.id && drawState.status === "pending";
+          const hasDrawFeedback = drawState.agendaId === agenda.id && drawState.status !== "idle";
+          const canRunDraw = agenda.amigoSecretoAtivo && !agenda.amigoSecretoSorteadoAt && participantesSorteio >= 2 && !runSecretSanta.isPending;
           return (
             <div key={agenda.id} className="card" style={{ padding: 16 }}>
               <div className="admin-presencial-row">
@@ -208,6 +262,23 @@ export function AdminPresencial() {
                       <strong>Regras do amigo secreto:</strong> {agenda.amigoSecretoRegras}
                     </div>
                   )}
+                  {agenda.amigoSecretoAtivo && agenda.amigoSecretoSorteadoAt && (
+                    <div className="admin-presencial-draw-info">
+                      <strong>Sorteio concluido com {participantesSorteio} participante(s):</strong> {formatDateTimeLabel(agenda.amigoSecretoSorteadoAt)}. Novas inscricoes no amigo secreto estao bloqueadas.
+                    </div>
+                  )}
+                  {hasDrawFeedback && (
+                    <div className={`admin-presencial-draw-feedback is-${drawState.status}`}>
+                      <div className="admin-presencial-draw-feedback-title">
+                        {drawState.status === "pending"
+                          ? "Sorteando agora"
+                          : drawState.status === "success"
+                            ? "Sorteio concluido"
+                            : "Falha ao iniciar sorteio"}
+                      </div>
+                      <div className="admin-presencial-draw-feedback-text">{drawState.message}</div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="admin-presencial-side">
@@ -217,11 +288,26 @@ export function AdminPresencial() {
                   <div className="admin-presencial-actions">
                     {agenda.amigoSecretoAtivo && (
                       <button
-                        className="btn-ghost"
-                        onClick={() => runSecretSanta.mutate(agenda.id)}
-                        disabled={runSecretSanta.isPending || Boolean(agenda.amigoSecretoSorteadoAt) || participantesSorteio < 2}
+                        className={`btn-ghost ${isDrawingThisAgenda ? "admin-presencial-draw-btn is-running" : "admin-presencial-draw-btn"}`}
+                        onClick={() => handleRunSecretSanta(agenda)}
+                        disabled={!canRunDraw}
+                        title={
+                          agenda.amigoSecretoSorteadoAt
+                            ? "O sorteio ja foi iniciado para este evento."
+                            : participantesSorteio < 2
+                              ? "Sao necessarios ao menos 2 participantes no amigo secreto."
+                              : isDrawingThisAgenda
+                                ? "O sorteio esta sendo realizado agora."
+                                : "Realizar sorteio do amigo secreto"
+                        }
                       >
-                        {agenda.amigoSecretoSorteadoAt ? "Sorteio iniciado" : "Iniciar sorteio"}
+                        {isDrawingThisAgenda
+                          ? "Sorteando..."
+                          : agenda.amigoSecretoSorteadoAt
+                            ? `Sorteio concluido (${participantesSorteio})`
+                            : participantesSorteio < 2
+                              ? "Minimo 2 no sorteio"
+                              : "Iniciar sorteio"}
                       </button>
                     )}
                     <button className="btn-ghost" onClick={() => openEdit(agenda)}>

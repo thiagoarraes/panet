@@ -13,6 +13,7 @@ const toAvatar = (profile) => {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+
   return {
     id: profile.id,
     nome: profile.nome,
@@ -54,6 +55,8 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   observacao: item.observacao || "",
   status: item.status || "aberto",
   createdAt: item.created_at || null,
+  minhaSugestaoAmigoSecreto: "",
+  meuAmigoSecretoSugestao: "",
   confirmacoes,
 });
 
@@ -61,8 +64,10 @@ const sortPresencialAgendas = (items) =>
   [...(items || [])].sort((a, b) => {
     const byDate = String(a?.dataIso || "").localeCompare(String(b?.dataIso || ""));
     if (byDate !== 0) return byDate;
+
     const byTime = String(a?.horaIso || "").localeCompare(String(b?.horaIso || ""));
     if (byTime !== 0) return byTime;
+
     return String(a?.createdAt || "").localeCompare(String(b?.createdAt || ""));
   });
 
@@ -83,9 +88,11 @@ export function usePresencial(userId) {
         )
         .order("data_presencial", { ascending: true })
         .order("created_at", { ascending: false });
+
       if (agendasError) throw agendasError;
 
       const agendaIds = (agendasRows || []).map((row) => row.id).filter(Boolean);
+      const userIdStr = String(userId || "");
 
       const confirmacoesPromise =
         agendaIds.length > 0
@@ -101,10 +108,29 @@ export function usePresencial(userId) {
       const confirmacoesResult = await confirmacoesPromise;
       if (confirmacoesResult.error) {
         // Do not block the full page if attendee list fails temporarily.
-        console.warn("Falha ao carregar confirmações presencial:", confirmacoesResult.error.message);
+        console.warn("Falha ao carregar confirmacoes presencial:", confirmacoesResult.error.message);
       }
 
       const confirmacoesRows = confirmacoesResult.data || [];
+
+      const suggestionsPromise =
+        userIdStr && agendaIds.length > 0
+          ? supabase
+              .from("presencial_amigo_secreto_sugestoes")
+              .select("agenda_id,sugestao")
+              .eq("colaborador_id", userIdStr)
+              .in("agenda_id", agendaIds)
+          : Promise.resolve({ data: [], error: null });
+
+      const suggestionsResult = await suggestionsPromise;
+      if (suggestionsResult.error) {
+        // Own Secret Santa suggestions are optional and should not block the page.
+        console.warn("Falha ao carregar sugestoes do amigo secreto:", suggestionsResult.error.message);
+      }
+
+      const suggestionsByAgenda = new Map(
+        (suggestionsResult.data || []).map((row) => [String(row.agenda_id), row.sugestao || ""])
+      );
 
       const confirmacoesByAgenda = new Map();
       for (const row of confirmacoesRows) {
@@ -113,7 +139,6 @@ export function usePresencial(userId) {
         confirmacoesByAgenda.set(String(row.agenda_id), list);
       }
 
-      const userIdStr = String(userId || "");
       const sortedSecretAgendaIds = new Set(
         (agendasRows || [])
           .filter((row) => Boolean(row?.amigo_secreto_ativo) && Boolean(row?.amigo_secreto_sorteado_at))
@@ -137,9 +162,7 @@ export function usePresencial(userId) {
           // Secret Santa data is optional for rendering the agenda list.
           console.warn("Falha ao carregar resultado do amigo secreto:", secretResult.error.message);
         } else if (Array.isArray(secretResult.data)) {
-          secretRows = secretResult.data.filter((row) =>
-            userEligibleAgendaIds.has(String(row?.agenda_id || ""))
-          );
+          secretRows = secretResult.data.filter((row) => userEligibleAgendaIds.has(String(row?.agenda_id || "")));
         }
       }
 
@@ -159,6 +182,7 @@ export function usePresencial(userId) {
               instagram: row.instagram,
               linkedin: row.linkedin,
               github: row.github,
+              sugestao: row.sugestao || "",
             },
           ])
         );
@@ -166,9 +190,11 @@ export function usePresencial(userId) {
 
       const mapped = (agendasRows || []).map((row) => ({
         ...mapDbPresencialAgendaToUi(row, confirmacoesByAgenda.get(String(row.id)) || []),
+        minhaSugestaoAmigoSecreto: suggestionsByAgenda.get(String(row.id)) || "",
         meuAmigoSecreto: secretResultsByAgenda.has(String(row.id))
           ? toAvatar(secretResultsByAgenda.get(String(row.id)))
           : null,
+        meuAmigoSecretoSugestao: secretResultsByAgenda.get(String(row.id))?.sugestao || "",
       }));
 
       return sortPresencialAgendas(mapped);

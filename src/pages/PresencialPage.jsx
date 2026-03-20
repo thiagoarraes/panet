@@ -4,6 +4,16 @@ import { Avatar } from "../components/Avatar";
 import { usePresencial } from "../hooks/queries/usePresencial";
 import { useRespondPresencial, useToggleSecretSanta } from "../hooks/mutations/usePresencialMutations";
 
+const SECRET_SANTA_SUGGESTION_LIMIT = 280;
+const EMPTY_SECRET_SANTA_MODAL = {
+  open: false,
+  agendaId: "",
+  agendaTitle: "",
+  draft: "",
+  mode: "join",
+  error: "",
+};
+
 const formatDateLong = (isoDate, short = false) =>
   new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
     weekday: short ? "short" : "long",
@@ -40,6 +50,73 @@ const getConfirmedParticipants = (agenda) =>
 const getSecretSantaParticipants = (agenda) =>
   (agenda?.confirmacoes || []).filter((item) => item.status === "talvez");
 
+function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSaving }) {
+  if (!state.open) return null;
+
+  return (
+    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
+      <div className="modal presencial-suggestion-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div>
+            <div className="section-title" style={{ fontSize: 18 }}>
+              {state.mode === "edit" ? "Atualizar sugestão" : "Participar do amigo secreto"}
+            </div>
+            <div className="section-sub" style={{ marginTop: 4 }}>
+              {state.agendaTitle}
+            </div>
+          </div>
+          <button className="modal-close" onClick={onClose} disabled={isSaving} aria-label="Fechar modal">
+            x
+          </button>
+        </div>
+
+        <div className="modal-body">
+          <div className="presencial-suggestion-intro">
+            <span className="presencial-suggestion-pill">Opcional e privado</span>
+            <div className="presencial-suggestion-title">Tem alguma sugestão do que gostaria de ganhar?</div>
+            <div className="presencial-suggestion-copy">
+              Se quiser, escreva uma dica para ajudar quem te tirar a acertar no presente. Essa mensagem só aparece
+              para a pessoa sorteada.
+            </div>
+          </div>
+
+          <div className="presencial-suggestion-field">
+            <label className="form-label">SUGESTÃO DE PRESENTE</label>
+            <textarea
+              className="form-input presencial-suggestion-textarea"
+              value={state.draft}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Ex: gosto de itens de papelaria, canecas criativas, chocolate amargo..."
+              rows={5}
+              maxLength={SECRET_SANTA_SUGGESTION_LIMIT}
+              autoFocus
+            />
+            <div className="presencial-suggestion-meta">
+              <span>
+                {state.draft.trim()
+                  ? "Sua dica fica guardada e aparece junto do resultado do sorteio."
+                  : "Campo opcional. Se preferir, participe sem deixar nenhuma sugestão."}
+              </span>
+              <span>{state.draft.length}/{SECRET_SANTA_SUGGESTION_LIMIT}</span>
+            </div>
+          </div>
+
+          {state.error && <div className="presencial-suggestion-error">{state.error}</div>}
+
+          <div className="admin-modal-actions presencial-suggestion-actions">
+            <button className="btn-ghost" onClick={onClose} disabled={isSaving}>
+              Cancelar
+            </button>
+            <button className="btn-primary" onClick={onSubmit} disabled={isSaving}>
+              {isSaving ? "Salvando..." : state.mode === "edit" ? "Salvar sugestão" : "Entrar no sorteio"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PresencialPage({ currentUserId }) {
   const presencialQuery = usePresencial(currentUserId);
   const agendas = useMemo(() => presencialQuery.data || [], [presencialQuery.data]);
@@ -47,6 +124,7 @@ export function PresencialPage({ currentUserId }) {
   const toggleSecretSantaMutation = useToggleSecretSanta(currentUserId);
 
   const [savingState, setSavingState] = useState({ agendaId: "", status: "" });
+  const [secretSantaModal, setSecretSantaModal] = useState(EMPTY_SECRET_SANTA_MODAL);
 
   const proximasAgendas = useMemo(
     () =>
@@ -67,6 +145,53 @@ export function PresencialPage({ currentUserId }) {
       await respondMutation.mutateAsync({ agendaId, status });
     } finally {
       setSavingState({ agendaId: "", status: "" });
+    }
+  };
+
+  const closeSecretSantaModal = () => {
+    if (toggleSecretSantaMutation.isPending) return;
+    setSecretSantaModal(EMPTY_SECRET_SANTA_MODAL);
+  };
+
+  const openSecretSantaModal = (agenda, mode = "join") => {
+    setSecretSantaModal({
+      open: true,
+      agendaId: agenda?.id || "",
+      agendaTitle: agenda?.titulo || "Amigo secreto",
+      draft: agenda?.minhaSugestaoAmigoSecreto || "",
+      mode,
+      error: "",
+    });
+  };
+
+  const handleSecretSantaSubmit = async () => {
+    if (!secretSantaModal.agendaId) return;
+
+    try {
+      await toggleSecretSantaMutation.mutateAsync({
+        agendaId: secretSantaModal.agendaId,
+        shouldParticipate: true,
+        suggestion: secretSantaModal.draft,
+      });
+      setSecretSantaModal(EMPTY_SECRET_SANTA_MODAL);
+    } catch (error) {
+      setSecretSantaModal((previous) => ({
+        ...previous,
+        error: error?.message || "Não foi possível salvar sua participação agora.",
+      }));
+    }
+  };
+
+  const handleSecretSantaLeave = async (agendaId) => {
+    if (!agendaId) return;
+
+    try {
+      await toggleSecretSantaMutation.mutateAsync({
+        agendaId,
+        shouldParticipate: false,
+      });
+    } catch (_error) {
+      // Query invalidation restores the previous server state if this fails.
     }
   };
 
@@ -91,6 +216,7 @@ export function PresencialPage({ currentUserId }) {
           </div>
         </div>
       )}
+
       <div className="section-header">
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -108,7 +234,8 @@ export function PresencialPage({ currentUserId }) {
             <Info size={16} /> Como funciona
           </div>
           <div className="presencial-hero-text">
-            Cada evento reúne as confirmações do time em uma lista organizada, dando mais visibilidade para planejamento, logística e participação.
+            Cada evento reúne as confirmações do time em uma lista organizada, dando mais visibilidade para planejamento,
+            logística e participação.
           </div>
         </div>
         <div className="presencial-hero-points">
@@ -117,18 +244,18 @@ export function PresencialPage({ currentUserId }) {
               <CheckCircle2 size={14} />
             </div>
             <div className="presencial-hero-point-content">
-              <div className="presencial-hero-point-label">Passo 1 — Confirme presença</div>
+              <div className="presencial-hero-point-label">Passo 1 - Confirme presença</div>
               <div className="presencial-hero-point-text">Garanta sua participação no evento.</div>
             </div>
           </div>
-          {proximasAgendas.some((a) => a.amigoSecretoAtivo) && (
+          {proximasAgendas.some((agenda) => agenda.amigoSecretoAtivo) && (
             <div className="presencial-hero-point">
               <div className="presencial-hero-point-icon" style={{ background: "rgba(var(--accent-rgb, 99,102,241),0.14)", color: "var(--accent)" }}>
                 <Gift size={14} />
               </div>
               <div className="presencial-hero-point-content">
-                <div className="presencial-hero-point-label">Passo 2 — Amigo secreto</div>
-                <div className="presencial-hero-point-text">Se o evento tiver sorteio, inscreva-se após confirmar presença.</div>
+                <div className="presencial-hero-point-label">Passo 2 - Amigo secreto</div>
+                <div className="presencial-hero-point-text">Se o evento tiver sorteio, inscreva-se depois de confirmar presença.</div>
               </div>
             </div>
           )}
@@ -143,6 +270,7 @@ export function PresencialPage({ currentUserId }) {
             </div>
           </div>
         )}
+
         {proximasAgendas.map((agenda) => {
           const confirmados = getConfirmedParticipants(agenda);
           const participantesSorteio = getSecretSantaParticipants(agenda);
@@ -205,7 +333,6 @@ export function PresencialPage({ currentUserId }) {
                   )}
                 </div>
 
-                {/* Step 1: Confirmação de presença */}
                 <div className="presencial-step-section">
                   <div className="presencial-step-header">
                     <div className="presencial-step-badge" style={{ background: minhaResposta ? "var(--success)" : "var(--muted)" }}>1</div>
@@ -232,7 +359,6 @@ export function PresencialPage({ currentUserId }) {
                   </div>
                 </div>
 
-                {/* Step 2: Amigo secreto (always visible when active, gated by step 1) */}
                 {agenda.amigoSecretoAtivo && (
                   <div className={`presencial-secret-santa-section ${!minhaResposta ? "presencial-secret-santa-locked" : ""}`}>
                     <div className="presencial-step-header">
@@ -259,35 +385,85 @@ export function PresencialPage({ currentUserId }) {
                         )}
 
                         <div className="presencial-actions">
-                          <button
-                            className={`presencial-secret-santa-btn ${estouNoSorteio ? "is-active" : ""}`}
-                            onClick={() => toggleSecretSantaMutation.mutate({ agendaId: agenda.id, shouldParticipate: !estouNoSorteio })}
-                            disabled={isSavingAgenda || Boolean(agenda.amigoSecretoSorteadoAt)}
-                          >
-                            <Gift size={16} />
-                            {agenda.amigoSecretoSorteadoAt
-                              ? estouNoSorteio
-                                ? "Participação confirmada"
-                                : "Sorteio já realizado"
-                              : estouNoSorteio
-                                ? "Participando — clique para sair"
-                                : "Quero participar!"}
-                          </button>
+                          {agenda.amigoSecretoSorteadoAt ? (
+                            <button
+                              className={`presencial-secret-santa-btn ${estouNoSorteio ? "is-active" : ""}`}
+                              disabled
+                            >
+                              <Gift size={16} />
+                              {estouNoSorteio ? "Participação confirmada" : "Sorteio já realizado"}
+                            </button>
+                          ) : !estouNoSorteio ? (
+                            <button
+                              className="presencial-secret-santa-btn"
+                              onClick={() => openSecretSantaModal(agenda, "join")}
+                              disabled={toggleSecretSantaMutation.isPending}
+                            >
+                              <Gift size={16} />
+                              Quero participar
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="presencial-secret-santa-btn is-soft"
+                                onClick={() => openSecretSantaModal(agenda, "edit")}
+                                disabled={toggleSecretSantaMutation.isPending}
+                              >
+                                <Gift size={16} />
+                                {agenda.minhaSugestaoAmigoSecreto ? "Editar sugestão" : "Adicionar sugestão"}
+                              </button>
+                              <button
+                                className="btn-ghost"
+                                onClick={() => handleSecretSantaLeave(agenda.id)}
+                                disabled={toggleSecretSantaMutation.isPending}
+                              >
+                                Sair do amigo secreto
+                              </button>
+                            </>
+                          )}
                         </div>
+
+                        {!estouNoSorteio && !agenda.amigoSecretoSorteadoAt && (
+                          <div className="presencial-secret-santa-tip">
+                            Ao entrar no sorteio, você pode deixar uma dica opcional de presente que só quem te tirar vai ver.
+                          </div>
+                        )}
+
+                        {estouNoSorteio && !agenda.amigoSecretoSorteadoAt && (
+                          <div className="presencial-secret-santa-summary">
+                            <div className="presencial-secret-santa-summary-label">Sua participação está confirmada</div>
+                            <div className="presencial-secret-santa-summary-text">
+                              {agenda.minhaSugestaoAmigoSecreto
+                                ? "Sua sugestão está salva e será mostrada somente para quem te tirar."
+                                : "Você ainda pode adicionar uma sugestão opcional antes do sorteio."}
+                            </div>
+                            {agenda.minhaSugestaoAmigoSecreto && (
+                              <div className="presencial-secret-santa-summary-quote">{agenda.minhaSugestaoAmigoSecreto}</div>
+                            )}
+                          </div>
+                        )}
 
                         {agenda.amigoSecretoSorteadoAt && (
                           <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 8 }}>
-                            Sorteio concluído — só você pode ver seu resultado.
+                            Sorteio concluído - só você pode ver seu resultado.
                           </div>
                         )}
 
                         {agenda.amigoSecretoSorteadoAt && estouNoSorteio && agenda.meuAmigoSecreto && (
                           <div className="presencial-secret-santa-result">
-                            <Avatar col={agenda.meuAmigoSecreto} size={42} />
-                            <div>
-                              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
-                              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
-                              <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
+                            <div className="presencial-secret-santa-result-person">
+                              <Avatar col={agenda.meuAmigoSecreto} size={42} />
+                              <div>
+                                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
+                                <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
+                                <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
+                              </div>
+                            </div>
+                            <div className="presencial-secret-santa-wish">
+                              <div className="presencial-secret-santa-wish-label">Sugestão para acertar no presente</div>
+                              <div className="presencial-secret-santa-wish-text">
+                                {agenda.meuAmigoSecretoSugestao || "Essa pessoa preferiu manter o mistério e não deixou nenhuma sugestão por enquanto."}
+                              </div>
                             </div>
                           </div>
                         )}
@@ -320,25 +496,25 @@ export function PresencialPage({ currentUserId }) {
 
                   {agenda.amigoSecretoAtivo && (
                     <div className="presencial-people-card">
-                    <div className="presencial-people-title">No amigo secreto</div>
-                    <div className="presencial-people-list">
-                      {participantesSorteio.length > 0 ? (
-                        participantesSorteio.map((item) => (
-                          <div key={item.id} className="presencial-person-row">
-                            <Avatar col={item.colaborador} size={34} />
-                            <div style={{ minWidth: 0 }}>
-                              <div className="presencial-person-name">{item.colaborador?.nome}</div>
-                              <div className="presencial-person-note">{item.observacao || "Participando do sorteio"}</div>
+                      <div className="presencial-people-title">No amigo secreto</div>
+                      <div className="presencial-people-list">
+                        {participantesSorteio.length > 0 ? (
+                          participantesSorteio.map((item) => (
+                            <div key={item.id} className="presencial-person-row">
+                              <Avatar col={item.colaborador} size={34} />
+                              <div style={{ minWidth: 0 }}>
+                                <div className="presencial-person-name">{item.colaborador?.nome}</div>
+                                <div className="presencial-person-note">{item.observacao || "Participando do sorteio"}</div>
+                              </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="empty-state" style={{ padding: 18 }}>
+                            Ninguém entrou no sorteio ainda.
                           </div>
-                        ))
-                      ) : (
-                        <div className="empty-state" style={{ padding: 18 }}>
-                          Ninguém entrou no sorteio ainda.
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
                   )}
                 </div>
               </div>
@@ -349,13 +525,19 @@ export function PresencialPage({ currentUserId }) {
         {proximasAgendas.length === 0 && (
           <div className="card">
             <div className="card-body">
-              <div className="empty-state">
-                Nenhum evento aberto no momento.
-              </div>
+              <div className="empty-state">Nenhum evento aberto no momento.</div>
             </div>
           </div>
         )}
       </div>
+
+      <SecretSantaSuggestionModal
+        state={secretSantaModal}
+        onClose={closeSecretSantaModal}
+        onChange={(draft) => setSecretSantaModal((previous) => ({ ...previous, draft, error: "" }))}
+        onSubmit={handleSecretSantaSubmit}
+        isSaving={toggleSecretSantaMutation.isPending}
+      />
     </div>
   );
 }

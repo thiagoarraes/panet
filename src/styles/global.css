@@ -788,6 +788,8 @@
     padding: 4px 0 2px 30px;
   }
   .presencial-secret-santa-content {
+    display: grid;
+    gap: 12px;
     padding-left: 30px;
   }
   .presencial-secret-santa-btn {
@@ -814,19 +816,152 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
   }
+  .presencial-secret-santa-btn.is-soft {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    color: var(--text);
+  }
   .presencial-secret-santa-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
+  .presencial-secret-santa-tip {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .presencial-secret-santa-summary {
+    display: grid;
+    gap: 8px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 38%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface2) 78%, transparent), color-mix(in srgb, var(--accent) 5%, var(--surface)));
+  }
+  .presencial-secret-santa-summary-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .presencial-secret-santa-summary-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .presencial-secret-santa-summary-quote {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
   .presencial-secret-santa-result {
     margin-top: 12px;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
-    background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 40%),
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), color-mix(in srgb, var(--surface2) 68%, var(--surface)));
+    display: grid;
+    gap: 14px;
+  }
+  .presencial-secret-santa-result-person {
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+  .presencial-secret-santa-wish {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    background: color-mix(in srgb, #ffffff 5%, transparent);
+  }
+  .presencial-secret-santa-wish-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .presencial-secret-santa-wish-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .presencial-suggestion-modal {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 42%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface2) 76%, transparent), var(--surface));
+    box-shadow:
+      0 28px 52px rgba(0, 0, 0, 0.32),
+      0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .presencial-suggestion-intro {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .presencial-suggestion-pill {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.35px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+  .presencial-suggestion-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .presencial-suggestion-copy {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .presencial-suggestion-field {
+    display: grid;
+    gap: 8px;
+  }
+  .presencial-suggestion-textarea {
+    min-height: 140px;
+    resize: vertical;
+    line-height: 1.7;
+  }
+  .presencial-suggestion-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .presencial-suggestion-error {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    color: color-mix(in srgb, var(--danger) 82%, #ffffff);
+    font-size: 13px;
+  }
+  .presencial-suggestion-actions {
+    margin-top: 18px;
   }
 
   .presencial-people-grid {
@@ -905,6 +1040,45 @@
     font-size: 13px;
     color: var(--text);
   }
+  .admin-presencial-draw-info,
+  .admin-presencial-draw-feedback {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface2) 78%, transparent);
+  }
+  .admin-presencial-draw-info {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .admin-presencial-draw-feedback {
+    display: grid;
+    gap: 4px;
+  }
+  .admin-presencial-draw-feedback.is-pending {
+    border-color: color-mix(in srgb, #5B8DEF 34%, var(--border));
+    background: color-mix(in srgb, #5B8DEF 10%, var(--surface));
+  }
+  .admin-presencial-draw-feedback.is-success {
+    border-color: color-mix(in srgb, var(--success) 34%, var(--border));
+    background: color-mix(in srgb, var(--success) 10%, var(--surface));
+  }
+  .admin-presencial-draw-feedback.is-error {
+    border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  }
+  .admin-presencial-draw-feedback-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.25px;
+  }
+  .admin-presencial-draw-feedback-text {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
   .admin-presencial-side {
     display: flex;
     align-items: flex-end;
@@ -914,6 +1088,12 @@
   .admin-presencial-actions {
     display: flex;
     gap: 8px;
+  }
+  .admin-presencial-draw-btn.is-running {
+    border-color: color-mix(in srgb, #5B8DEF 48%, var(--border));
+    color: #5B8DEF;
+    background: color-mix(in srgb, #5B8DEF 12%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, #5B8DEF 14%, transparent);
   }
 
   /* Galeria */
@@ -1786,5 +1966,23 @@
     .presencial-secret-santa-btn {
       width: 100%;
       justify-content: center;
+    }
+    .presencial-secret-santa-result {
+      padding: 14px;
+    }
+    .presencial-secret-santa-result-person {
+      align-items: flex-start;
+    }
+    .presencial-suggestion-meta {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .presencial-suggestion-actions {
+      width: 100%;
+      justify-content: stretch !important;
+    }
+    .presencial-suggestion-actions .btn-ghost,
+    .presencial-suggestion-actions .btn-primary {
+      flex: 1 1 auto;
     }
   }
