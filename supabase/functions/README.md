@@ -3,6 +3,7 @@
 ## Functions
 - `create-collaborator`
 - `delete-collaborator`
+- `post-og`
 - `reset-password`
 - `update-profile`
 
@@ -18,6 +19,7 @@ From project root:
 ```bash
 supabase functions deploy create-collaborator
 supabase functions deploy delete-collaborator
+supabase functions deploy post-og --no-verify-jwt
 supabase functions deploy reset-password
 supabase functions deploy update-profile
 ```

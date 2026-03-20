@@ -11,15 +11,7 @@ import { useMural } from "../hooks/queries/useMural";
 import { useFerias } from "../hooks/queries/useFerias";
 import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
-
-const toPostSlug = (value) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+import { toPostSlug } from "../lib/postRouting.js";
 
 const getDateBoxParts = (iso) => {
   const date = new Date(`${iso}T12:00:00`);

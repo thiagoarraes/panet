@@ -4,6 +4,7 @@ import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, Chev
 import { COLABORADORES } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabase.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
+import { extractPostSlugFromPathname, toPostSlug } from "../lib/postRouting.js";
 import { Avatar } from "./Avatar";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
@@ -166,12 +167,9 @@ const resolveRoute = (pathname) => {
       break;
   }
 
-  const singleSegmentMatch = path.match(/^\/([^/]+)$/);
-  if (singleSegmentMatch) {
-    const slug = decodeURIComponent(singleSegmentMatch[1] || "").trim();
-    if (slug) {
-      return { pagina: "post_detalhe", adminAba: "colaboradores", known: true, postSlug: slug };
-    }
+  const slug = extractPostSlugFromPathname(path);
+  if (slug) {
+    return { pagina: "post_detalhe", adminAba: "colaboradores", known: true, postSlug: slug };
   }
 
   return { pagina: "dashboard", adminAba: "colaboradores", known: false };
@@ -218,15 +216,6 @@ const withTimeout = (promise, timeoutMs, timeoutMessage = "timeout") =>
       }
     );
   });
-
-const toPostSlug = (value) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 
 const isTransientAuthTimeout = (err) => {
   const msg = String(err?.message || "");
