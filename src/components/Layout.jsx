@@ -223,6 +223,46 @@ const isTransientAuthTimeout = (err) => {
   return msg === "session_timeout" || msg === "profile_timeout" || msg === "session_recheck_timeout";
 };
 
+const LOGIN_RETRY_DELAYS_MS = [700, 1500];
+
+const sleep = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const isRetryableLoginError = (error) => {
+  const status = Number(error?.status || error?.code || 0);
+  if (Number.isFinite(status) && status >= 500) return true;
+
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("service unavailable") ||
+    message.includes("upstream connect error") ||
+    message.includes("network request failed") ||
+    message.includes("failed to fetch") ||
+    message.includes("fetch failed") ||
+    message.includes("remote connection failure") ||
+    message.includes("delayed connect error") ||
+    message.includes("gateway") ||
+    message.includes("timeout")
+  );
+};
+
+const signInWithPasswordRetry = async (email, password) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= LOGIN_RETRY_DELAYS_MS.length; attempt += 1) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) return { data, error: null };
+
+    lastError = error;
+    if (!isRetryableLoginError(error) || attempt === LOGIN_RETRY_DELAYS_MS.length) break;
+    await sleep(LOGIN_RETRY_DELAYS_MS[attempt]);
+  }
+
+  return { data: null, error: lastError };
+};
+
 const hasStoredSupabaseSession = () => {
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
@@ -650,9 +690,11 @@ export default function PanetApp() {
       setTela("primeiro_acesso");
       return;
     }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await signInWithPasswordRetry(email, password);
     if (error) {
-      const msg = error.message || "Não foi possível salvar o perfil.";
+      const msg = isRetryableLoginError(error)
+        ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
+        : error.message || "Não foi possível fazer login.";
       throw new Error(msg);
     }
     const activeSession = data?.session || (await supabase.auth.getSession()).data.session;
