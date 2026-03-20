@@ -5,6 +5,8 @@ import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
 import { useMural } from "../hooks/queries/useMural";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
+import { usePostagens } from "../hooks/queries/usePostagens";
+import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -54,11 +56,9 @@ const getPeriodoFolgaLabel = (item) => {
 
 export function DashboardPage({
   onOpenPost,
-  onToggleCurtida,
   onParabenizar,
   onOpenAniversarios,
   onOpenFolgas,
-  postagens,
   aniversariantes,
   colaboradores,
   currentUser,
@@ -67,6 +67,8 @@ export function DashboardPage({
   dayoff,
   ausencias,
 }) {
+  const { data: postagens = [] } = usePostagens(currentUserId);
+  const toggleCurtida = useToggleCurtida();
   const { data: muralMsgs = [] } = useMural(currentUserId);
   const enviarMensagem = useEnviarMensagem(currentUserId);
   const [pagina, setPagina] = useState(1);
@@ -267,7 +269,13 @@ export function DashboardPage({
                 post={post}
                 onOpen={onOpenPost}
                 curtido={post.userCurtiu}
-                onToggleCurtida={() => onToggleCurtida(post.id)}
+                onToggleCurtida={() =>
+                  toggleCurtida.mutate({
+                    postId: post.id,
+                    userId: currentUserId,
+                    alreadyLiked: post.userCurtiu,
+                  })
+                }
                 showVerMais={true}
               />
             ))}

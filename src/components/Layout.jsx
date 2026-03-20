@@ -2933,11 +2933,9 @@ export default function PanetApp() {
     dashboard: (
       <DashboardPage
         onOpenPost={handleOpenPost}
-        onToggleCurtida={handleToggleCurtida}
         onParabenizar={handleParabenizarAniversario}
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
-        postagens={postagens}
         aniversariantes={aniversariantes}
         colaboradores={colaboradores}
         currentUser={eu}
@@ -2947,7 +2945,7 @@ export default function PanetApp() {
         ausencias={ausencias}
       />
     ),
-    postagens: <PostagensPage onOpen={handleOpenPost} onToggleCurtida={handleToggleCurtida} postagens={postagens} />,
+    postagens: <PostagensPage onOpen={handleOpenPost} currentUserId={currentProfile?.id} />,
     post_detalhe: (
       <PostDetalhePage
         post={selectedPost}
