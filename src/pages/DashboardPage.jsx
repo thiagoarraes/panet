@@ -9,6 +9,9 @@ import { usePostagens } from "../hooks/queries/usePostagens";
 import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 import { useFerias } from "../hooks/queries/useFerias";
 import { useAusencias } from "../hooks/queries/useAusencias";
+import { useAniversarios } from "../hooks/queries/useAniversarios";
+import { useColaboradores } from "../hooks/queries/useColaboradores";
+import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -58,11 +61,8 @@ const getPeriodoFolgaLabel = (item) => {
 
 export function DashboardPage({
   onOpenPost,
-  onParabenizar,
   onOpenAniversarios,
   onOpenFolgas,
-  aniversariantes,
-  colaboradores,
   currentUser,
   currentUserId,
 }) {
@@ -74,6 +74,9 @@ export function DashboardPage({
   const ferias = feriasData?.ferias || [];
   const dayoff = feriasData?.dayoff || [];
   const { data: ausencias = [] } = useAusencias(currentUserId);
+  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
+  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const parabenizarMutation = useParabenizarAniversario(currentUserId);
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
@@ -166,7 +169,10 @@ export function DashboardPage({
     if (!today?.colaborador?.id || parabenizando) return;
     try {
       setParabenizando(true);
-      const result = await onParabenizar?.(today.colaborador.id);
+      const result = await parabenizarMutation.mutateAsync({
+        aniversarianteId: today.colaborador.id,
+        alreadyReacted: userJaParabenizou,
+      });
       if (result?.added) launch();
     } finally {
       setParabenizando(false);

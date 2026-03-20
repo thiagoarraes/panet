@@ -2933,11 +2933,8 @@ export default function PanetApp() {
     dashboard: (
       <DashboardPage
         onOpenPost={handleOpenPost}
-        onParabenizar={handleParabenizarAniversario}
         onOpenAniversarios={() => navigateTo("aniversarios")}
         onOpenFolgas={() => navigateTo("ferias")}
-        aniversariantes={aniversariantes}
-        colaboradores={colaboradores}
         currentUser={eu}
         currentUserId={currentProfile?.id || eu.id}
       />
@@ -2966,9 +2963,7 @@ export default function PanetApp() {
     colaboradores: <ColaboradoresPage currentUserId={currentProfile?.id} />,
     aniversarios: (
       <AniversariosPage
-        aniversariantes={aniversariantes}
         currentUserId={currentProfile?.id || eu.id}
-        colaboradores={colaboradores}
       />
     ),
     ferias: <FeriasPage currentUserId={currentProfile?.id} />,

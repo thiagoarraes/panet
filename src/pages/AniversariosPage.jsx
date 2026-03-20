@@ -1,6 +1,8 @@
 ﻿import { useMemo, useState } from "react";
 import { Cake, CalendarDays } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { useAniversarios } from "../hooks/queries/useAniversarios";
+import { useColaboradores } from "../hooks/queries/useColaboradores";
 
 const MESES = [
   "Janeiro",
@@ -63,7 +65,9 @@ const sortByMesDia = (a, b) => {
   return sortByDia(a, b);
 };
 
-export function AniversariosPage({ aniversariantes = [], colaboradores = [] }) {
+export function AniversariosPage({ currentUserId }) {
+  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
+  const { data: colaboradores = [] } = useColaboradores(currentUserId);
   const mesAtualIndex = new Date().getMonth();
   const [mesSelecionado, setMesSelecionado] = useState("todos");
 
