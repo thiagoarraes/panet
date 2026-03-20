@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { POSTAGENS_INIT } from "../../data/mockData.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 
@@ -30,7 +31,7 @@ const toAvatar = (profile) => {
   };
 };
 
-const mapDbPostToUi = (post, currentUserId) => {
+const mapDbPostToUi = (post, currentUserId, signedUrlMap) => {
   const likes = (post?.curtidas || []).map((item) => item.colaborador_id);
   const comments = (post?.comentarios || []).map((item) => ({
     id: item.id,
@@ -47,7 +48,7 @@ const mapDbPostToUi = (post, currentUserId) => {
     id: post.id,
     titulo: post.titulo,
     descricao: post.descricao,
-    imagem: post.imagem_url || postImg(post.id),
+    imagem: resolveSignedMediaUrl("postagens", post.imagem_url, signedUrlMap, postImg(post.id)),
     categoria: post.categoria,
     data: post.data_post,
     curtidas: likes,
@@ -77,7 +78,8 @@ export function usePostagemDetalhe(userId, postId) {
 
       if (error) throw new Error(error.message);
       if (!data) return null;
-      return mapDbPostToUi(data, userId);
+      const signedUrlMap = await createSignedUrlMap("postagens", [data.imagem_url]);
+      return mapDbPostToUi(data, userId, signedUrlMap);
     },
     enabled: (!!userId && !!postId) || !isSupabaseEnabled,
     staleTime: 30 * 1000,

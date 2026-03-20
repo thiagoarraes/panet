@@ -1,6 +1,14 @@
 export const getGaleriaStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
+  if (/^(data:|blob:)/i.test(value)) return "";
+  if (!/^https?:\/\//i.test(value)) {
+    if (value.startsWith("/galerias/")) {
+      const candidate = value.slice("/galerias/".length);
+      return candidate.includes("/") ? candidate : "";
+    }
+    return value.replace(/^\/+/, "");
+  }
   try {
     const parsed = new URL(value);
     const pathname = decodeURIComponent(parsed.pathname || "");
@@ -27,6 +35,8 @@ export const getGaleriaStoragePathFromUrl = (rawUrl) => {
 export const getAvatarStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
+  if (/^(data:|blob:)/i.test(value)) return "";
+  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
   try {
     const parsed = new URL(value);
     const pathname = decodeURIComponent(parsed.pathname || "");
@@ -48,6 +58,8 @@ export const getAvatarStoragePathFromUrl = (rawUrl) => {
 export const getPostStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
+  if (/^(data:|blob:)/i.test(value)) return "";
+  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
   try {
     const parsed = new URL(value);
     const pathname = decodeURIComponent(parsed.pathname || "");

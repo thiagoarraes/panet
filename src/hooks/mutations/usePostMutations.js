@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { getPostStoragePathFromUrl } from "../../lib/imageUtils.js";
+import { normalizeStoredMediaValue } from "../../lib/storageMedia.js";
 
 const isDataImageUrl = (value) =>
   /^data:image\//i.test(String(value || "").trim());
@@ -102,10 +103,7 @@ export function useCreatePost() {
             .from("postagens")
             .upload(storagePath, sourceBlob, { contentType: "image/webp" });
           if (uploadError) throw uploadError;
-          const { data: publicData } = supabase.storage
-            .from("postagens")
-            .getPublicUrl(storagePath);
-          if (publicData?.publicUrl) imagemUrl = publicData.publicUrl;
+          imagemUrl = storagePath;
         } catch (err) {
           console.warn(
             "Falha ao otimizar/upload da capa do post. Mantendo imagem original.",
@@ -113,6 +111,8 @@ export function useCreatePost() {
           );
         }
       }
+
+      imagemUrl = normalizeStoredMediaValue("postagens", imagemUrl);
 
       const { error } = await supabase.from("postagens").insert({
         titulo: payload.titulo,
@@ -146,10 +146,7 @@ export function useUpdatePost() {
             .from("postagens")
             .upload(uploadedPostPath, sourceBlob, { contentType: "image/webp" });
           if (uploadError) throw uploadError;
-          const { data: publicData } = supabase.storage
-            .from("postagens")
-            .getPublicUrl(uploadedPostPath);
-          if (publicData?.publicUrl) imagemUrl = publicData.publicUrl;
+          imagemUrl = uploadedPostPath;
         } catch (err) {
           uploadedPostPath = "";
           console.warn(
@@ -158,6 +155,8 @@ export function useUpdatePost() {
           );
         }
       }
+
+      imagemUrl = normalizeStoredMediaValue("postagens", imagemUrl);
 
       const { error } = await supabase
         .from("postagens")

@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useState, useEffect, useCallback } from "react";
+import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
 import { ImageIcon } from "lucide-react";
 import { useGalerias } from "../hooks/queries/useGalerias.js";
 
@@ -24,7 +24,7 @@ const getSlugFromPath = (pathname) => {
 
 export function GaleriaPage({ currentUserId }) {
   const galeriasQuery = useGalerias(currentUserId);
-  const eventos = galeriasQuery.data || [];
+  const eventos = useMemo(() => galeriasQuery.data || [], [galeriasQuery.data]);
   const [eventoAberto, setEventoAberto] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
 

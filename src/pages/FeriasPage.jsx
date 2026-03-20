@@ -71,7 +71,6 @@ export function FeriasPage({ currentUserId }) {
   const ausenciasVisiveis = (ausencias || [])
     .filter((a) => {
       if (!a.inicio) return false;
-      const inicio = new Date(a.inicio);
       const fim = a.fim ? new Date(a.fim) : null;
       const now = new Date();
       // mostra ausências que ainda não terminaram ou terminaram nas últimas 4 horas

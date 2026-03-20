@@ -28,30 +28,28 @@ const toAvatar = (profile) => {
 };
 
 export function useAusencias(userId, options = {}) {
-  const summaryOnly = Boolean(options?.summaryOnly);
   const queryEnabled = options?.enabled ?? true;
-  const colaboradorFields = summaryOnly
-    ? "id,nome,cargo,cor_avatar,foto_url"
-    : "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github";
+  const summaryOnly = Boolean(options?.summaryOnly);
 
   return useQuery({
     queryKey: ["ausencias", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return [];
-      const { data, error } = await supabase
-        .from("ausencias")
-        .select(
-          `id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(${colaboradorFields})`
-        )
-        .order("inicio", { ascending: false });
+      const { data, error } = await supabase.rpc("get_public_ausencias");
       if (error) throw error;
       return (data || []).map((item) => ({
         id: item.id,
-        motivo: item.motivo,
+        motivo: "",
         inicio: item.inicio,
         fim: item.fim,
-        estimativa: item.estimativa,
-        colaborador: toAvatar(item.colaborador),
+        estimativa: null,
+        colaborador: toAvatar({
+          id: item.colaborador_id,
+          nome: item.nome,
+          cargo: item.cargo,
+          cor_avatar: item.cor_avatar,
+          foto_url: item.foto_url,
+        }),
       }));
     },
     staleTime: 2 * 60 * 1000,

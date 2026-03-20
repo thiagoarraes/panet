@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from "react";
 import { Heart, MessageCircle, Send, X } from "lucide-react";
+import DOMPurify from "dompurify";
 import { Avatar } from "./Avatar";
 import { Badge } from "./Badge";
 
@@ -74,7 +75,11 @@ export function PostModal({ post, currentUser, onClose, onToggleCurtida, onComen
           </button>
         </div>
         <div className="modal-body">
-          <div className="rich-content" style={{ marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: post.descricao || "" }} />
+          <div
+            className="rich-content"
+            style={{ marginBottom: 20 }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.descricao || "") }}
+          />
           <div style={{ display: "flex", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
             <button className={`post-action ${post.userCurtiu ? "liked" : ""}`} onClick={() => onToggleCurtida(post.id)}>
               <Heart size={14} fill={post.userCurtiu ? "currentColor" : "none"} />{" "}

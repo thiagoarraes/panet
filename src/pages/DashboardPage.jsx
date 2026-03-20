@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal, UserMinus } from "lucide-react";
+import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
@@ -87,26 +87,32 @@ export function DashboardPage({
     enabled: useLegacyQueries,
   });
 
-  const postagens = hasSnapshotData
-    ? dashboardSnapshotQuery.data.postagens
-    : (postagensQuery.data || []);
-  const muralMsgs = hasSnapshotData
-    ? dashboardSnapshotQuery.data.mural
-    : (muralQuery.data || []);
-  const feriasData = hasSnapshotData
-    ? dashboardSnapshotQuery.data.feriasData
-    : feriasQuery.data;
-  const ferias = feriasData?.ferias || [];
-  const dayoff = feriasData?.dayoff || [];
-  const ausencias = hasSnapshotData
-    ? dashboardSnapshotQuery.data.ausencias
-    : (ausenciasQuery.data || []);
-  const aniversariantes = hasSnapshotData
-    ? dashboardSnapshotQuery.data.aniversariantes
-    : (aniversariosQuery.data || []);
-  const colaboradores = hasSnapshotData
-    ? dashboardSnapshotQuery.data.colaboradores
-    : (colaboradoresQuery.data || []);
+  const postagens = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.postagens || [] : postagensQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotQuery.data, postagensQuery.data]
+  );
+  const muralMsgs = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.mural || [] : muralQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotQuery.data, muralQuery.data]
+  );
+  const feriasData = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.feriasData || null : feriasQuery.data || null),
+    [hasSnapshotData, dashboardSnapshotQuery.data, feriasQuery.data]
+  );
+  const ferias = useMemo(() => feriasData?.ferias || [], [feriasData]);
+  const dayoff = useMemo(() => feriasData?.dayoff || [], [feriasData]);
+  const ausencias = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.ausencias || [] : ausenciasQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotQuery.data, ausenciasQuery.data]
+  );
+  const aniversariantes = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.aniversariantes || [] : aniversariosQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotQuery.data, aniversariosQuery.data]
+  );
+  const colaboradores = useMemo(
+    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.colaboradores || [] : colaboradoresQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotQuery.data, colaboradoresQuery.data]
+  );
 
   const parabenizarMutation = useParabenizarAniversario(currentUserId);
   const [pagina, setPagina] = useState(1);
@@ -129,8 +135,8 @@ export function DashboardPage({
     : [];
 
   const aniversariantesTodos = useMemo(() => {
-    const byId = new Map((aniversariantes || []).map((item) => [String(item?.colaborador?.id || item?.id), item]));
-    const fromColaboradores = (colaboradores || [])
+    const byId = new Map(aniversariantes.map((item) => [String(item?.colaborador?.id || item?.id), item]));
+    const fromColaboradores = colaboradores
       .filter((col) => Boolean(col?.aniversario))
       .map((col) => {
         const existing = byId.get(String(col.id));
@@ -156,12 +162,12 @@ export function DashboardPage({
 
   const parabenizadores = useMemo(() => {
     if (!today?.reacoes?.length) return [];
-    const byId = new Map((colaboradores || []).map((c) => [String(c.id), c]));
+    const byId = new Map(colaboradores.map((c) => [String(c.id), c]));
     return today.reacoes.map((id) => byId.get(String(id))).filter(Boolean);
   }, [colaboradores, today]);
 
   const userJaParabenizou = Boolean(today?.reacoes?.includes(currentUserId));
-  const muralOrdenado = useMemo(() => [...(muralMsgs || [])].slice(0, 20).reverse(), [muralMsgs]);
+  const muralOrdenado = useMemo(() => [...muralMsgs].slice(0, 20).reverse(), [muralMsgs]);
 
   useEffect(() => {
     const el = muralListRef.current;
@@ -170,7 +176,7 @@ export function DashboardPage({
   }, [muralOrdenado.length]);
   const ausentesAgora = useMemo(() => {
     const now = new Date();
-    return (ausencias || [])
+    return ausencias
       .filter((a) => {
         if (!a.inicio) return false;
         const fim = a.fim ? new Date(a.fim) : null;
@@ -197,8 +203,8 @@ export function DashboardPage({
       };
     };
     const todos = [
-      ...(ferias || []).map((f) => toSortable(f, "ferias")),
-      ...(dayoff || []).map((d) => toSortable(d, "dayoff")),
+      ...ferias.map((f) => toSortable(f, "ferias")),
+      ...dayoff.map((d) => toSortable(d, "dayoff")),
     ]
       .filter(Boolean)
       .sort((a, b) => a._anchorDate.getTime() - b._anchorDate.getTime())

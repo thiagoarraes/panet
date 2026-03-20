@@ -1,12 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { getGaleriaStoragePathFromUrl, optimizeImageToWebp } from "../../lib/imageUtils.js";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
+import { normalizeStoredMediaValue } from "../../lib/storageMedia.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -112,9 +107,10 @@ export function useAddGaleriaFoto() {
   return useMutation({
     mutationFn: async ({ eventoId, payload }) => {
       if (!isSupabaseEnabled || !supabase) return;
+      const fotoUrl = normalizeStoredMediaValue("galeria", payload.foto_url);
       const { error } = await supabase.from("galeria_fotos").insert({
         evento_id: eventoId,
-        foto_url: payload.foto_url,
+        foto_url: fotoUrl,
         legenda: payload.legenda || null,
         ordem: payload.ordem || 0,
       });
@@ -134,10 +130,11 @@ export function useUpdateGaleriaFoto() {
   return useMutation({
     mutationFn: async ({ fotoId, payload }) => {
       if (!isSupabaseEnabled || !supabase) return;
+      const fotoUrl = normalizeStoredMediaValue("galeria", payload.foto_url);
       const { error } = await supabase
         .from("galeria_fotos")
         .update({
-          foto_url: payload.foto_url,
+          foto_url: fotoUrl,
           legenda: payload.legenda || null,
         })
         .eq("id", fotoId);
@@ -174,9 +171,10 @@ export function useSetGaleriaCapa() {
   return useMutation({
     mutationFn: async ({ eventoId, fotoUrl }) => {
       if (!isSupabaseEnabled || !supabase || !eventoId || !fotoUrl) return;
+      const normalizedFotoUrl = normalizeStoredMediaValue("galeria", fotoUrl);
       const { error } = await supabase
         .from("galeria_eventos")
-        .update({ capa_url: fotoUrl })
+        .update({ capa_url: normalizedFotoUrl })
         .eq("id", eventoId);
       if (error) throw new Error(error.message);
     },
@@ -203,7 +201,7 @@ export function useUploadGaleriaFotos() {
       const monthFolder = String(monthNum).padStart(2, "0");
       const basePath = `${year}/${monthFolder}/${eventoId}`;
       let ordemBase = currentEventoFotosLength;
-      let firstUploadedPublicUrl = null;
+      let firstUploadedStoragePath = null;
 
       for (let i = 0; i < files.length; i += 1) {
         const file = files[i];
@@ -218,13 +216,12 @@ export function useUploadGaleriaFotos() {
         });
         if (uploadError) throw new Error(uploadError.message);
 
-        const publicUrl = `${GALERIA_PUBLIC_BASE}/${storagePath}`;
-        if (!firstUploadedPublicUrl) firstUploadedPublicUrl = publicUrl;
+        if (!firstUploadedStoragePath) firstUploadedStoragePath = storagePath;
 
         ordemBase += 1;
         const { error: insertFotoError } = await supabase.from("galeria_fotos").insert({
           evento_id: eventoId,
-          foto_url: publicUrl,
+          foto_url: storagePath,
           legenda: null,
           ordem: ordemBase,
         });
@@ -232,8 +229,8 @@ export function useUploadGaleriaFotos() {
       }
 
       // Auto-set capa if evento has no capa yet
-      if (firstUploadedPublicUrl && opts.setCapaIfEmpty) {
-        await supabase.from("galeria_eventos").update({ capa_url: firstUploadedPublicUrl }).eq("id", eventoId);
+      if (firstUploadedStoragePath && opts.setCapaIfEmpty) {
+        await supabase.from("galeria_eventos").update({ capa_url: firstUploadedStoragePath }).eq("id", eventoId);
       }
     },
     onSuccess: () => invalidateGalerias(queryClient),

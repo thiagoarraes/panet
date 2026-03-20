@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X, CalendarDays } from "lucide-react";
 import { COLABORADORES } from "../data/mockData.js";
@@ -24,9 +24,7 @@ const PROFILE_CACHE_KEY = "panet.profile.cache";
 const AUTH_TIMEOUT_MS = 5000;
 const PROFILE_DEDUP_WINDOW_MS = 3000;
 const PROFILE_BACKGROUND_REFRESH_DELAY_MS = 12000;
-const GALERIA_PUBLIC_BASE = "https://panet.agenciapan.com/galerias";
 const PANZAP_METRICS_STORAGE_KEY = "panet.metrics.panzap.v1";
-const PANZAP_METRICS_LIMIT = 200;
 const globalProfileLoadState = { userId: null, promise: null, loadedAt: 0 };
 
 
@@ -87,8 +85,6 @@ const invokeEdgeFunctionHttp = async (fnName, body, accessToken, fallbackMessage
 
   return parsed || {};
 };
-
-const isDataImageUrl = (value) => /^data:image\//i.test(String(value || "").trim());
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
@@ -304,7 +300,6 @@ export default function PanetApp() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
   const userMenuRef = useRef(null);
-  const panzapPendingRef = useRef(new Map());
   const initialDataLoadRef = useRef({ userId: null, at: 0 });
   const profileLoadInFlightRef = useRef({ userId: null, promise: null });
   const profileBackgroundRefreshRef = useRef(null);
@@ -319,27 +314,6 @@ export default function PanetApp() {
   useEffect(() => {
     currentProfileIdRef.current = currentProfile?.id || null;
   }, [currentProfile?.id]);
-
-  const logPanzapMetric = useCallback((event, payload = {}) => {
-    const entry = {
-      event,
-      at: new Date().toISOString(),
-      ...payload,
-    };
-    try {
-      const raw = localStorage.getItem(PANZAP_METRICS_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      const next = Array.isArray(parsed) ? parsed : [];
-      next.push(entry);
-      while (next.length > PANZAP_METRICS_LIMIT) next.shift();
-      localStorage.setItem(PANZAP_METRICS_STORAGE_KEY, JSON.stringify(next));
-    } catch (_err) {
-      // ignore metric persistence failure
-    }
-    if (typeof window !== "undefined") {
-      window.__PANET_PANZAP_METRICS_LAST = entry;
-    }
-  }, []);
 
   const effectiveUserId = currentProfile?.id || sessionUserId || null;
   const eu = useMemo(() => {

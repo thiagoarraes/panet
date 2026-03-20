@@ -99,17 +99,17 @@ export function PostDetalhePage({
   const muralListRef = useRef(null);
 
   const postSlugIndexQuery = usePostagensSlugIndex(currentUserId);
-  const postagensIndex = postSlugIndexQuery.data || [];
+  const postagensIndex = useMemo(() => postSlugIndexQuery.data || [], [postSlugIndexQuery.data]);
   const aniversariosQuery = useAniversarios(currentUserId);
-  const aniversariantes = aniversariosQuery.data || [];
+  const aniversariantes = useMemo(() => aniversariosQuery.data || [], [aniversariosQuery.data]);
   const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
-  const colaboradores = colaboradoresQuery.data || [];
+  const colaboradores = useMemo(() => colaboradoresQuery.data || [], [colaboradoresQuery.data]);
   const muralQuery = useMural(currentUserId);
-  const muralMsgs = muralQuery.data || [];
+  const muralMsgs = useMemo(() => muralQuery.data || [], [muralQuery.data]);
   const feriasQuery = useFerias(currentUserId, { summaryOnly: true });
-  const feriasData = feriasQuery.data;
-  const ferias = feriasData?.ferias || [];
-  const dayoff = feriasData?.dayoff || [];
+  const feriasData = useMemo(() => feriasQuery.data || null, [feriasQuery.data]);
+  const ferias = useMemo(() => feriasData?.ferias || [], [feriasData]);
+  const dayoff = useMemo(() => feriasData?.dayoff || [], [feriasData]);
 
   const toggleCurtidaMutation = useToggleCurtida();
   const comentarMutation = useComentar();
@@ -132,8 +132,8 @@ export function PostDetalhePage({
   const dateBox = useMemo(() => (post ? getDateBoxParts(post.data) : { day: "--", month: "---", year: "----" }), [post]);
 
   const aniversariantesTodos = useMemo(() => {
-    const byId = new Map((aniversariantes || []).map((item) => [String(item?.colaborador?.id || item?.id), item]));
-    const fromColaboradores = (colaboradores || [])
+    const byId = new Map(aniversariantes.map((item) => [String(item?.colaborador?.id || item?.id), item]));
+    const fromColaboradores = colaboradores
       .filter((col) => Boolean(col?.aniversario))
       .map((col) => {
         const existing = byId.get(String(col.id));
@@ -159,7 +159,7 @@ export function PostDetalhePage({
     [aniversariantesTodos]
   );
 
-  const muralOrdenado = useMemo(() => [...(muralMsgs || [])].slice(0, 20).reverse(), [muralMsgs]);
+  const muralOrdenado = useMemo(() => [...muralMsgs].slice(0, 20).reverse(), [muralMsgs]);
 
   useEffect(() => {
     const el = muralListRef.current;
@@ -184,8 +184,8 @@ export function PostDetalhePage({
       };
     };
     return [
-      ...(ferias || []).map((f) => toSortable(f, "ferias")),
-      ...(dayoff || []).map((d) => toSortable(d, "dayoff")),
+      ...ferias.map((f) => toSortable(f, "ferias")),
+      ...dayoff.map((d) => toSortable(d, "dayoff")),
     ]
       .filter(Boolean)
       .sort((a, b) => a._anchorDate.getTime() - b._anchorDate.getTime())

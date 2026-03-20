@@ -68,15 +68,15 @@ const sortByMesDia = (a, b) => {
 export function AniversariosPage({ currentUserId }) {
   const aniversariosQuery = useAniversarios(currentUserId);
   const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
-  const aniversariantes = aniversariosQuery.data || [];
-  const colaboradores = colaboradoresQuery.data || [];
+  const aniversariantes = useMemo(() => aniversariosQuery.data || [], [aniversariosQuery.data]);
+  const colaboradores = useMemo(() => colaboradoresQuery.data || [], [colaboradoresQuery.data]);
   const mesAtualIndex = new Date().getMonth();
   const [mesSelecionado, setMesSelecionado] = useState("todos");
 
   const aniversariantesTodos = useMemo(() => {
     const aniversariantesById = new Map(aniversariantes.map((item) => [String(item?.colaborador?.id || item?.id), item]));
 
-    const base = (colaboradores || [])
+    const base = colaboradores
       .filter((col) => Boolean(col?.aniversario))
       .map((col) => {
         const existing = aniversariantesById.get(String(col.id));

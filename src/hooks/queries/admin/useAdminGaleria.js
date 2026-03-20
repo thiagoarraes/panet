@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../../lib/supabase.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../../lib/storageMedia.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -10,12 +11,17 @@ const escapePostgrestOrTerm = (value) =>
     .replace(/[,*().]/g, " ")
     .trim();
 
-const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
+const mapDbGaleriaToUi = (eventosRows, fotosRows = null, signedUrlMap = new Map()) => {
   const fotosByEvento = new Map();
   if (Array.isArray(fotosRows)) {
     for (const foto of fotosRows || []) {
       const arr = fotosByEvento.get(foto.evento_id) || [];
-      arr.push({ id: foto.id, src: foto.foto_url, legenda: foto.legenda || "", ordem: foto.ordem || 0 });
+      arr.push({
+        id: foto.id,
+        src: resolveSignedMediaUrl("galeria", foto.foto_url, signedUrlMap, ""),
+        legenda: foto.legenda || "",
+        ordem: foto.ordem || 0,
+      });
       fotosByEvento.set(foto.evento_id, arr);
     }
   }
@@ -26,7 +32,10 @@ const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
       id: evento.id,
       evento: evento.titulo,
       mes: evento.mes_ano || "",
-      capa: evento.capa_url || fotos[0]?.src || "https://picsum.photos/seed/galeria-empty/600/450",
+      capa:
+        resolveSignedMediaUrl("galeria", evento.capa_url, signedUrlMap, "") ||
+        fotos[0]?.src ||
+        "https://picsum.photos/seed/galeria-empty/600/450",
       fotos,
     };
   });
@@ -78,7 +87,11 @@ export function useAdminGaleria({ page = 1, pageSize = 20, search = "" } = {}) {
         fotosRows = fotos || [];
       }
 
-      const rows = mapDbGaleriaToUi(data || [], fotosRows);
+      const signedUrlMap = await createSignedUrlMap("galeria", [
+        ...(data || []).map((evento) => evento.capa_url),
+        ...(fotosRows || []).map((foto) => foto.foto_url),
+      ]);
+      const rows = mapDbGaleriaToUi(data || [], fotosRows, signedUrlMap);
       const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
       return { rows, count: safeCount };
     },

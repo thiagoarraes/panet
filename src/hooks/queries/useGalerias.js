@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { GALERIA_EVENTOS } from "../../data/mockData.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
 
 // ---------------------------------------------------------------------------
 // Helpers (mirrors Layout.jsx)
 // ---------------------------------------------------------------------------
 
-const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
+const mapDbGaleriaToUi = (eventosRows, fotosRows = null, signedUrlMap = new Map()) => {
   const fotosByEvento = new Map();
 
   if (Array.isArray(fotosRows)) {
@@ -14,7 +15,7 @@ const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
       const arr = fotosByEvento.get(foto.evento_id) || [];
       arr.push({
         id: foto.id,
-        src: foto.foto_url,
+        src: resolveSignedMediaUrl("galeria", foto.foto_url, signedUrlMap, ""),
         legenda: foto.legenda || "",
         ordem: foto.ordem || 0,
       });
@@ -26,7 +27,7 @@ const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
     const nestedFotos = Array.isArray(evento?.galeria_fotos)
       ? evento.galeria_fotos.map((foto) => ({
           id: foto.id,
-          src: foto.foto_url,
+          src: resolveSignedMediaUrl("galeria", foto.foto_url, signedUrlMap, ""),
           legenda: foto.legenda || "",
           ordem: foto.ordem || 0,
         }))
@@ -37,7 +38,10 @@ const mapDbGaleriaToUi = (eventosRows, fotosRows = null) => {
       id: evento.id,
       evento: evento.titulo,
       mes: evento.mes_ano || "",
-      capa: evento.capa_url || fotos[0]?.src || "https://picsum.photos/seed/galeria-empty/600/450",
+      capa:
+        resolveSignedMediaUrl("galeria", evento.capa_url, signedUrlMap, "") ||
+        fotos[0]?.src ||
+        "https://picsum.photos/seed/galeria-empty/600/450",
       fotos,
     };
   });
@@ -63,7 +67,15 @@ export function useGalerias(userId) {
         .order("ordem", { foreignTable: "galeria_fotos", ascending: true });
 
       if (!eventosError) {
-        return mapDbGaleriaToUi(eventos);
+        const signedUrlMap = await createSignedUrlMap("galeria", [
+          ...(eventos || []).map((evento) => evento.capa_url),
+          ...(eventos || []).flatMap((evento) =>
+            Array.isArray(evento?.galeria_fotos)
+              ? evento.galeria_fotos.map((foto) => foto.foto_url)
+              : []
+          ),
+        ]);
+        return mapDbGaleriaToUi(eventos, null, signedUrlMap);
       }
 
       // Fallback: if embedded relation fails, load separately
@@ -85,7 +97,11 @@ export function useGalerias(userId) {
         if (!fotosError) fotosRows = fotos || [];
       }
 
-      return mapDbGaleriaToUi(eventosOnly || [], fotosRows);
+      const signedUrlMap = await createSignedUrlMap("galeria", [
+        ...(eventosOnly || []).map((evento) => evento.capa_url),
+        ...(fotosRows || []).map((foto) => foto.foto_url),
+      ]);
+      return mapDbGaleriaToUi(eventosOnly || [], fotosRows, signedUrlMap);
     },
     enabled: !!userId || !isSupabaseEnabled,
     staleTime: 90 * 1000,

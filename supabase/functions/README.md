@@ -35,4 +35,4 @@ The admin screen invokes:
 - `supabase.functions.invoke("reset-password", { body: { user_id } })`
 - `supabase.functions.invoke("update-profile", { body })`
 
-Both functions validate that the caller is authenticated and has `perfil = 'admin'` in `public.colaboradores`.
+The collaborator-management functions validate that the caller is authenticated, has `perfil = 'admin'`, and has access to the `colaboradores` module in `public.colaboradores.admin_modulos`.

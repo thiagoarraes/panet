@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+const REQUIRED_ADMIN_MODULE = "colaboradores";
+
 const extractAvatarPathFromUrl = (fotoUrl: string) => {
   const trimmed = String(fotoUrl || "").trim();
   if (!trimmed) return "";
@@ -31,6 +33,12 @@ const extractAvatarPathFromUrl = (fotoUrl: string) => {
 };
 
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
+
+const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos?: string[] | null } | null) => {
+  if (!profile || profile.perfil !== "admin") return false;
+  if (profile.admin_modulos === null || profile.admin_modulos === undefined) return true;
+  return Array.isArray(profile.admin_modulos) && profile.admin_modulos.includes(REQUIRED_ADMIN_MODULE);
+};
 
 const findAuthUserIdByEmail = async (
   adminClient: ReturnType<typeof createClient>,
@@ -110,12 +118,12 @@ serve(async (req) => {
 
     const { data: callerProfile, error: profileError } = await adminClient
       .from("colaboradores")
-      .select("id, perfil")
+      .select("id, perfil, admin_modulos")
       .eq("id", callerUser.id)
       .maybeSingle();
 
-    if (profileError || !callerProfile || callerProfile.perfil !== "admin") {
-      return new Response(JSON.stringify({ error: "Only admins can delete users." }), {
+    if (profileError || !hasRequiredAdminModule(callerProfile)) {
+      return new Response(JSON.stringify({ error: "Only admins with colaboradores access can delete users." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

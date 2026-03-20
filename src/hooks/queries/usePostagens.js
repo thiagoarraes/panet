@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { POSTAGENS_INIT } from "../../data/mockData.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 const POST_CATEGORIES = new Set(["Notícia", "Comunicado", "Evento"]);
 const escapeIlikeTerm = (value) => String(value || "").replace(/[\\%_]/g, (char) => `\\${char}`);
 
-const mapDbPostSummaryToUi = (post, likesRows, commentsCount, currentUserId) => {
+const mapDbPostSummaryToUi = (post, likesRows, commentsCount, currentUserId, signedUrlMap) => {
   const likes = (likesRows || []).map((c) => c.colaborador_id);
   return {
     id: post.id,
     titulo: post.titulo,
     descricao: post.descricao,
-    imagem: post.imagem_url || postImg(post.id),
+    imagem: resolveSignedMediaUrl("postagens", post.imagem_url, signedUrlMap, postImg(post.id)),
     categoria: post.categoria,
     data: post.data_post,
     curtidas: likes,
@@ -61,9 +62,13 @@ export function usePostagens(userId, options = {}) {
 
       const postagemIds = (posts || []).map((post) => post.id).filter(Boolean);
       if (postagemIds.length === 0) return [];
+      const signedUrlMap = await createSignedUrlMap(
+        "postagens",
+        (posts || []).map((post) => post.imagem_url)
+      );
 
       if (summaryOnly) {
-        return (posts || []).map((post) => mapDbPostSummaryToUi(post, [], 0, userId));
+        return (posts || []).map((post) => mapDbPostSummaryToUi(post, [], 0, userId, signedUrlMap));
       }
 
       const [{ data: likesRows, error: likesError }, { data: commentsRows, error: commentsError }] =
@@ -92,7 +97,8 @@ export function usePostagens(userId, options = {}) {
           post,
           likesByPost.get(String(post.id)) || [],
           commentsCountByPost.get(String(post.id)) || 0,
-          userId
+          userId,
+          signedUrlMap
         )
       );
     },

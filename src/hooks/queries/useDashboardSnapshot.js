@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 
@@ -52,13 +53,13 @@ const daysUntilBirthday = (isoDate) => {
   return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 };
 
-const mapDbPostSummaryToUi = (post, currentUserId) => {
+const mapDbPostSummaryToUi = (post, currentUserId, signedUrlMap) => {
   const likes = Array.isArray(post?.curtidas) ? post.curtidas.filter(Boolean) : [];
   return {
     id: post?.id,
     titulo: post?.titulo || "",
     descricao: post?.descricao || "",
-    imagem: post?.imagem_url || postImg(post?.id || "post"),
+    imagem: resolveSignedMediaUrl("postagens", post?.imagem_url, signedUrlMap, postImg(post?.id || "post")),
     categoria: post?.categoria || "Notícia",
     data: post?.data_post || null,
     curtidas: likes,
@@ -162,8 +163,12 @@ export function useDashboardSnapshot(userId, options = {}) {
       }
       if (!payload || typeof payload !== "object") payload = {};
 
+      const signedUrlMap = await createSignedUrlMap(
+        "postagens",
+        safeArray(payload.postagens).map((post) => post?.imagem_url)
+      );
       const postagens = safeArray(payload.postagens).map((post) =>
-        mapDbPostSummaryToUi(post, userId)
+        mapDbPostSummaryToUi(post, userId, signedUrlMap)
       );
       const mural = safeArray(payload.mural).map(mapDbMuralToUi);
       const feriasRows = safeArray(payload.ferias).map(mapDbFeriasToUi);

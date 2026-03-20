@@ -31,14 +31,6 @@ const toAvatar = (profile) => {
   };
 };
 
-const mapDbPresencialConfirmacaoToUi = (item) => ({
-  id: item.id,
-  status: item.status || "confirmado",
-  observacao: item.observacao || "",
-  createdAt: item.created_at || null,
-  colaborador: toAvatar(item.colaborador),
-});
-
 const mapDbPresencialAgendaToUi = (item, confirmacoes = []) => ({
   id: item.id,
   titulo: item.titulo || "Dia presencial",

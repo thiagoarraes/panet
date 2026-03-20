@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../../lib/supabase.js";
+import { createSignedUrlMap, resolveSignedMediaUrl } from "../../../lib/storageMedia.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,6 +47,10 @@ export function useAdminPostagens({ page = 1, pageSize = 20, search = "" } = {})
 
       const [{ data, error }, { count }] = await Promise.all([rowsQuery.range(from, to), countQuery]);
       if (error) throw new Error(error.message);
+      const signedUrlMap = await createSignedUrlMap(
+        "postagens",
+        (data || []).map((post) => post.imagem_url)
+      );
 
       const postagemIds = (data || []).map((post) => post.id).filter(Boolean);
       const likesByPost = new Map();
@@ -74,7 +79,7 @@ export function useAdminPostagens({ page = 1, pageSize = 20, search = "" } = {})
           id: post.id,
           titulo: post.titulo,
           descricao: post.descricao,
-          imagem: post.imagem_url || postImg(post.id),
+          imagem: resolveSignedMediaUrl("postagens", post.imagem_url, signedUrlMap, postImg(post.id)),
           categoria: post.categoria,
           data: post.data_post,
           curtidas: likesByPost.get(key) || [],

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock3, Gift, Info, MapPin, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, Gift, Info, MapPin, Users } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { usePresencial } from "../hooks/queries/usePresencial";
 import { useRespondPresencial, useToggleSecretSanta } from "../hooks/mutations/usePresencialMutations";
@@ -12,16 +12,6 @@ const formatDateLong = (isoDate, short = false) =>
   });
 
 const formatTimeLabel = (timeValue) => String(timeValue || "").slice(0, 5);
-
-const getDayLabel = (isoDate) =>
-  new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-  });
-
-const getMonthLabel = (isoDate) =>
-  new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
-    month: "short",
-  });
 
 const getStatusMeta = (status) => {
   if (status === "confirmado" || status === "talvez") {
@@ -52,7 +42,7 @@ const getSecretSantaParticipants = (agenda) =>
 
 export function PresencialPage({ currentUserId }) {
   const presencialQuery = usePresencial(currentUserId);
-  const agendas = presencialQuery.data || [];
+  const agendas = useMemo(() => presencialQuery.data || [], [presencialQuery.data]);
   const respondMutation = useRespondPresencial(currentUserId);
   const toggleSecretSantaMutation = useToggleSecretSanta(currentUserId);
 

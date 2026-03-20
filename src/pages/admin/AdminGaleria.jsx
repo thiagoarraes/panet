@@ -33,7 +33,7 @@ export function AdminGaleria() {
   }, [searchInput]);
 
   const { data, isLoading } = useAdminGaleria({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
-  const rows = data?.rows || [];
+  const rows = useMemo(() => data?.rows || [], [data?.rows]);
   const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
