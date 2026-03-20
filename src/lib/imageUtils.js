@@ -1,13 +1,34 @@
+const toDecodedPathname = (value) => {
+  try {
+    return decodeURIComponent(new URL(String(value || ""), "https://panet.local").pathname || "");
+  } catch (_err) {
+    return decodeURIComponent(String(value || "").split(/[?#]/, 1)[0] || "");
+  }
+};
+
 export const getGaleriaStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
   if (/^(data:|blob:)/i.test(value)) return "";
   if (!/^https?:\/\//i.test(value)) {
-    if (value.startsWith("/galerias/")) {
-      const candidate = value.slice("/galerias/".length);
+    const pathname = toDecodedPathname(value);
+
+    if (pathname.startsWith("/galerias/")) {
+      const candidate = pathname.slice("/galerias/".length);
       return candidate.includes("/") ? candidate : "";
     }
-    return value.replace(/^\/+/, "");
+
+    const markers = [
+      "/storage/v1/object/public/galeria/",
+      "/storage/v1/object/sign/galeria/",
+      "/storage/v1/object/authenticated/galeria/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+
+    return pathname.replace(/^\/+/, "");
   }
   try {
     const parsed = new URL(value);
@@ -36,7 +57,19 @@ export const getAvatarStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
   if (/^(data:|blob:)/i.test(value)) return "";
-  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
+  if (!/^https?:\/\//i.test(value)) {
+    const pathname = toDecodedPathname(value);
+    const markers = [
+      "/storage/v1/object/public/avatares/",
+      "/storage/v1/object/sign/avatares/",
+      "/storage/v1/object/authenticated/avatares/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+    return pathname.replace(/^\/+/, "");
+  }
   try {
     const parsed = new URL(value);
     const pathname = decodeURIComponent(parsed.pathname || "");
@@ -59,7 +92,19 @@ export const getPostStoragePathFromUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
   if (/^(data:|blob:)/i.test(value)) return "";
-  if (!/^https?:\/\//i.test(value)) return value.replace(/^\/+/, "");
+  if (!/^https?:\/\//i.test(value)) {
+    const pathname = toDecodedPathname(value);
+    const markers = [
+      "/storage/v1/object/public/postagens/",
+      "/storage/v1/object/sign/postagens/",
+      "/storage/v1/object/authenticated/postagens/",
+    ];
+    for (const marker of markers) {
+      const idx = pathname.indexOf(marker);
+      if (idx >= 0) return pathname.slice(idx + marker.length);
+    }
+    return pathname.replace(/^\/+/, "");
+  }
   try {
     const parsed = new URL(value);
     const pathname = decodeURIComponent(parsed.pathname || "");

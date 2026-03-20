@@ -12,6 +12,7 @@ const BUCKET_EXTRACTORS = {
   galeria: getGaleriaStoragePathFromUrl,
   postagens: getPostStoragePathFromUrl,
 };
+const LOCAL_HOSTNAME_RE = /^(localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0)$/i;
 
 const isClientOnlyUrl = (value) => /^(data:|blob:)/i.test(String(value || "").trim());
 const isAbsoluteWebUrl = (value) => /^https?:\/\//i.test(String(value || "").trim());
@@ -22,6 +23,45 @@ const ensureAbsoluteUrl = (value) => {
   if (isAbsoluteWebUrl(trimmed) || !SUPABASE_URL) return trimmed;
   return `${SUPABASE_URL}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
 };
+
+const canUseSameOriginStorageProxy = () => {
+  if (typeof window === "undefined") return false;
+  const hostname = String(window.location?.hostname || "").trim();
+  return Boolean(hostname) && !LOCAL_HOSTNAME_RE.test(hostname);
+};
+
+const extractStorageHttpPath = (value) => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed || isClientOnlyUrl(trimmed)) return "";
+
+  if (!isAbsoluteWebUrl(trimmed)) {
+    return trimmed.startsWith("/storage/v1/object/") ? trimmed : "";
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!parsed.pathname.startsWith("/storage/v1/object/")) return "";
+    return `${parsed.pathname}${parsed.search}`;
+  } catch (_err) {
+    return "";
+  }
+};
+
+const preferAppHostedStorageUrl = (value) => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed || isClientOnlyUrl(trimmed)) return trimmed;
+
+  const storagePath = extractStorageHttpPath(trimmed);
+  if (!storagePath) return trimmed;
+  if (canUseSameOriginStorageProxy()) return storagePath;
+  return ensureAbsoluteUrl(storagePath);
+};
+
+const encodeStoragePath = (value) =>
+  String(value || "")
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
 
 const toMediaRef = (bucket, rawValue) => {
   const original = String(rawValue || "").trim();
@@ -46,7 +86,17 @@ export const resolveSignedMediaUrl = (bucket, rawValue, signedUrlMap, fallback =
   if (ref.kind === "storage") {
     return signedUrlMap?.get(ref.path) || fallback;
   }
-  if (ref.kind === "direct") return ref.original || fallback;
+  if (ref.kind === "direct") return preferAppHostedStorageUrl(ref.original) || fallback;
+  return fallback;
+};
+
+export const resolvePublicMediaUrl = (bucket, rawValue, fallback = "") => {
+  const ref = toMediaRef(bucket, rawValue);
+  if (ref.kind === "storage") {
+    const encodedPath = encodeStoragePath(ref.path);
+    return preferAppHostedStorageUrl(`/storage/v1/object/public/${bucket}/${encodedPath}`) || fallback;
+  }
+  if (ref.kind === "direct") return preferAppHostedStorageUrl(ref.original) || fallback;
   return fallback;
 };
 
@@ -76,7 +126,7 @@ export const createSignedUrlMap = async (
 
     for (const item of data || []) {
       if (!item?.path || !item?.signedUrl) continue;
-      signedUrls.set(item.path, ensureAbsoluteUrl(item.signedUrl));
+      signedUrls.set(item.path, preferAppHostedStorageUrl(item.signedUrl));
     }
     return signedUrls;
   }
@@ -85,7 +135,7 @@ export const createSignedUrlMap = async (
     storagePaths.map(async (path) => {
       const { data, error } = await bucketApi.createSignedUrl(path, expiresIn);
       if (error) throw error;
-      if (data?.signedUrl) signedUrls.set(path, ensureAbsoluteUrl(data.signedUrl));
+      if (data?.signedUrl) signedUrls.set(path, preferAppHostedStorageUrl(data.signedUrl));
     })
   );
 

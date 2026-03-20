@@ -732,10 +732,7 @@ export default function PanetApp() {
         contentType: "image/webp",
       });
       if (uploadError) throw new Error(uploadError.message);
-      const { data: publicData } = supabase.storage.from("avatares").getPublicUrl(uploadedAvatarPath);
-      if (publicData?.publicUrl) {
-        updatePayload.foto_url = publicData.publicUrl;
-      }
+      updatePayload.foto_url = uploadedAvatarPath;
     }
 
     let fnData = null;
