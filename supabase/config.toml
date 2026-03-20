@@ -1,0 +1,14 @@
+[functions.create-collaborator]
+verify_jwt = false
+
+[functions.delete-collaborator]
+verify_jwt = false
+
+[functions.reset-password]
+verify_jwt = false
+
+[functions.update-profile]
+verify_jwt = false
+
+[functions.post-og]
+verify_jwt = false

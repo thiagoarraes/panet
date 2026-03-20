@@ -13,6 +13,11 @@ These are required in Supabase project secrets:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## JWT verification
+The project uses Supabase publishable keys in the frontend. Administrative functions therefore keep
+gateway JWT verification disabled and validate the caller token inside the function body.
+This is configured in `supabase/config.toml`.
+
 ## Deploy
 From project root:
 
