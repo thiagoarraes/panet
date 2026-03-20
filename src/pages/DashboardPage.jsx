@@ -172,7 +172,10 @@ export function DashboardPage({
   useEffect(() => {
     const el = muralListRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const frameId = window.requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frameId);
   }, [muralOrdenado.length]);
   const ausentesAgora = useMemo(() => {
     const now = new Date();

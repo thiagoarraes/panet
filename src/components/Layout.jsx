@@ -204,10 +204,20 @@ const toAvatar = (profile) => {
 };
 
 const withTimeout = (promise, timeoutMs, timeoutMessage = "timeout") =>
-  Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)),
-  ]);
+  new Promise((resolve, reject) => {
+    const timerId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timerId);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timerId);
+        reject(error);
+      }
+    );
+  });
 
 const toPostSlug = (value) =>
   String(value || "")
