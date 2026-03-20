@@ -1,6 +1,6 @@
 ﻿import { Suspense, lazy, useState, useEffect, useCallback } from "react";
 import { ImageIcon } from "lucide-react";
-import { GALERIA_EVENTOS } from "../data/mockData.js";
+import { useGalerias } from "../hooks/queries/useGalerias.js";
 
 const loadGaleriaLightbox = () => import("../components/GaleriaLightbox");
 const GaleriaLightbox = lazy(() => loadGaleriaLightbox().then((m) => ({ default: m.GaleriaLightbox })));
@@ -22,7 +22,8 @@ const getSlugFromPath = (pathname) => {
   return decodeURIComponent(raw.split("/")[0] || "").trim();
 };
 
-export function GaleriaPage({ eventos = GALERIA_EVENTOS }) {
+export function GaleriaPage({ currentUserId }) {
+  const { data: eventos = [] } = useGalerias(currentUserId);
   const [eventoAberto, setEventoAberto] = useState(null);
   const [fotoIdx, setFotoIdx] = useState(0);
 
