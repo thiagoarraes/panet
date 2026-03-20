@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import { Avatar } from "../../components/Avatar";
+import { useAdminFerias } from "../../hooks/queries/admin/useAdminFerias.js";
+import { useAdminAusencias } from "../../hooks/queries/admin/useAdminAusencias.js";
+import { useCreateFerias, useUpdateFerias, useDeleteFerias } from "../../hooks/mutations/useFeriasMutations.js";
+import { useCreateAusencia, useUpdateAusencia, useDeleteAusencia } from "../../hooks/mutations/useAusenciasMutations.js";
+import { useColaboradores } from "../../hooks/queries/useColaboradores.js";
 
 const toIso = (brDate) => {
   const [d, m, y] = String(brDate || "").split("/");
@@ -26,13 +31,11 @@ const formatDateForStore = (date) => {
 };
 
 // Helpers para ausência (datetime)
-// Converte ISO UTC → formato local para datetime-local input
 const formatDateTimeLocal = (isoString) => {
   if (!isoString) return "";
   const d = new Date(isoString);
   if (isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
-  // usa hora local do browser (não UTC)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
@@ -43,20 +46,7 @@ const formatDisplayDateTime = (isoString) => {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 };
 
-export function AdminFerias({
-  ferias,
-  dayoff,
-  colaboradores,
-  onCreateFerias,
-  onUpdateFerias,
-  onDeleteFerias,
-  onListFerias,
-  ausencias,
-  onCreateAusencia,
-  onUpdateAusencia,
-  onDeleteAusencia,
-  onListAusencias,
-}) {
+export function AdminFerias({ currentUserId }) {
   const [sub, setSub] = useState("ferias");
 
   // ─── Férias / Day Off state ───────────────────────────────────────
@@ -68,10 +58,6 @@ export function AdminFerias({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
-  const [hiddenIds, setHiddenIds] = useState(new Set());
-  const [serverRows, setServerRows] = useState([]);
-  const [serverCount, setServerCount] = useState(0);
-  const [serverLoading, setServerLoading] = useState(false);
 
   // ─── Ausência state ───────────────────────────────────────────────
   const [ausenciaModal, setAusenciaModal] = useState(null);
@@ -82,14 +68,8 @@ export function AdminFerias({
   const [ausenciaSearchTerm, setAusenciaSearchTerm] = useState("");
   const [ausenciaPage, setAusenciaPage] = useState(1);
   const [ausenciaPendingDelete, setAusenciaPendingDelete] = useState(new Set());
-  const [ausenciaServerRows, setAusenciaServerRows] = useState([]);
-  const [ausenciaServerCount, setAusenciaServerCount] = useState(0);
-  const [ausenciaServerLoading, setAusenciaServerLoading] = useState(false);
 
   const PAGE_SIZE = 20;
-  const colaboradoresOpts = useMemo(() => colaboradores || [], [colaboradores]);
-  const listaBase = sub === "ferias" ? ferias : dayoff;
-  const lista = useMemo(() => listaBase.filter((item) => !hiddenIds.has(item.id)), [hiddenIds, listaBase]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -109,87 +89,37 @@ export function AdminFerias({
 
   useEffect(() => { setCurrentPage(1); }, [sub]);
 
-  useEffect(() => {
-    const existingIds = new Set([...(ferias || []), ...(dayoff || [])].map((item) => String(item.id)));
-    setHiddenIds((prev) => {
-      let changed = false;
-      const next = new Set();
-      for (const id of prev) {
-        if (existingIds.has(String(id))) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [dayoff, ferias]);
-
-  // ─── Férias / Day Off server pagination ──────────────────────────
-  const listaFiltrada = useMemo(() => {
-    if (!searchTerm) return lista;
-    return lista.filter((item) => {
-      const nome = String(item.colaborador?.nome || "").toLowerCase();
-      const cargo = String(item.colaborador?.cargo || "").toLowerCase();
-      const status = String(item.status || "").toLowerCase();
-      const periodo = `${item.inicio || ""} ${item.fim || ""}`.toLowerCase();
-      return nome.includes(searchTerm) || cargo.includes(searchTerm) || status.includes(searchTerm) || periodo.includes(searchTerm);
-    });
-  }, [lista, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(listaFiltrada.length / PAGE_SIZE));
-  const page = Math.min(currentPage, totalPages);
-  const listaPaginada = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return listaFiltrada.slice(start, start + PAGE_SIZE);
-  }, [listaFiltrada, page]);
-
-  useEffect(() => {
-    if (!onListFerias || sub === "ausencia") return;
-    let active = true;
-    setServerLoading(true);
-    onListFerias({ tipo: sub === "ferias" ? "ferias" : "dayoff", page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
-      .then((result) => {
-        if (!active) return;
-        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => { console.error(error); if (active) { setServerRows([]); setServerCount(0); } })
-      .finally(() => { if (active) setServerLoading(false); });
-    return () => { active = false; };
-  }, [currentPage, onListFerias, searchTerm, sub]);
-
-  const hasServerPagination = typeof onListFerias === "function";
-  const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm ? serverRows : listaPaginada
-    : listaPaginada;
-  const totalItems = hasServerPagination ? serverCount : listaFiltrada.length;
+  // ─── Query hooks ──────────────────────────────────────────────────
+  const { data: feriasData, isLoading: feriasLoading } = useAdminFerias({
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+    search: searchTerm,
+    tipo: sub === "ferias" ? "ferias" : "dayoff",
+  });
+  const rows = sub !== "ausencia" ? (feriasData?.rows || []) : [];
+  const totalItems = sub !== "ausencia" ? (feriasData?.count || 0) : 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
 
-  // ─── Ausência server pagination ───────────────────────────────────
-  useEffect(() => {
-    if (!onListAusencias || sub !== "ausencia") return;
-    let active = true;
-    setAusenciaServerLoading(true);
-    onListAusencias({ page: ausenciaPage, pageSize: PAGE_SIZE, search: ausenciaSearchTerm })
-      .then((result) => {
-        if (!active) return;
-        setAusenciaServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setAusenciaServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => { console.error(error); if (active) { setAusenciaServerRows([]); setAusenciaServerCount(0); } })
-      .finally(() => { if (active) setAusenciaServerLoading(false); });
-    return () => { active = false; };
-  }, [ausenciaPage, ausenciaSearchTerm, onListAusencias, sub]);
-
-  const ausenciaRows = ausenciaServerRows.length > 0 || ausenciaPage > 1 || ausenciaSearchTerm
-    ? ausenciaServerRows
-    : (ausencias || []).filter((a) => {
-        if (!ausenciaSearchTerm) return true;
-        const nome = String(a.colaborador?.nome || "").toLowerCase();
-        const motivo = String(a.motivo || "").toLowerCase();
-        return nome.includes(ausenciaSearchTerm) || motivo.includes(ausenciaSearchTerm);
-      });
-  const ausenciaTotalItems = ausenciaServerCount || ausenciaRows.length;
+  const { data: ausenciaData, isLoading: ausenciaLoading } = useAdminAusencias({
+    page: ausenciaPage,
+    pageSize: PAGE_SIZE,
+    search: ausenciaSearchTerm,
+  });
+  const ausenciaRows = ausenciaData?.rows || [];
+  const ausenciaTotalItems = ausenciaData?.count || 0;
   const ausenciaTotalPages = Math.max(1, Math.ceil(ausenciaTotalItems / PAGE_SIZE));
+
+  const { data: colaboradoresData } = useColaboradores(currentUserId);
+  const colaboradoresOpts = useMemo(() => colaboradoresData || [], [colaboradoresData]);
+
+  // ─── Mutation hooks ───────────────────────────────────────────────
+  const createFerias = useCreateFerias();
+  const updateFerias = useUpdateFerias();
+  const deleteFerias = useDeleteFerias();
+  const createAusencia = useCreateAusencia();
+  const updateAusencia = useUpdateAusencia();
+  const deleteAusencia = useDeleteAusencia();
 
   // ─── Férias / Day Off handlers ────────────────────────────────────
   const abrirNovo = () => {
@@ -201,10 +131,17 @@ export function AdminFerias({
     if (!form.colaboradorId || !form.inicio || !form.fim) return;
     try {
       setSaving(true);
+      const payload = {
+        colaborador_id: form.colaboradorId,
+        inicio: form.inicio,
+        fim: form.fim,
+        status: form.status || "marcado",
+        tipo: sub === "ferias" ? "ferias" : "dayoff",
+      };
       if (modal === "novo") {
-        await onCreateFerias({ colaborador_id: form.colaboradorId, inicio: form.inicio, fim: form.fim, status: form.status || "marcado", tipo: sub === "ferias" ? "ferias" : "dayoff" });
+        await createFerias.mutateAsync(payload);
       } else {
-        await onUpdateFerias(form.id, { colaborador_id: form.colaboradorId, inicio: form.inicio, fim: form.fim, status: form.status || "marcado", tipo: sub === "ferias" ? "ferias" : "dayoff" });
+        await updateFerias.mutateAsync({ id: form.id, payload });
       }
       setModal(null);
     } finally {
@@ -215,22 +152,12 @@ export function AdminFerias({
   const removerRegistro = async () => {
     if (!confirmarExcluir?.id) return;
     const id = confirmarExcluir.id;
-    const snapshotRows = [...serverRows];
-    const snapshotCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
-      if (hasServerPagination) {
-        setServerRows((prev) => prev.filter((row) => row.id !== id));
-        setServerCount((prev) => Math.max(0, prev - 1));
-      } else {
-        setHiddenIds((prev) => new Set(prev).add(id));
-      }
-      await onDeleteFerias(id);
+      await deleteFerias.mutateAsync(id);
       setConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) { setServerRows(snapshotRows); setServerCount(snapshotCount); }
-      else { setHiddenIds((prev) => { const next = new Set(prev); next.delete(id); return next; }); }
     } finally {
       setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
@@ -242,7 +169,6 @@ export function AdminFerias({
     setAusenciaModal("novo");
   };
 
-  // datetime-local dá hora local sem timezone; converte para ISO UTC
   const localToIso = (localStr) => {
     if (!localStr) return null;
     const d = new Date(localStr);
@@ -261,9 +187,9 @@ export function AdminFerias({
         estimativa: ausenciaForm.tipoTempo === "estimativa" && ausenciaForm.estimativa ? ausenciaForm.estimativa : null,
       };
       if (ausenciaModal === "novo") {
-        await onCreateAusencia(payload);
+        await createAusencia.mutateAsync(payload);
       } else {
-        await onUpdateAusencia(ausenciaModal, payload);
+        await updateAusencia.mutateAsync({ id: ausenciaModal, payload });
       }
       setAusenciaModal(null);
     } finally {
@@ -274,18 +200,12 @@ export function AdminFerias({
   const removerAusencia = async () => {
     if (!ausenciaConfirmarExcluir?.id) return;
     const id = ausenciaConfirmarExcluir.id;
-    const snapshotRows = [...ausenciaServerRows];
-    const snapshotCount = ausenciaServerCount;
     try {
       setAusenciaPendingDelete((prev) => new Set(prev).add(id));
-      setAusenciaServerRows((prev) => prev.filter((r) => r.id !== id));
-      setAusenciaServerCount((prev) => Math.max(0, prev - 1));
-      await onDeleteAusencia(id);
+      await deleteAusencia.mutateAsync(id);
       setAusenciaConfirmarExcluir(null);
     } catch (error) {
       console.error(error);
-      setAusenciaServerRows(snapshotRows);
-      setAusenciaServerCount(snapshotCount);
     } finally {
       setAusenciaPendingDelete((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
@@ -351,7 +271,7 @@ export function AdminFerias({
                 </div>
               </div>
             ))}
-            {rows.length === 0 && <div className="empty-state">{serverLoading ? "Carregando..." : "Nenhum registro encontrado."}</div>}
+            {rows.length === 0 && <div className="empty-state">{feriasLoading ? "Carregando..." : "Nenhum registro encontrado."}</div>}
           </div>
           {totalItems > PAGE_SIZE && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
@@ -401,7 +321,7 @@ export function AdminFerias({
                 </div>
               </div>
             ))}
-            {ausenciaRows.length === 0 && <div className="empty-state">{ausenciaServerLoading ? "Carregando..." : "Nenhuma ausência registrada."}</div>}
+            {ausenciaRows.length === 0 && <div className="empty-state">{ausenciaLoading ? "Carregando..." : "Nenhuma ausência registrada."}</div>}
           </div>
           {ausenciaTotalItems > PAGE_SIZE && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>

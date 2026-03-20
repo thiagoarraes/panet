@@ -1,16 +1,16 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ImageIcon, Pencil, Trash2, X } from "lucide-react";
+import { useAdminGaleria } from "../../hooks/queries/admin/useAdminGaleria.js";
+import {
+  useCreateGaleriaEvento,
+  useUpdateGaleriaEvento,
+  useDeleteGaleriaEvento,
+  useDeleteGaleriaFoto,
+  useUploadGaleriaFotos,
+  useSetGaleriaCapa,
+} from "../../hooks/mutations/useGaleriaMutations.js";
 
-export function AdminGaleria({
-  eventos = [],
-  onCreateEvento,
-  onUpdateEvento,
-  onDeleteEvento,
-  onListGaleria,
-  onDeleteFoto,
-  onUploadFotosEvento,
-  onSetCapaEvento,
-}) {
+export function AdminGaleria() {
   const [modalEvento, setModalEvento] = useState(null);
   const [modalFotos, setModalFotos] = useState(null);
   const [eventoForm, setEventoForm] = useState({ titulo: "", mes: "", ano: "" });
@@ -20,10 +20,6 @@ export function AdminGaleria({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
-  const [hiddenEventoIds, setHiddenEventoIds] = useState(new Set());
-  const [serverRows, setServerRows] = useState([]);
-  const [serverCount, setServerCount] = useState(0);
-  const [serverLoading, setServerLoading] = useState(false);
   const inputFotosMaisRef = useRef(null);
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   const PAGE_SIZE = 20;
@@ -36,76 +32,22 @@ export function AdminGaleria({
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
-  useEffect(() => {
-    const existingIds = new Set(eventos.map((evento) => String(evento.id)));
-    setHiddenEventoIds((prev) => {
-      let changed = false;
-      const next = new Set();
-      for (const id of prev) {
-        if (existingIds.has(String(id))) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [eventos]);
-
-  const eventosVisiveis = useMemo(() => {
-    const base = eventos.filter((evento) => !hiddenEventoIds.has(evento.id));
-    if (!searchTerm) return base;
-    return base.filter((evento) => {
-      const titulo = String(evento.evento || "").toLowerCase();
-      const mes = String(evento.mes || "").toLowerCase();
-      return titulo.includes(searchTerm) || mes.includes(searchTerm);
-    });
-  }, [eventos, hiddenEventoIds, searchTerm]);
-
-  const totalPages = Math.max(1, Math.ceil(eventosVisiveis.length / PAGE_SIZE));
-  const page = Math.min(currentPage, totalPages);
-
-  const eventosPaginados = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return eventosVisiveis.slice(start, start + PAGE_SIZE);
-  }, [eventosVisiveis, page]);
-
-  useEffect(() => {
-    if (!onListGaleria) return;
-    let active = true;
-    setServerLoading(true);
-    onListGaleria({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm })
-      .then((result) => {
-        if (!active) return;
-        setServerRows(Array.isArray(result?.rows) ? result.rows : []);
-        setServerCount(Number(result?.count || 0));
-      })
-      .catch((error) => {
-        console.error(error);
-        if (active) {
-          setServerRows([]);
-          setServerCount(0);
-        }
-      })
-      .finally(() => {
-        if (active) setServerLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [currentPage, onListGaleria, searchTerm]);
-
-  const hasServerPagination = typeof onListGaleria === "function";
-  const rows = hasServerPagination
-    ? serverRows.length > 0 || currentPage > 1 || searchTerm
-      ? serverRows
-      : eventosPaginados
-    : eventosPaginados;
-  const totalItems = hasServerPagination ? serverCount : eventosVisiveis.length;
+  const { data, isLoading } = useAdminGaleria({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
+  const rows = data?.rows || [];
+  const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
 
+  const createEvento = useCreateGaleriaEvento();
+  const updateEvento = useUpdateGaleriaEvento();
+  const deleteEvento = useDeleteGaleriaEvento();
+  const deleteFoto = useDeleteGaleriaFoto();
+  const uploadFotos = useUploadGaleriaFotos();
+  const setCapa = useSetGaleriaCapa();
+
   const eventoAtual = useMemo(() => {
-    const source = hasServerPagination ? rows : eventos;
-    return source.find((e) => e.id === modalFotos) || null;
-  }, [eventos, hasServerPagination, modalFotos, rows]);
+    return rows.find((e) => e.id === modalFotos) || null;
+  }, [modalFotos, rows]);
 
   const abrirNovoEvento = () => {
     setEventoForm({ titulo: "", mes: "", ano: "" });
@@ -121,29 +63,11 @@ export function AdminGaleria({
   };
 
   const excluirEvento = async (id) => {
-    const snapshotServerRows = [...serverRows];
-    const snapshotServerCount = serverCount;
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
-      if (hasServerPagination) {
-        setServerRows((prev) => prev.filter((row) => row.id !== id));
-        setServerCount((prev) => Math.max(0, prev - 1));
-      } else {
-        setHiddenEventoIds((prev) => new Set(prev).add(id));
-      }
-      await onDeleteEvento?.(id);
+      await deleteEvento.mutateAsync(id);
     } catch (error) {
       console.error(error);
-      if (hasServerPagination) {
-        setServerRows(snapshotServerRows);
-        setServerCount(snapshotServerCount);
-      } else {
-        setHiddenEventoIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      }
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
@@ -164,13 +88,18 @@ export function AdminGaleria({
         mes_ano: mesAno || null,
       };
       if (modalEvento === "novo") {
-        const created = await onCreateEvento?.(payload);
+        const created = await createEvento.mutateAsync(payload);
         const monthNum = meses.findIndex((m) => m === eventoForm.mes) + 1;
         if (created?.id && filesLote.length > 0) {
-          await onUploadFotosEvento?.(created.id, filesLote, { year: eventoForm.ano, month: monthNum });
+          await uploadFotos.mutateAsync({
+            eventoId: created.id,
+            files: filesLote,
+            opts: { year: eventoForm.ano, month: monthNum, setCapaIfEmpty: true },
+            currentEventoFotosLength: 0,
+          });
         }
       } else {
-        await onUpdateEvento?.(modalEvento, payload);
+        await updateEvento.mutateAsync({ id: modalEvento, payload });
       }
       setFilesLote([]);
       setModalEvento(null);
@@ -188,7 +117,12 @@ export function AdminGaleria({
     const year = String(anoLabel || new Date().getFullYear());
     try {
       setSaving(true);
-      await onUploadFotosEvento?.(eventoAtual.id, files, { year, month: monthNum });
+      await uploadFotos.mutateAsync({
+        eventoId: eventoAtual.id,
+        files,
+        opts: { year, month: monthNum },
+        currentEventoFotosLength: eventoAtual.fotos?.length || 0,
+      });
     } finally {
       setSaving(false);
       if (inputFotosMaisRef.current) inputFotosMaisRef.current.value = "";
@@ -252,7 +186,7 @@ export function AdminGaleria({
         ))}
         {rows.length === 0 && (
           <div className="empty-state">
-            {serverLoading ? "Carregando..." : searchTerm ? "Nenhum evento encontrado para este filtro." : "Sem eventos de galeria."}
+            {isLoading ? "Carregando..." : searchTerm ? "Nenhum evento encontrado para este filtro." : "Sem eventos de galeria."}
           </div>
         )}
       </div>
@@ -406,7 +340,7 @@ export function AdminGaleria({
                       <button
                         className="btn-ghost"
                         style={{ padding: "4px 8px", fontSize: 12 }}
-                        onClick={() => onSetCapaEvento?.(eventoAtual.id, foto.src)}
+                        onClick={() => setCapa.mutate({ eventoId: eventoAtual.id, fotoUrl: foto.src })}
                       >
                         Definir capa
                       </button>
@@ -420,7 +354,7 @@ export function AdminGaleria({
                           fontSize: 12,
                           cursor: "pointer",
                         }}
-                        onClick={() => onDeleteFoto?.(foto.id)}
+                        onClick={() => deleteFoto.mutate(foto.id)}
                       >
                         Excluir
                       </button>
@@ -436,4 +370,3 @@ export function AdminGaleria({
     </div>
   );
 }
-

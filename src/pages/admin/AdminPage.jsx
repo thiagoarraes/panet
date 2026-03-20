@@ -29,46 +29,7 @@ export function AdminPage({
   aba = "colaboradores",
   onChangeAba,
   currentProfile,
-  postagens,
-  setPostagens,
-  ferias,
-  dayoff,
-  colaboradores,
   currentUserId,
-  onDeleteColaborador,
-  onCreatePost,
-  onUpdatePost,
-  onDeletePost,
-  onListPostagens,
-  onCreateFerias,
-  onUpdateFerias,
-  onDeleteFerias,
-  onListFerias,
-  ausencias,
-  onCreateAusencia,
-  onUpdateAusencia,
-  onDeleteAusencia,
-  onListAusencias,
-  presencialAgendas,
-  onCreatePresencialAgenda,
-  onUpdatePresencialAgenda,
-  onDeletePresencialAgenda,
-  onListPresencial,
-  onRunPresencialSecretSanta,
-  muralMsgs,
-  onDeleteMuralMensagem,
-  onDeleteMuralMensagens,
-  onListMural,
-  galeriaEventos,
-  onCreateGaleriaEvento,
-  onUpdateGaleriaEvento,
-  onDeleteGaleriaEvento,
-  onListGaleria,
-  onAddGaleriaFoto,
-  onUpdateGaleriaFoto,
-  onDeleteGaleriaFoto,
-  onUploadGaleriaFotos,
-  onSetGaleriaCapa,
 }) {
   // null = super admin (acesso total); array = módulos permitidos
   const adminModulos = currentProfile?.admin_modulos ?? null;
@@ -107,79 +68,34 @@ export function AdminPage({
       {abaAtiva === "colaboradores" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminColaboradores
-            initialColaboradores={colaboradores}
             currentUserId={currentUserId}
             isSuperAdmin={isSuperAdmin}
-            onDeleteColaborador={onDeleteColaborador}
           />
         </Suspense>
       )}
       {abaAtiva === "postagens" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminPostagens
-            postagens={postagens}
-            setPostagens={setPostagens}
-            onCreatePost={onCreatePost}
-            onUpdatePost={onUpdatePost}
-            onDeletePost={onDeletePost}
-            onListPostagens={onListPostagens}
-          />
+          <AdminPostagens currentUserId={currentUserId} />
         </Suspense>
       )}
       {abaAtiva === "ferias" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminFerias
-            ferias={ferias}
-            dayoff={dayoff}
-            colaboradores={colaboradores}
-            onCreateFerias={onCreateFerias}
-            onUpdateFerias={onUpdateFerias}
-            onDeleteFerias={onDeleteFerias}
-            onListFerias={onListFerias}
-            ausencias={ausencias}
-            onCreateAusencia={onCreateAusencia}
-            onUpdateAusencia={onUpdateAusencia}
-            onDeleteAusencia={onDeleteAusencia}
-            onListAusencias={onListAusencias}
-          />
+          <AdminFerias currentUserId={currentUserId} />
         </Suspense>
       )}
       {abaAtiva === "galeria" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminGaleria
-            eventos={galeriaEventos}
-            onCreateEvento={onCreateGaleriaEvento}
-            onUpdateEvento={onUpdateGaleriaEvento}
-            onDeleteEvento={onDeleteGaleriaEvento}
-            onListGaleria={onListGaleria}
-            onAddFoto={onAddGaleriaFoto}
-            onUpdateFoto={onUpdateGaleriaFoto}
-            onDeleteFoto={onDeleteGaleriaFoto}
-            onUploadFotosEvento={onUploadGaleriaFotos}
-            onSetCapaEvento={onSetGaleriaCapa}
-          />
+          <AdminGaleria />
         </Suspense>
       )}
       {abaAtiva === "presencial" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminPresencial
-            agendas={presencialAgendas}
-            onCreateAgenda={onCreatePresencialAgenda}
-            onUpdateAgenda={onUpdatePresencialAgenda}
-            onDeleteAgenda={onDeletePresencialAgenda}
-            onListPresencial={onListPresencial}
-            onRunSecretSanta={onRunPresencialSecretSanta}
-          />
+          <AdminPresencial />
         </Suspense>
       )}
       {abaAtiva === "mural" && (
         <Suspense fallback={<AdminTabFallback />}>
-          <AdminMural
-            mensagens={muralMsgs}
-            onDeleteMensagem={onDeleteMuralMensagem}
-            onDeleteMensagens={onDeleteMuralMensagens}
-            onListMural={onListMural}
-          />
+          <AdminMural />
         </Suspense>
       )}
     </div>

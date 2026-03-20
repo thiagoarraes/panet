@@ -2,6 +2,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { FaInstagram, FaLinkedin, FaWhatsapp, FaEnvelope } from "react-icons/fa6";
+import { useColaboradores } from "../hooks/queries/useColaboradores.js";
 
 const toWhatsappHref = (telefone) => {
   const digits = String(telefone || "").replace(/\D/g, "");
@@ -47,7 +48,8 @@ const getZodiacInfo = (isoDate) => {
   return { nome: "Peixes", emoji: "♓" };
 };
 
-export function ColaboradoresPage({ colaboradores = [] }) {
+export function ColaboradoresPage({ currentUserId }) {
+  const { data: colaboradores = [] } = useColaboradores(currentUserId);
   const [selected, setSelected] = useState(null);
   const signo = getZodiacInfo(selected?.aniversario);
   const signoHref = signo

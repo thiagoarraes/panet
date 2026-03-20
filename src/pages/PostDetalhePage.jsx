@@ -1,8 +1,24 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal, Pencil, Trash2 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
+import { usePostagens } from "../hooks/queries/usePostagens";
+import { useAniversarios } from "../hooks/queries/useAniversarios";
+import { useColaboradores } from "../hooks/queries/useColaboradores";
+import { useMural } from "../hooks/queries/useMural";
+import { useFerias } from "../hooks/queries/useFerias";
+import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
+import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
+
+const toPostSlug = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const getDateBoxParts = (iso) => {
   const date = new Date(`${iso}T12:00:00`);
@@ -66,21 +82,11 @@ const getPeriodoFolgaLabel = (item) => {
 };
 
 export function PostDetalhePage({
-  post,
   currentUser,
   currentUserId,
-  onToggleCurtida,
-  onComentar,
-  onEditarComentario,
-  onDeletarComentario,
+  postSlug,
   onOpenAniversarios,
   onOpenFolgas,
-  onEnviarMensagem,
-  aniversariantes = [],
-  colaboradores = [],
-  muralMsgs = [],
-  ferias = [],
-  dayoff = [],
 }) {
   const [texto, setTexto] = useState("");
   const [loadingComentario, setLoadingComentario] = useState(false);
@@ -90,6 +96,25 @@ export function PostDetalhePage({
   const [textoMural, setTextoMural] = useState("");
   const [enviandoMural, setEnviandoMural] = useState(false);
   const muralListRef = useRef(null);
+
+  const { data: postagens = [] } = usePostagens(currentUserId);
+  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
+  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const { data: muralMsgs = [] } = useMural(currentUserId);
+  const { data: feriasData } = useFerias(currentUserId);
+  const ferias = feriasData?.ferias || [];
+  const dayoff = feriasData?.dayoff || [];
+
+  const toggleCurtidaMutation = useToggleCurtida();
+  const comentarMutation = useComentar();
+  const editarComentarioMutation = useEditarComentario();
+  const deletarComentarioMutation = useDeletarComentario();
+  const enviarMensagemMutation = useEnviarMensagem(currentUserId);
+
+  const post = useMemo(
+    () => postagens.find((p) => toPostSlug(p.titulo) === postSlug) || null,
+    [postagens, postSlug]
+  );
 
   const eu = useMemo(() => currentUser || { nome: "Você", foto: "U", cor: "#11E7E7" }, [currentUser]);
   const dateBox = useMemo(() => (post ? getDateBoxParts(post.data) : { day: "--", month: "---", year: "----" }), [post]);
@@ -159,7 +184,7 @@ export function PostDetalhePage({
     if (!post || !texto.trim()) return;
     try {
       setLoadingComentario(true);
-      await onComentar(post.id, texto.trim());
+      await comentarMutation.mutateAsync({ postId: post.id, userId: currentUserId, texto: texto.trim() });
       setTexto("");
     } finally {
       setLoadingComentario(false);
@@ -177,10 +202,10 @@ export function PostDetalhePage({
   };
 
   const salvarEdicao = async () => {
-    if (!textoEdicao.trim() || !onEditarComentario) return;
+    if (!textoEdicao.trim()) return;
     try {
       setLoadingEdicao(true);
-      await onEditarComentario(editandoId, textoEdicao.trim());
+      await editarComentarioMutation.mutateAsync({ comentarioId: editandoId, userId: currentUserId, novoTexto: textoEdicao.trim() });
       setEditandoId(null);
       setTextoEdicao("");
     } finally {
@@ -189,8 +214,13 @@ export function PostDetalhePage({
   };
 
   const deletarComentario = async (comentarioId) => {
-    if (!onDeletarComentario) return;
-    await onDeletarComentario(comentarioId);
+    await deletarComentarioMutation.mutateAsync({ comentarioId, userId: currentUserId });
+  };
+
+  const handleToggleCurtida = (postId) => {
+    if (!post) return;
+    const alreadyLiked = post.curtidas.includes(currentUserId);
+    toggleCurtidaMutation.mutate({ postId, userId: currentUserId, alreadyLiked });
   };
 
   const handleEnviarMural = async () => {
@@ -198,7 +228,9 @@ export function PostDetalhePage({
     if (!valor || enviandoMural) return;
     setEnviandoMural(true);
     setTextoMural("");
-    Promise.resolve(onEnviarMensagem?.(valor))
+    Promise.resolve(
+      enviarMensagemMutation.mutateAsync({ texto: valor, currentProfile: currentUser })
+    )
       .catch(() => {
         setTextoMural((prev) => prev || valor);
       })
@@ -241,7 +273,7 @@ export function PostDetalhePage({
                 <div className="rich-content" style={{ marginTop: 20, marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.descricao || "") }} />
 
                 <div style={{ display: "flex", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
-                  <button className={`post-action ${post.userCurtiu ? "liked" : ""}`} onClick={() => onToggleCurtida(post.id)}>
+                  <button className={`post-action ${post.userCurtiu ? "liked" : ""}`} onClick={() => handleToggleCurtida(post.id)}>
                     <Heart size={14} fill={post.userCurtiu ? "currentColor" : "none"} />{" "}
                     {formatCountLabel(post.curtidas.length, "curtida", "curtidas")}
                   </button>
@@ -457,6 +489,3 @@ export function PostDetalhePage({
     </div>
   );
 }
-
-
-

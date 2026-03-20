@@ -1,5 +1,7 @@
 import { CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { useFerias } from "../hooks/queries/useFerias";
+import { useAusencias } from "../hooks/queries/useAusencias";
 
 const parseBrDate = (brDate) => {
   const [day, month, year] = String(brDate || "").split("/").map(Number);
@@ -58,7 +60,11 @@ const getAusenciaAtiva = (ausencias) => {
     .sort((a, b) => new Date(a.inicio) - new Date(b.inicio));
 };
 
-export function FeriasPage({ ferias, dayoff, ausencias }) {
+export function FeriasPage({ currentUserId }) {
+  const { data: feriasData } = useFerias(currentUserId);
+  const ferias = feriasData?.ferias || [];
+  const dayoff = feriasData?.dayoff || [];
+  const { data: ausencias = [] } = useAusencias(currentUserId);
   const ausenciasAtivas = getAusenciaAtiva(ausencias);
   const ausenciasVisiveis = (ausencias || [])
     .filter((a) => {

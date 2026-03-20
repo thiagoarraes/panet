@@ -1,7 +1,11 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { PostCard } from "../components/PostCard";
+import { usePostagens } from "../hooks/queries/usePostagens";
+import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 
-export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
+export function PostagensPage({ onOpen, currentUserId }) {
+  const { data: postagens = [] } = usePostagens(currentUserId);
+  const toggleCurtida = useToggleCurtida();
   const [filtro, setFiltro] = useState("Todos");
   const [busca, setBusca] = useState("");
   const cats = ["Todos", "Notícia", "Comunicado", "Evento"];
@@ -10,6 +14,14 @@ export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
       (filtro === "Todos" || p.categoria === filtro) &&
       (busca === "" || p.titulo.toLowerCase().includes(busca.toLowerCase()))
   );
+
+  const handleToggleCurtida = (post) => {
+    toggleCurtida.mutate({
+      postId: post.id,
+      userId: currentUserId,
+      alreadyLiked: post.userCurtiu,
+    });
+  };
 
   return (
     <div className="fade-up postagens-page">
@@ -54,7 +66,7 @@ export function PostagensPage({ onOpen, onToggleCurtida, postagens }) {
             post={post}
             onOpen={onOpen}
             curtido={post.userCurtiu}
-            onToggleCurtida={() => onToggleCurtida(post.id)}
+            onToggleCurtida={() => handleToggleCurtida(post)}
           />
         ))}
       </div>

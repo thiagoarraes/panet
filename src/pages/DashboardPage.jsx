@@ -3,6 +3,15 @@ import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal, 
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
+import { useMural } from "../hooks/queries/useMural";
+import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
+import { usePostagens } from "../hooks/queries/usePostagens";
+import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
+import { useFerias } from "../hooks/queries/useFerias";
+import { useAusencias } from "../hooks/queries/useAusencias";
+import { useAniversarios } from "../hooks/queries/useAniversarios";
+import { useColaboradores } from "../hooks/queries/useColaboradores";
+import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -52,21 +61,22 @@ const getPeriodoFolgaLabel = (item) => {
 
 export function DashboardPage({
   onOpenPost,
-  onToggleCurtida,
-  onParabenizar,
   onOpenAniversarios,
   onOpenFolgas,
-  onEnviarMensagem,
-  postagens,
-  aniversariantes,
-  colaboradores,
-  muralMsgs,
   currentUser,
   currentUserId,
-  ferias,
-  dayoff,
-  ausencias,
 }) {
+  const { data: postagens = [] } = usePostagens(currentUserId);
+  const toggleCurtida = useToggleCurtida();
+  const { data: muralMsgs = [] } = useMural(currentUserId);
+  const enviarMensagem = useEnviarMensagem(currentUserId);
+  const { data: feriasData } = useFerias(currentUserId);
+  const ferias = feriasData?.ferias || [];
+  const dayoff = feriasData?.dayoff || [];
+  const { data: ausencias = [] } = useAusencias(currentUserId);
+  const { data: aniversariantes = [] } = useAniversarios(currentUserId);
+  const { data: colaboradores = [] } = useColaboradores(currentUserId);
+  const parabenizarMutation = useParabenizarAniversario(currentUserId);
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
@@ -159,7 +169,10 @@ export function DashboardPage({
     if (!today?.colaborador?.id || parabenizando) return;
     try {
       setParabenizando(true);
-      const result = await onParabenizar?.(today.colaborador.id);
+      const result = await parabenizarMutation.mutateAsync({
+        aniversarianteId: today.colaborador.id,
+        alreadyReacted: userJaParabenizou,
+      });
       if (result?.added) launch();
     } finally {
       setParabenizando(false);
@@ -171,13 +184,17 @@ export function DashboardPage({
     if (!texto || enviandoMural) return;
     setEnviandoMural(true);
     setTextoMural("");
-    Promise.resolve(onEnviarMensagem?.(texto))
-      .catch(() => {
-        setTextoMural((prev) => prev || texto);
-      })
-      .finally(() => {
-        setEnviandoMural(false);
-      });
+    enviarMensagem.mutate(
+      { texto, currentProfile: currentUser },
+      {
+        onError: () => {
+          setTextoMural((prev) => prev || texto);
+        },
+        onSettled: () => {
+          setEnviandoMural(false);
+        },
+      }
+    );
   };
 
   return (
@@ -261,7 +278,13 @@ export function DashboardPage({
                 post={post}
                 onOpen={onOpenPost}
                 curtido={post.userCurtiu}
-                onToggleCurtida={() => onToggleCurtida(post.id)}
+                onToggleCurtida={() =>
+                  toggleCurtida.mutate({
+                    postId: post.id,
+                    userId: currentUserId,
+                    alreadyLiked: post.userCurtiu,
+                  })
+                }
                 showVerMais={true}
               />
             ))}
