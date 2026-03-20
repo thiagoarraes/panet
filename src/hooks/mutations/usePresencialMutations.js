@@ -235,10 +235,6 @@ export function useRespondPresencial(userId) {
               (c) => String(c.colaborador?.id) !== String(effectiveUserId)
             );
           } else {
-            const idx = confirmacoes.findIndex(
-              (c) => String(c.colaborador?.id) !== String(effectiveUserId)
-            );
-            // Actually find the correct index
             const myIdx = confirmacoes.findIndex(
               (c) => String(c.colaborador?.id) === String(effectiveUserId)
             );
