@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock3, Gift, Info, MapPin, Users } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { usePresencial } from "../hooks/queries/usePresencial";
+import { useRespondPresencial, useToggleSecretSanta } from "../hooks/mutations/usePresencialMutations";
 
 const formatDateLong = (isoDate, short = false) =>
   new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", {
@@ -48,7 +50,11 @@ const getConfirmedParticipants = (agenda) =>
 const getSecretSantaParticipants = (agenda) =>
   (agenda?.confirmacoes || []).filter((item) => item.status === "talvez");
 
-export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggleSecretSanta }) {
+export function PresencialPage({ currentUserId }) {
+  const { data: agendas = [] } = usePresencial(currentUserId);
+  const respondMutation = useRespondPresencial(currentUserId);
+  const toggleSecretSantaMutation = useToggleSecretSanta(currentUserId);
+
   const [savingState, setSavingState] = useState({ agendaId: "", status: "" });
 
   const proximasAgendas = useMemo(
@@ -67,7 +73,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggl
     if (!agendaId) return;
     try {
       setSavingState({ agendaId, status });
-      await onRespond?.(agendaId, status);
+      await respondMutation.mutateAsync({ agendaId, status });
     } finally {
       setSavingState({ agendaId: "", status: "" });
     }
@@ -249,7 +255,7 @@ export function PresencialPage({ agendas = [], currentUserId, onRespond, onToggl
                         <div className="presencial-actions">
                           <button
                             className={`presencial-secret-santa-btn ${estouNoSorteio ? "is-active" : ""}`}
-                            onClick={() => onToggleSecretSanta?.(agenda.id, !estouNoSorteio)}
+                            onClick={() => toggleSecretSantaMutation.mutate({ agendaId: agenda.id, shouldParticipate: !estouNoSorteio })}
                             disabled={isSavingAgenda || Boolean(agenda.amigoSecretoSorteadoAt)}
                           >
                             <Gift size={16} />

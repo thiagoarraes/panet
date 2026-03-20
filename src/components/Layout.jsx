@@ -2972,14 +2972,7 @@ export default function PanetApp() {
       />
     ),
     ferias: <FeriasPage currentUserId={currentProfile?.id} />,
-    presencial: (
-      <PresencialPage
-        agendas={presencialAgendas}
-        currentUserId={currentProfile?.id || eu.id}
-        onRespond={handleRespondPresencial}
-        onToggleSecretSanta={handleTogglePresencialSecretSanta}
-      />
-    ),
+    presencial: <PresencialPage currentUserId={currentProfile?.id || eu.id} />,
     galeria: <GaleriaPage eventos={galeriaEventos} />,
     perfil: <PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />,
     admin: (
