@@ -6,6 +6,11 @@ const repoRoot = process.cwd();
 const hooksPath = ".githooks";
 const preCommitHook = path.join(repoRoot, hooksPath, "pre-commit");
 
+if (process.env.CI || process.env.VERCEL) {
+  console.log("Git hooks: ambiente CI detectado, setup ignorado.");
+  process.exit(0);
+}
+
 try {
   execFileSync("git", ["rev-parse", "--show-toplevel"], {
     cwd: repoRoot,
