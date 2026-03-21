@@ -63,6 +63,49 @@ const getPeriodoFolgaLabel = (item) => {
   return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
 };
 
+const isSameCalendarDay = (left, right) =>
+  left?.getDate?.() === right?.getDate?.() &&
+  left?.getMonth?.() === right?.getMonth?.() &&
+  left?.getFullYear?.() === right?.getFullYear?.();
+
+const formatDisplayDayMonth = (date) =>
+  date?.toLocaleDateString?.("pt-BR", { day: "2-digit", month: "2-digit" }) || "";
+
+const formatDisplayTime = (date) =>
+  date?.toLocaleTimeString?.("pt-BR", { hour: "2-digit", minute: "2-digit" }) || "";
+
+const getAusenciaMeta = (item) => {
+  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
+
+  const inicio = new Date(item.inicio);
+  const fim = item.fim ? new Date(item.fim) : null;
+  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
+
+  const now = new Date();
+  const hasFimValido = fim && !Number.isNaN(fim.getTime());
+  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
+  const isToday = isSameCalendarDay(inicio, now);
+
+  if (crossesDays) {
+    return {
+      dateLabel: "",
+      timeLabel: `${formatDisplayDayMonth(inicio)} ${formatDisplayTime(inicio)} → ${formatDisplayDayMonth(fim)} ${formatDisplayTime(fim)}`,
+    };
+  }
+
+  const dateLabel = !isToday
+    ? formatDisplayDayMonth(inicio)
+    : "";
+
+  const timeLabel = hasFimValido
+    ? `${formatDisplayTime(inicio)} – ${formatDisplayTime(fim)}`
+    : item.estimativa
+      ? `${formatDisplayTime(inicio)} · ${item.estimativa}`
+      : `${formatDisplayTime(inicio)} · sem previsão`;
+
+  return { dateLabel, timeLabel };
+};
+
 export function DashboardPage({
   onOpenPost,
   onOpenAniversarios,
@@ -415,27 +458,38 @@ export function DashboardPage({
               )}
               {ausentesAgora.length > 0 && (
                 <div style={{ marginTop: 10, marginBottom: 8 }}>
-                  {ausentesAgora.map((a) => (
-                    <div key={`ausente-${a.id}`} className="folga-entry is-ausencia">
-                      <div className="folga-avatar-wrap">
-                        <Avatar col={a.colaborador} size={32} />
-                      </div>
-                      <div className="folga-content">
-                        <div className="folga-user">{a.colaborador.nome.split(" ")[0]}</div>
-                        <div className="folga-status">
-                          <span className="status-chip" style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                            Ausente
-                          </span>
+                  {ausentesAgora.map((a) => {
+                    const ausenciaMeta = getAusenciaMeta(a);
+                    return (
+                      <div key={`ausente-${a.id}`} className="folga-entry is-ausencia">
+                        <div className="folga-avatar-wrap">
+                          <Avatar col={a.colaborador} size={32} />
                         </div>
-                        <div className="folga-date-line">
-                          <Clock size={12} />
-                          {a.fim
-                            ? `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} – ${new Date(a.fim).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
-                            : a.estimativa ? `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · ~${a.estimativa}` : `${new Date(a.inicio).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · sem previsão`}
+                        <div className="folga-content">
+                          <div className="folga-user">{a.colaborador.nome.split(" ")[0]}</div>
+                          <div className="folga-status">
+                            <span className="status-chip" style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              Ausente
+                            </span>
+                          </div>
+                          <div className="folga-meta">
+                            {ausenciaMeta.dateLabel ? (
+                              <span className="folga-meta-chip">
+                                <CalendarDays size={12} />
+                                {ausenciaMeta.dateLabel}
+                              </span>
+                            ) : null}
+                            {ausenciaMeta.timeLabel ? (
+                              <span className="folga-meta-chip is-time">
+                                <Clock size={12} />
+                                {ausenciaMeta.timeLabel}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <div style={{ marginTop: ausentesAgora.length === 0 ? 10 : 0, marginBottom: 12 }}>
@@ -466,8 +520,10 @@ export function DashboardPage({
                     <div className="folga-content">
                       <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
                       <div className="folga-status">{badge}</div>
-                      <div className="folga-date-line">
-                        <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
+                      <div className="folga-meta">
+                        <span className="folga-meta-chip">
+                          <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -89,6 +89,7 @@ serve(async (req) => {
     const body = await req.json();
     const nome = String(body?.nome || "").trim();
     const cargo = String(body?.cargo || "Colaborador").trim() || "Colaborador";
+    const aniversario = body?.aniversario ? String(body.aniversario).trim() : null;
     const email = String(body?.email || "").trim().toLowerCase();
     const telefone = body?.telefone ? String(body.telefone).trim() : null;
     const instagram = body?.instagram ? String(body.instagram).trim() : null;
@@ -150,6 +151,7 @@ serve(async (req) => {
       instagram,
       linkedin,
       github,
+      aniversario,
       perfil,
       primeiro_acesso: true,
     });

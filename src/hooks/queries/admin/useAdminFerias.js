@@ -32,6 +32,7 @@ const mapDbFeriasToUi = (item) => ({
   fim: formatBrDate(item.fim),
   status: item.status,
   tipo: item.tipo,
+  motivoReal: item.motivo_real || "",
   colaborador: toAvatar(item.colaborador),
 });
 
@@ -68,7 +69,7 @@ export function useAdminFerias({ page = 1, pageSize = 20, search = "", tipo = "f
 
       let rowsQuery = supabase
         .from("ferias")
-        .select("id,inicio,fim,status,tipo,colaborador_id")
+        .select("id,inicio,fim,status,tipo,motivo_real,colaborador_id")
         .eq("tipo", safeTipo)
         .order("inicio", { ascending: true });
 
@@ -84,11 +85,23 @@ export function useAdminFerias({ page = 1, pageSize = 20, search = "", tipo = "f
         if (colsError) throw new Error(colsError.message);
         const ids = (cols || []).map((row) => row.id);
         if (ids.length > 0) {
-          rowsQuery = rowsQuery.in("colaborador_id", ids);
-          countQuery = countQuery.in("colaborador_id", ids);
+          if (safeTipo === "dayoff") {
+            const serializedIds = ids.map((id) => `"${id}"`).join(",");
+            const expression = `colaborador_id.in.(${serializedIds}),motivo_real.ilike.%${escaped}%`;
+            rowsQuery = rowsQuery.or(expression);
+            countQuery = countQuery.or(expression);
+          } else {
+            rowsQuery = rowsQuery.in("colaborador_id", ids);
+            countQuery = countQuery.in("colaborador_id", ids);
+          }
         } else {
-          rowsQuery = rowsQuery.ilike("status", `%${escaped}%`);
-          countQuery = countQuery.ilike("status", `%${escaped}%`);
+          if (safeTipo === "dayoff") {
+            rowsQuery = rowsQuery.ilike("motivo_real", `%${escaped}%`);
+            countQuery = countQuery.ilike("motivo_real", `%${escaped}%`);
+          } else {
+            rowsQuery = rowsQuery.ilike("status", `%${escaped}%`);
+            countQuery = countQuery.ilike("status", `%${escaped}%`);
+          }
         }
       }
 

@@ -68,7 +68,7 @@ const invokeAdminFunctionHttp = async (fnName, body, accessToken, fallbackMessag
   return parsed || {};
 };
 
-const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v1";
+const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v2";
 const PAGE_SIZE = 20;
 const escapePostgrestLike = (value) =>
   String(value || "")
@@ -139,6 +139,7 @@ const mapProfileToRow = (profile, currentUserId) => {
     id: profile.id,
     nome: profile.nome,
     cargo: profile.cargo,
+    aniversario: profile.aniversario || "",
     email: profile.email,
     telefone: profile.telefone || "",
     fotoUrl: profile.foto_url || "",
@@ -277,7 +278,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       const to = from + PAGE_SIZE - 1;
       let rowsQuery = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,email,telefone,cor_avatar,foto_url,perfil,admin_modulos")
+        .select("id,nome,cargo,aniversario,email,telefone,cor_avatar,foto_url,perfil,admin_modulos")
         .order("nome", { ascending: true })
         .range(from, to);
 
@@ -337,6 +338,8 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   const abrirNovo = () => {
     setForm({
       nome: "",
+      cargo: "Colaborador",
+      aniversario: "",
       email: "",
       perfil: "colaborador",
       adminModulos: null,
@@ -352,8 +355,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   };
 
   const salvar = async () => {
-    if (!form.nome || !form.email) return;
+    if (!form.nome || !form.email || !form.cargo) {
+      setErrorMsg("Preencha nome, cargo e e-mail corporativo.");
+      return;
+    }
     const normalizedEmail = String(form.email || "").trim().toLowerCase();
+    const normalizedCargo = String(form.cargo || "").trim() || "Colaborador";
+    const normalizedBirthday = form.aniversario ? String(form.aniversario).trim() : null;
     if (!isSupabaseEnabled) {
       const duplicatedEmail = lista.some(
         (c) => String(c?.email || "").trim().toLowerCase() === normalizedEmail && (modal === "novo" || c.id !== form.id)
@@ -373,8 +381,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       .toUpperCase();
 
     if (!isSupabaseEnabled) {
-      if (modal === "novo") setLista((p) => [...p, { ...form, id: Date.now(), foto: iniciais, redes: {} }]);
-      else setLista((p) => p.map((c) => (c.id === form.id ? { ...form, foto: iniciais } : c)));
+      const localPayload = {
+        ...form,
+        cargo: normalizedCargo,
+        aniversario: normalizedBirthday || "",
+      };
+      if (modal === "novo") setLista((p) => [...p, { ...localPayload, id: Date.now(), foto: iniciais, redes: {} }]);
+      else setLista((p) => p.map((c) => (c.id === form.id ? { ...localPayload, foto: iniciais } : c)));
       setModal(null);
       return;
     }
@@ -395,6 +408,8 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       if (modal === "novo") {
         const payload = {
           nome: form.nome,
+          cargo: normalizedCargo,
+          aniversario: normalizedBirthday,
           email: normalizedEmail,
           perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
@@ -412,6 +427,8 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       } else {
         const updatePayload = {
           nome: form.nome,
+          cargo: normalizedCargo,
+          aniversario: normalizedBirthday,
           email: normalizedEmail,
           perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
@@ -723,6 +740,29 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                   </select>
                 </div>
               </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">CARGO *</label>
+                  <input
+                    className="form-input"
+                    value={form.cargo || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, cargo: e.target.value }))}
+                    placeholder="Ex: Designer, Redator, Desenvolvedor"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">ANIVERSÁRIO</label>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={form.aniversario || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, aniversario: e.target.value }))}
+                  />
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+                    Essa data alimenta a página de aniversários da Panet.
+                  </div>
+                </div>
+              </div>
 
               {modal === "novo" && (
                 <div className="form-group">
@@ -866,6 +906,4 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     </div>
   );
 }
-
-
 

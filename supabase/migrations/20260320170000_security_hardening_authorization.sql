@@ -75,12 +75,12 @@ grant execute on function public.get_public_ausencias() to authenticated;
 
 -- colaboradores
 drop policy if exists "colaboradores: update próprio ou admin" on public.colaboradores;
-drop policy if exists "colaboradores: update prÃ³prio ou admin" on public.colaboradores;
+drop policy if exists "colaboradores: update proprio ou admin" on public.colaboradores;
 drop policy if exists "colaboradores: editar próprio" on public.colaboradores;
 drop policy if exists "colaboradores: admin insert" on public.colaboradores;
 drop policy if exists "colaboradores: admin delete" on public.colaboradores;
 drop policy if exists "colaboradores: admin update" on public.colaboradores;
-drop policy if exists "colaboradores: editar prÃ³prio" on public.colaboradores;
+drop policy if exists "colaboradores: editar proprio" on public.colaboradores;
 
 create policy "colaboradores: update proprio seguro"
   on public.colaboradores for update

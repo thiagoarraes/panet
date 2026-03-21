@@ -1,0 +1,40 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.99.3"
+  },
+  "remote": {
+    "https://deno.land/std@0.224.0/async/delay.ts": "f90dd685b97c2f142b8069082993e437b1602b8e2561134827eeb7c12b95c499",
+    "https://deno.land/std@0.224.0/http/server.ts": "f9313804bf6467a1704f45f76cb6cd0a3396a3b31c316035e6a4c2035d1ea514",
+    "https://esm.sh/@supabase/supabase-js@2.99.3": "043625cad1798d7e165a9cfcea145ac7d309c34786e5558023fecbcf565abfc7"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@supabase/supabase-js@^2.99.1",
+        "npm:@tanstack/react-query-devtools@^5.91.3",
+        "npm:@tanstack/react-query@^5.91.2",
+        "npm:@tiptap/extension-link@^3.20.1",
+        "npm:@tiptap/extension-placeholder@^3.20.1",
+        "npm:@tiptap/react@^3.20.1",
+        "npm:@tiptap/starter-kit@^3.20.1",
+        "npm:@types/react-dom@^18.3.0",
+        "npm:@types/react@^18.3.3",
+        "npm:@vercel/functions@^3.4.3",
+        "npm:@vitejs/plugin-react@^4.3.0",
+        "npm:date-fns@^4.1.0",
+        "npm:dompurify@^3.3.3",
+        "npm:eslint-plugin-react-hooks@^4.6.2",
+        "npm:eslint-plugin-react@^7.34.2",
+        "npm:eslint@^8.57.0",
+        "npm:lucide-react@0.577",
+        "npm:react-datepicker@^9.1.0",
+        "npm:react-dom@^18.3.1",
+        "npm:react-easy-crop@^5.5.6",
+        "npm:react-icons@^5.6.0",
+        "npm:react@^18.3.1",
+        "npm:vite@^5.2.0"
+      ]
+    }
+  }
+}

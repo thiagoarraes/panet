@@ -1,0 +1,21 @@
+#!/bin/sh
+
+echo "Checking UTF-8 encoding..."
+npm run check:encoding
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  echo
+  echo "Commit blocked: fix the encoding issues above."
+  exit "$status"
+fi
+
+echo "Checking Supabase edge functions..."
+npm run check:functions
+status=$?
+
+if [ "$status" -ne 0 ]; then
+  echo
+  echo "Commit blocked: fix the edge function issues above."
+  exit "$status"
+fi

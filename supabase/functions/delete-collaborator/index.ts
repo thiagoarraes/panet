@@ -41,7 +41,7 @@ const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos
 };
 
 const findAuthUserIdByEmail = async (
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: { auth: { admin: { listUsers: (params: { page: number; perPage: number }) => Promise<{ data?: { users?: Array<{ id?: string; email?: string | null }> }; error?: { message?: string } | null }> } } },
   email: string,
 ) => {
   const normalized = normalizeEmail(email);

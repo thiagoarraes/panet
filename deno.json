@@ -1,0 +1,9 @@
+{
+  "exclude": [
+    "dist",
+    "node_modules"
+  ],
+  "tasks": {
+    "check:functions": "deno run -A scripts/check-supabase-functions.ts"
+  }
+}

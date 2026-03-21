@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, MessageCircle, Send, Cake, CalendarDays, Plane, MessageSquare, SendHorizonal, Pencil, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Cake, CalendarDays, Clock, Plane, MessageSquare, SendHorizonal, Pencil, Trash2 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
+import { SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
 import { usePostagemDetalhe } from "../hooks/queries/usePostagemDetalhe";
 import { usePostagensSlugIndex } from "../hooks/queries/usePostagensSlugIndex";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useMural } from "../hooks/queries/useMural";
 import { useFerias } from "../hooks/queries/useFerias";
+import { useAusencias } from "../hooks/queries/useAusencias";
 import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 import { toPostSlug } from "../lib/postRouting.js";
@@ -74,6 +76,46 @@ const getPeriodoFolgaLabel = (item) => {
   return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
 };
 
+const isSameCalendarDay = (left, right) =>
+  left?.getDate?.() === right?.getDate?.() &&
+  left?.getMonth?.() === right?.getMonth?.() &&
+  left?.getFullYear?.() === right?.getFullYear?.();
+
+const formatDisplayDayMonth = (date) =>
+  date?.toLocaleDateString?.("pt-BR", { day: "2-digit", month: "2-digit" }) || "";
+
+const formatDisplayTime = (date) =>
+  date?.toLocaleTimeString?.("pt-BR", { hour: "2-digit", minute: "2-digit" }) || "";
+
+const getAusenciaMeta = (item) => {
+  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
+
+  const inicio = new Date(item.inicio);
+  const fim = item.fim ? new Date(item.fim) : null;
+  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
+
+  const now = new Date();
+  const hasFimValido = fim && !Number.isNaN(fim.getTime());
+  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
+  const isToday = isSameCalendarDay(inicio, now);
+
+  if (crossesDays) {
+    return {
+      dateLabel: "",
+      timeLabel: `${formatDisplayDayMonth(inicio)} ${formatDisplayTime(inicio)} → ${formatDisplayDayMonth(fim)} ${formatDisplayTime(fim)}`,
+    };
+  }
+
+  const dateLabel = !isToday ? formatDisplayDayMonth(inicio) : "";
+  const timeLabel = hasFimValido
+    ? `${formatDisplayTime(inicio)} – ${formatDisplayTime(fim)}`
+    : item.estimativa
+      ? `${formatDisplayTime(inicio)} · ${item.estimativa}`
+      : `${formatDisplayTime(inicio)} · sem previsão`;
+
+  return { dateLabel, timeLabel };
+};
+
 export function PostDetalhePage({
   currentUser,
   currentUserId,
@@ -102,6 +144,8 @@ export function PostDetalhePage({
   const feriasData = useMemo(() => feriasQuery.data || null, [feriasQuery.data]);
   const ferias = useMemo(() => feriasData?.ferias || [], [feriasData]);
   const dayoff = useMemo(() => feriasData?.dayoff || [], [feriasData]);
+  const ausenciasQuery = useAusencias(currentUserId, { summaryOnly: true });
+  const ausencias = useMemo(() => ausenciasQuery.data || [], [ausenciasQuery.data]);
 
   const toggleCurtidaMutation = useToggleCurtida();
   const comentarMutation = useComentar();
@@ -186,11 +230,22 @@ export function PostDetalhePage({
       .sort((a, b) => a._anchorDate.getTime() - b._anchorDate.getTime())
       .slice(0, 5);
   }, [dayoff, ferias]);
+  const ausentesAgora = useMemo(() => {
+    const now = new Date();
+    return (ausencias || [])
+      .filter((item) => {
+        if (!item?.inicio) return false;
+        const fim = item.fim ? new Date(item.fim) : null;
+        return !fim || fim >= now;
+      })
+      .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))
+      .slice(0, 5);
+  }, [ausencias]);
   const sideIssues = [
     { label: "Aniversários", error: aniversariosQuery.error },
     { label: "Colaboradores", error: colaboradoresQuery.error },
     { label: "PanZap", error: muralQuery.error },
-    { label: "PanOff", error: feriasQuery.error },
+    { label: "PanOff", error: feriasQuery.error || ausenciasQuery.error },
   ].filter((item) => Boolean(item.error));
 
   const comentar = async () => {
@@ -396,7 +451,9 @@ export function PostDetalhePage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximos.map((a) => (
+              {proximos.length === 0 && aniversariosQuery.isLoading
+                ? Array.from({ length: 4 }, (_, i) => <SkeletonAnivItem key={i} />)
+                : proximos.map((a) => (
                 <div key={a.colaborador.id} className="aniv-item">
                   <div className="aniv-date">
                     <div className="aniv-day">{a.data.split("/")[0]}</div>
@@ -418,11 +475,55 @@ export function PostDetalhePage({
           <div className="card">
             <div className="card-header">
               <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <Plane size={14} /> Férias & Day Off
+                <Plane size={14} /> PanOff
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              <div style={{ marginTop: 10, marginBottom: 12 }}>
+              {proximasFolgas.length === 0 && ausentesAgora.length === 0 && (feriasQuery.isLoading || ausenciasQuery.isLoading) && (
+                <div style={{ marginTop: 10, marginBottom: 12 }}>
+                  {Array.from({ length: 3 }, (_, i) => <SkeletonFolgaEntry key={i} />)}
+                </div>
+              )}
+              {ausentesAgora.length > 0 && (
+                <div style={{ marginTop: 10, marginBottom: 8 }}>
+                  {ausentesAgora.map((item) => {
+                    const ausenciaMeta = getAusenciaMeta(item);
+                    return (
+                      <div key={`ausente-${item.id}`} className="folga-entry is-ausencia">
+                        <div className="folga-avatar-wrap">
+                          <Avatar col={item.colaborador} size={32} />
+                        </div>
+                        <div className="folga-content">
+                          <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
+                          <div className="folga-status">
+                            <span
+                              className="status-chip"
+                              style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}
+                            >
+                              Ausente
+                            </span>
+                          </div>
+                          <div className="folga-meta">
+                            {ausenciaMeta.dateLabel ? (
+                              <span className="folga-meta-chip">
+                                <CalendarDays size={12} />
+                                {ausenciaMeta.dateLabel}
+                              </span>
+                            ) : null}
+                            {ausenciaMeta.timeLabel ? (
+                              <span className="folga-meta-chip is-time">
+                                <Clock size={12} />
+                                {ausenciaMeta.timeLabel}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ marginTop: ausentesAgora.length === 0 ? 10 : 0, marginBottom: 12 }}>
                 {proximasFolgas.map((item) => {
                   const badge = item.tipo === "ferias" ? (
                     <span
@@ -450,8 +551,10 @@ export function PostDetalhePage({
                       <div className="folga-content">
                         <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
                         <div className="folga-status">{badge}</div>
-                        <div className="folga-date-line">
-                          <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
+                        <div className="folga-meta">
+                          <span className="folga-meta-chip">
+                            <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -58,7 +58,7 @@
   .theme-light .nav-item.active {
     background: color-mix(in srgb, #00a09d 22%, #ffffff);
     color: var(--accent2);
-    font-weight: 600;
+    font-weight: 400;
     box-shadow: inset 0 0 0 1px color-mix(in srgb, #00a09d 34%, transparent);
   }
   .theme-light .aniv-item:hover {
@@ -383,8 +383,42 @@
   .aniv-item:hover { background: rgba(255,255,255,0.02); border-radius: 8px; padding-left: 4px; }
   .aniv-date { font-size: 12px; color: var(--muted); text-align: center; min-width: 36px; }
   .aniv-day { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; color: var(--accent); line-height: 1; }
-  .aniv-info { flex: 1; }
+  .aniv-info { flex: 1; min-width: 0; }
+  .aniv-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
   .aniv-name { font-size: 14px; font-weight: 500; }
+  .aniv-signo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 16px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 8%, var(--surface2)),
+      color-mix(in srgb, var(--accent) 4%, var(--surface))
+    );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    color: color-mix(in srgb, var(--text) 84%, var(--accent));
+    font-family: "Sora", sans-serif;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .aniv-signo-text {
+    display: block;
+    line-height: 1;
+    transform: translateY(0.5px);
+  }
   .aniv-cargo { font-size: 12px; color: var(--muted); }
   .aniv-reactions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .aniv-all-header { align-items: center; gap: 12px; }
@@ -415,6 +449,7 @@
 
   /* Férias & Day Off card rows */
   .folga-entry {
+    --folga-accent: var(--accent);
     position: relative;
     display: grid;
     grid-template-columns: 32px minmax(0, 1fr);
@@ -436,15 +471,21 @@
     top: 0;
     bottom: 0;
     width: 3px;
-    background: color-mix(in srgb, var(--accent) 70%, transparent);
+    background: color-mix(in srgb, var(--folga-accent) 70%, transparent);
     opacity: 0.9;
+  }
+  .folga-entry.is-ausencia {
+    --folga-accent: #FFA032;
   }
   .folga-entry.is-dayoff::before {
     background: color-mix(in srgb, #E84B7A 78%, transparent);
   }
+  .folga-entry.is-dayoff {
+    --folga-accent: #E84B7A;
+  }
   .folga-entry:hover {
     transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-color: color-mix(in srgb, var(--folga-accent) 35%, var(--border));
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
   }
   .folga-avatar-wrap { display: flex; align-items: flex-start; justify-content: center; }
@@ -475,24 +516,277 @@
     align-items: center;
   }
   .folga-status .status-chip { white-space: nowrap; }
-  .folga-date-line {
+  .folga-meta {
     grid-area: date;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-top: 1px;
+  }
+  .folga-meta-chip {
     display: inline-flex;
-    width: fit-content;
     align-items: center;
     gap: 5px;
-    margin-top: 1px;
+    min-width: 0;
+    max-width: 100%;
     font-size: 10px;
     font-weight: 600;
     color: var(--muted);
-    background: color-mix(in srgb, var(--accent) 7%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+    background: color-mix(in srgb, var(--folga-accent) 7%, transparent);
+    border: 1px solid color-mix(in srgb, var(--folga-accent) 18%, transparent);
     border-radius: 999px;
-    padding: 1px 7px;
+    padding: 2px 7px;
+    white-space: nowrap;
   }
-  .folga-entry.is-dayoff .folga-date-line {
-    background: color-mix(in srgb, #E84B7A 7%, transparent);
-    border-color: color-mix(in srgb, #E84B7A 18%, transparent);
+  .folga-meta-chip svg {
+    flex-shrink: 0;
+  }
+  .folga-meta-chip.is-time {
+    color: color-mix(in srgb, var(--text) 76%, var(--muted));
+  }
+
+  .panoff-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .panoff-hero {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 22px;
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+    border-radius: 20px;
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 34%),
+      linear-gradient(135deg, color-mix(in srgb, var(--surface2) 86%, transparent), var(--surface));
+  }
+  .panoff-hero-copy {
+    min-width: 0;
+    max-width: 720px;
+  }
+  .panoff-hero-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: "Sora", sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .panoff-hero-sub {
+    margin-top: 10px;
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .panoff-hero-stats {
+    flex: 1;
+    min-width: min(100%, 360px);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .panoff-stat {
+    padding: 14px 14px 12px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface2) 88%, transparent), color-mix(in srgb, var(--surface) 96%, transparent));
+  }
+  .panoff-stat.is-ferias {
+    border-color: color-mix(in srgb, #5B8DEF 26%, var(--border));
+  }
+  .panoff-stat.is-dayoff {
+    border-color: color-mix(in srgb, #E84B7A 26%, var(--border));
+  }
+  .panoff-stat.is-ausencia {
+    border-color: color-mix(in srgb, #FFA032 26%, var(--border));
+  }
+  .panoff-stat-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panoff-stat-value {
+    margin-top: 8px;
+    font-family: "Sora", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+  }
+  .panoff-stat-note {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+  .panoff-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .panoff-column {
+    position: relative;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface2) 78%, transparent), color-mix(in srgb, var(--surface) 98%, transparent));
+    overflow: hidden;
+  }
+  .panoff-column::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 3px;
+    opacity: 0.9;
+  }
+  .panoff-column.is-ferias::before {
+    background: linear-gradient(90deg, rgba(91,141,239,0.95), rgba(91,141,239,0.25));
+  }
+  .panoff-column.is-dayoff::before {
+    background: linear-gradient(90deg, rgba(232,75,122,0.95), rgba(232,75,122,0.25));
+  }
+  .panoff-column.is-ausencia::before {
+    background: linear-gradient(90deg, rgba(255,160,50,0.95), rgba(255,160,50,0.25));
+  }
+  .panoff-column-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .panoff-column-copy {
+    min-width: 0;
+  }
+  .panoff-column-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: "Sora", sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .panoff-column-title.is-ferias {
+    color: #8fb3ff;
+  }
+  .panoff-column-title.is-dayoff {
+    color: #ff7fa5;
+  }
+  .panoff-column-title.is-ausencia {
+    color: #ffb457;
+  }
+  .panoff-column-sub {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .panoff-count-pill {
+    flex-shrink: 0;
+    min-width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-family: "Sora", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--surface2) 82%, transparent);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .panoff-count-pill.is-ferias {
+    border-color: rgba(91,141,239,0.28);
+    color: #8fb3ff;
+  }
+  .panoff-count-pill.is-dayoff {
+    border-color: rgba(232,75,122,0.28);
+    color: #ff7fa5;
+  }
+  .panoff-count-pill.is-ausencia {
+    border-color: rgba(255,160,50,0.28);
+    color: #ffb457;
+  }
+  .panoff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 84px;
+  }
+  .panoff-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 92px;
+    padding: 14px;
+    border: 1px dashed color-mix(in srgb, var(--border) 88%, transparent);
+    border-radius: 14px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    background: color-mix(in srgb, var(--surface2) 52%, transparent);
+  }
+  .aniv-hero {
+    flex-direction: column;
+    border-color: color-mix(in srgb, #ffb347 26%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, #ffb347 18%, transparent), transparent 34%),
+      radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 32%),
+      linear-gradient(135deg, color-mix(in srgb, var(--surface2) 86%, transparent), var(--surface));
+  }
+  .aniv-hero .panoff-hero-copy,
+  .aniv-hero .panoff-hero-stats {
+    max-width: none;
+    width: 100%;
+  }
+  .aniv-hero .panoff-hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .aniv-hero .panoff-stat {
+    min-height: 132px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .aniv-hero .panoff-stat-label {
+    min-height: 30px;
+    line-height: 1.3;
+  }
+  .aniv-hero .panoff-stat-note {
+    min-height: 32px;
+  }
+  .aniv-stat-value-name {
+    margin-top: 10px;
+    font-size: clamp(22px, 2vw, 28px);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .panoff-stat.is-aniv-upcoming {
+    border-color: color-mix(in srgb, #ffb347 28%, var(--border));
+  }
+  .panoff-stat.is-aniv-month {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  }
+  .panoff-stat.is-aniv-weekday {
+    border-color: color-mix(in srgb, #5B8DEF 28%, var(--border));
   }
 
   /* Presencial */
@@ -2004,6 +2298,31 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
   }
+  .mood-loading-head {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .mood-loading-line {
+    border-radius: 999px;
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--surface2) 84%, transparent) 25%,
+        color-mix(in srgb, var(--surface2) 56%, var(--border)) 50%,
+        color-mix(in srgb, var(--surface2) 84%, transparent) 75%
+      );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  .mood-loading-line--title {
+    width: min(320px, 76%);
+    height: 26px;
+  }
+  .mood-loading-line--subtitle {
+    width: min(220px, 48%);
+    height: 14px;
+  }
   .mood-loading-card {
     min-height: 88px;
     background:
@@ -2253,6 +2572,7 @@
     left: 100%;
   }
   .panet-datepicker-popper { z-index: 1200 !important; }
+  .datepicker-input { cursor: pointer; }
   .panet-datepicker {
     border: 1px solid var(--border) !important;
     background: var(--surface) !important;
@@ -2289,6 +2609,50 @@
     background: var(--accent) !important;
     color: #ffffff !important;
   }
+  .panet-datepicker .react-datepicker__day-name,
+  .panet-datepicker .react-datepicker__day {
+    width: 2rem;
+    line-height: 2rem;
+    margin: 0.18rem;
+  }
+  .panet-datepicker .react-datepicker__month-container {
+    padding: 4px 8px 10px;
+  }
+  .panet-datepicker .react-datepicker__time-container {
+    width: 116px;
+    border-left: 1px solid var(--border) !important;
+    background: color-mix(in srgb, var(--surface2) 78%, var(--surface)) !important;
+  }
+  .panet-datepicker .react-datepicker__time,
+  .panet-datepicker .react-datepicker__time-box {
+    width: 100% !important;
+    background: transparent !important;
+  }
+  .panet-datepicker .react-datepicker__time-list {
+    height: 286px !important;
+    padding: 8px !important;
+  }
+  .panet-datepicker .react-datepicker__time-list-item {
+    height: auto !important;
+    margin-bottom: 4px;
+    border-radius: 10px;
+    padding: 8px 10px !important;
+    color: var(--text) !important;
+    font-weight: 600;
+    transition: background 0.14s ease, color 0.14s ease;
+  }
+  .panet-datepicker .react-datepicker__time-list-item:hover {
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface)) !important;
+    color: #ffffff !important;
+  }
+  .panet-datepicker .react-datepicker__time-list-item--selected {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+  }
+  .panet-datepicker .react-datepicker__time-list-item--disabled {
+    color: color-mix(in srgb, var(--muted) 76%, transparent) !important;
+    opacity: 0.48;
+  }
   .panet-datepicker .react-datepicker__navigation-icon::before {
     border-color: var(--text) !important;
   }
@@ -2312,6 +2676,18 @@
   }
   .theme-light .panet-datepicker .react-datepicker__day--selected,
   .theme-light .panet-datepicker .react-datepicker__day--keyboard-selected {
+    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 88%, #fff), #008684) !important;
+    color: #ffffff !important;
+  }
+  .theme-light .panet-datepicker .react-datepicker__time-container {
+    border-left-color: color-mix(in srgb, #00a09d 22%, #c7d6e4) !important;
+    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 6%, #ffffff), #ffffff) !important;
+  }
+  .theme-light .panet-datepicker .react-datepicker__time-list-item:hover {
+    background: color-mix(in srgb, #00a09d 22%, #ffffff) !important;
+    color: #007d7b !important;
+  }
+  .theme-light .panet-datepicker .react-datepicker__time-list-item--selected {
     background: linear-gradient(180deg, color-mix(in srgb, #00a09d 88%, #fff), #008684) !important;
     color: #ffffff !important;
   }
@@ -2651,6 +3027,17 @@
     .mood-team-carousel-group .mood-team-card--wall {
       flex-basis: 156px;
     }
+    .panoff-hero {
+      flex-direction: column;
+    }
+    .panoff-hero-copy,
+    .panoff-hero-stats {
+      max-width: none;
+      width: 100%;
+    }
+    .panoff-board {
+      grid-template-columns: 1fr;
+    }
     .grid-3 { grid-template-columns: repeat(2, 1fr); }
     .grid-4 { grid-template-columns: repeat(2, 1fr); }
     .galeria-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2740,6 +3127,50 @@
     }
     .mood-dist-row {
       grid-template-columns: minmax(88px, 112px) minmax(0, 1fr) auto;
+    }
+    .panoff-hero {
+      padding: 18px;
+      border-radius: 18px;
+      gap: 14px;
+    }
+    .panoff-hero-title {
+      font-size: 22px;
+    }
+    .panoff-hero-sub {
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .panoff-hero-stats {
+      grid-template-columns: 1fr;
+    }
+    .panoff-stat {
+      padding: 13px 14px;
+    }
+    .panoff-stat-value {
+      font-size: 24px;
+    }
+    .panoff-column {
+      padding: 14px;
+      border-radius: 16px;
+    }
+    .panoff-column-head {
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .panoff-column-title {
+      font-size: 15px;
+    }
+    .panoff-column-sub {
+      font-size: 11px;
+    }
+    .panoff-count-pill {
+      min-width: 32px;
+      height: 32px;
+      font-size: 12px;
+    }
+    .panoff-empty {
+      min-height: 84px;
+      font-size: 12px;
     }
     .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
     .galeria-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2925,23 +3356,48 @@
       gap: 8px;
     }
     .folga-entry {
-      padding: 9px 9px 9px 11px;
-      gap: 8px;
-      border-radius: 10px;
+      grid-template-columns: 32px minmax(0, 1fr);
+      align-items: start;
+      padding: 10px 10px 10px 12px;
+      gap: 10px;
+      border-radius: 12px;
+    }
+    .folga-avatar-wrap {
+      padding-top: 2px;
     }
     .folga-content {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        "user"
-        "status"
-        "date";
-      row-gap: 3px;
+        "user status"
+        "date status";
+      column-gap: 8px;
+      row-gap: 6px;
+      align-items: start;
+    }
+    .folga-user {
+      display: flex;
+      align-items: center;
+      min-height: 22px;
+      font-size: 14px;
+      line-height: 1.2;
     }
     .folga-status {
-      justify-self: start;
+      justify-self: end;
+      align-self: center;
     }
-    .folga-date-line {
+    .folga-status .status-chip {
+      min-height: 22px;
+      padding: 0 10px;
       font-size: 10px;
+    }
+    .folga-meta {
+      gap: 6px;
+      margin-top: 0;
+    }
+    .folga-meta-chip {
+      font-size: 10px;
+      min-height: 24px;
+      padding: 0 8px;
     }
     .presencial-card-flat {
       padding: 16px;

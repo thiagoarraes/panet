@@ -98,7 +98,8 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   }, [entries.length, teamWallViewportWidth]);
   const shouldAutoScrollTeamWall = entries.length > maxVisibleTeamWallCards;
   const teamWallAnimationDuration = useMemo(() => `${Math.max(24, entries.length * 4)}s`, [entries.length]);
-  const shouldShowTeamWall = step === 3 || (!moodWindow.canSubmit && entries.length > 0);
+  const isMoodBoardLoading = moodCheckinsQuery.isLoading && entries.length === 0 && !moodCheckinsQuery.isError;
+  const shouldShowTeamWall = step === 3 || (Boolean(myEntry) && step === 1) || (!moodWindow.canSubmit && entries.length > 0);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -294,6 +295,26 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
       setSubmitError(error?.message || "Não foi possível registrar sua vibe agora.");
     }
   };
+
+  if (isMoodBoardLoading) {
+    return (
+      <section className="card mood-check-card">
+        <div className="mood-check-shell is-single">
+          <div className="mood-check-main mood-check-main--team">
+            <div className="mood-loading-head" aria-hidden="true">
+              <div className="mood-loading-line mood-loading-line--title" />
+              <div className="mood-loading-line mood-loading-line--subtitle" />
+            </div>
+            <div className="mood-loading-grid" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="mood-loading-card mood-loading-card--team" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="card mood-check-card">

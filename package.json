@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "check:encoding": "node scripts/check-encoding.mjs",
-    "build": "npm run check:encoding && vite build",
+    "check:functions": "node scripts/run-deno.mjs task check:functions",
+    "build": "npm run check:encoding && npm run check:functions && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "cleanup:storage:orphans": "node scripts/cleanup-storage-orphans.mjs",

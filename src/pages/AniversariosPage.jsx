@@ -4,6 +4,7 @@ import { Avatar } from "../components/Avatar";
 import { SkeletonAnivItem } from "../components/Skeleton";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
+import { getZodiacInfo } from "../lib/zodiac";
 
 const MESES = [
   "Janeiro",
@@ -30,6 +31,32 @@ const formatBirthday = (isoDate) => {
   const [year, month, day] = String(isoDate || "").split("-");
   if (!year || !month || !day) return "";
   return `${day.padStart(2, "0")}/${month.padStart(2, "0")}`;
+};
+
+const getNextBirthdayDate = (isoDate) => {
+  const raw = String(isoDate || "");
+  if (!raw) return null;
+
+  const [year, month, day] = raw.split("-").map((part) => Number(part));
+  if (!year || !month || !day) return null;
+
+  const now = new Date();
+  const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  const thisYearTarget = new Date(now.getFullYear(), month - 1, day, 12, 0, 0);
+  return thisYearTarget < todayNoon
+    ? new Date(now.getFullYear() + 1, month - 1, day, 12, 0, 0)
+    : thisYearTarget;
+};
+
+const formatBirthdayFullLabel = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const label = date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const normalized = label.replace(",", " ·");
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
 const daysUntilBirthday = (isoDate) => {
@@ -120,33 +147,69 @@ export function AniversariosPage({ currentUserId }) {
     return aniversariantesTodos.filter((a) => getMesIndex(a) === mesIndex).sort(sortByDia);
   }, [aniversariantesTodos, mesSelecionado]);
 
-  const AnivCard = ({ a }) => (
-    <div className="aniv-item">
-      <div className="aniv-date">
-        {a.diasRestantes === 0 ? (
-          <div style={{ display: "inline-flex" }}>
-            <Cake size={20} color="var(--accent)" />
-          </div>
-        ) : (
-          <>
-            <div className="aniv-day">{a.data.split("/")[0]}</div>
-            <div style={{ fontSize: 10, color: "var(--muted)" }}>/ {a.data.split("/")[1]}</div>
-          </>
-        )}
-      </div>
-      <Avatar col={a.colaborador} size={40} />
-      <div className="aniv-info">
-        <div className="aniv-name">{a.colaborador.nome}</div>
-        <div className="aniv-cargo">
+  const aniversariantesProximosSeteDias = useMemo(
+    () => aniversariantesTodos.filter((a) => a.diasRestantes >= 0 && a.diasRestantes <= 7),
+    [aniversariantesTodos]
+  );
+
+  const proximoAniversariante = useMemo(() => {
+    return [...aniversariantesTodos]
+      .filter((a) => a.diasRestantes >= 0)
+      .sort((a, b) => {
+        const diff = a.diasRestantes - b.diasRestantes;
+        if (diff !== 0) return diff;
+        return sortByDia(a, b);
+      })[0] || null;
+  }, [aniversariantesTodos]);
+
+  const proximoAniversarioDate = useMemo(
+    () => getNextBirthdayDate(proximoAniversariante?.colaborador?.aniversario),
+    [proximoAniversariante]
+  );
+
+  const proximoAniversarioLabel = useMemo(
+    () => formatBirthdayFullLabel(proximoAniversarioDate),
+    [proximoAniversarioDate]
+  );
+
+  const AnivCard = ({ a }) => {
+    const signo = getZodiacInfo(a.colaborador?.aniversario);
+
+    return (
+      <div className="aniv-item">
+        <div className="aniv-date">
           {a.diasRestantes === 0 ? (
-            <span className="today-badge">HOJE</span>
+            <div style={{ display: "inline-flex" }}>
+              <Cake size={20} color="var(--accent)" />
+            </div>
           ) : (
-            <span style={{ fontSize: 11, color: "var(--muted)" }}>{formatDiasRestantes(a.diasRestantes)}</span>
+            <>
+              <div className="aniv-day">{a.data.split("/")[0]}</div>
+              <div style={{ fontSize: 10, color: "var(--muted)" }}>/ {a.data.split("/")[1]}</div>
+            </>
           )}
         </div>
+        <Avatar col={a.colaborador} size={40} />
+        <div className="aniv-info">
+          <div className="aniv-name-row">
+            <div className="aniv-name">{a.colaborador.nome}</div>
+            {signo && (
+              <span className="aniv-signo-badge">
+                <span className="aniv-signo-text">{signo.nome}</span>
+              </span>
+            )}
+          </div>
+          <div className="aniv-cargo">
+            {a.diasRestantes === 0 ? (
+              <span className="today-badge">HOJE</span>
+            ) : (
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>{formatDiasRestantes(a.diasRestantes)}</span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="fade-up">
@@ -160,9 +223,63 @@ export function AniversariosPage({ currentUserId }) {
           </div>
         </div>
       )}
-      <div className="section-title" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <Cake size={22} /> Aniversários
-      </div>
+
+      <section className="panoff-hero aniv-hero" style={{ marginBottom: 18 }}>
+        <div className="panoff-hero-copy">
+          <div className="panoff-hero-title">
+            <Cake size={22} />
+            <span>Aniversários</span>
+          </div>
+          <div className="panoff-hero-sub">
+            Acompanhe os aniversários da equipe, veja quem celebra em breve e se organize para não deixar passar as próximas datas.
+          </div>
+        </div>
+
+        <div className="panoff-hero-stats">
+          <div className="panoff-stat is-aniv-weekday">
+            <div className="panoff-stat-label">
+              <CalendarDays size={14} />
+              Próximo aniversariante
+            </div>
+            <div className="panoff-stat-value aniv-stat-value-name">
+              {proximoAniversariante ? proximoAniversariante.colaborador.nome : "--"}
+            </div>
+            <div className="panoff-stat-note">
+              {proximoAniversariante ? (
+                <span>{proximoAniversarioLabel}</span>
+              ) : (
+                "Nenhum aniversário cadastrado"
+              )}
+            </div>
+          </div>
+
+          <div className="panoff-stat is-aniv-upcoming">
+            <div className="panoff-stat-label">
+              <CalendarDays size={14} />
+              Nos próximos 7 dias
+            </div>
+            <div className="panoff-stat-value">{aniversariantesProximosSeteDias.length}</div>
+            <div className="panoff-stat-note">
+              {aniversariantesProximosSeteDias.length === 0
+                ? "Nenhum na próxima semana"
+                : aniversariantesProximosSeteDias.length === 1
+                  ? "Aniversário está chegando"
+                  : "Aniversários estão chegando"}
+            </div>
+          </div>
+
+          <div className="panoff-stat is-aniv-month">
+            <div className="panoff-stat-label">
+              <Cake size={14} />
+              {`Neste mês de ${MESES[mesAtualIndex]}`}
+            </div>
+            <div className="panoff-stat-value">{aniversariantesMesAtual.length}</div>
+            <div className="panoff-stat-note">
+              {aniversariantesMesAtual.length === 1 ? "aniversariante" : "aniversariantes"}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">

@@ -173,47 +173,29 @@ create policy "comentarios: dono deleta"
   using (auth.uid() = colaborador_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- TABELA: aniversarios
+-- TABELA: aniversario_parabenizacoes
 -- ─────────────────────────────────────────────────────────────────────────────
-create table public.aniversarios (
-  id              uuid primary key default uuid_generate_v4(),
-  colaborador_id  uuid not null references public.colaboradores(id) on delete cascade,
-  data_aniversario date not null,          -- dia e mês usados; ano ignorado
-  created_at      timestamptz not null default now()
+create table public.aniversario_parabenizacoes (
+  id                uuid primary key default gen_random_uuid(),
+  aniversariante_id uuid not null references public.colaboradores(id) on delete cascade,
+  colaborador_id    uuid not null references public.colaboradores(id) on delete cascade,
+  ano_ref           int not null default extract(year from now())::int,
+  created_at        timestamptz not null default now(),
+  unique(aniversariante_id, colaborador_id, ano_ref)
 );
 
-alter table public.aniversarios enable row level security;
+alter table public.aniversario_parabenizacoes enable row level security;
 
-create policy "aniversarios: leitura autenticados"
-  on public.aniversarios for select using (auth.role() = 'authenticated');
+create policy "aniv_parab: leitura autenticados"
+  on public.aniversario_parabenizacoes for select
+  using (auth.role() = 'authenticated');
 
-create policy "aniversarios: admin gerencia"
-  on public.aniversarios for all
-  using (
-    exists (
-      select 1 from public.colaboradores
-      where id = auth.uid() and perfil = 'admin'
-    )
-  );
+create policy "aniv_parab: colaborador insere"
+  on public.aniversario_parabenizacoes for insert
+  with check (auth.uid() = colaborador_id);
 
--- ─────────────────────────────────────────────────────────────────────────────
--- TABELA: reacoes_aniversario
--- ─────────────────────────────────────────────────────────────────────────────
-create table public.reacoes_aniversario (
-  id              uuid primary key default uuid_generate_v4(),
-  aniversario_id  uuid not null references public.aniversarios(id) on delete cascade,
-  colaborador_id  uuid not null references public.colaboradores(id) on delete cascade,
-  created_at      timestamptz not null default now(),
-  unique(aniversario_id, colaborador_id)
-);
-
-alter table public.reacoes_aniversario enable row level security;
-
-create policy "reacoes_aniv: leitura autenticados"
-  on public.reacoes_aniversario for select using (auth.role() = 'authenticated');
-
-create policy "reacoes_aniv: colaborador gerencia"
-  on public.reacoes_aniversario for all
+create policy "aniv_parab: colaborador deleta"
+  on public.aniversario_parabenizacoes for delete
   using (auth.uid() = colaborador_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -226,6 +208,7 @@ create table public.ferias (
   fim             date not null,
   status          status_ferias not null default 'marcado',
   tipo            text not null default 'ferias',   -- 'ferias' | 'dayoff'
+  motivo_real     text,
   created_at      timestamptz not null default now()
 );
 
