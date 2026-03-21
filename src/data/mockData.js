@@ -5,6 +5,11 @@
 
 const postImg    = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 const galeriaImg = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
+const todayIso = (() => {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+})();
 
 export const COLABORADORES = [
   { id: 1,  nome: "Ana Paula Ferreira", cargo: "Diretora de Criação",      email: "ana.paula@agenciapan.com",    telefone: "(84) 99812-4401", foto: "AP", cor: "#E8826A", redes: { instagram: "anapaulaferreira",   linkedin: "ana-paula-ferreira" } },
@@ -145,4 +150,47 @@ export const MURAL_INIT = [
   { id: 3, colaborador: COLABORADORES[1], texto: "Brunopanwifi123 hahaha", hora: "09:17", data: "Hoje" },
   { id: 4, colaborador: COLABORADORES[8], texto: "Lembrem que amanhã temos reunião de alinhamento de contas às 14h! Confirmem presença 🙏", hora: "11:30", data: "Hoje" },
   { id: 5, colaborador: COLABORADORES[2], texto: "Entregando as artes do cliente Natura hoje à tarde. Pessoal de criação, qualquer dúvida me chamem!", hora: "13:45", data: "Ontem" },
+];
+
+export const MOOD_CHECKINS_INIT = [
+  {
+    id: "mood-1",
+    colaboradorId: 1,
+    moodId: "flow",
+    energy: 8,
+    tags: ["Criativo hoje", "Bom humor"],
+    dateKey: todayIso,
+    createdAt: `${todayIso}T08:35:00`,
+    updatedAt: `${todayIso}T08:35:00`,
+  },
+  {
+    id: "mood-2",
+    colaboradorId: 3,
+    moodId: "focus",
+    energy: 7,
+    tags: ["Deadline próximo", "Inspirado"],
+    dateKey: todayIso,
+    createdAt: `${todayIso}T09:12:00`,
+    updatedAt: `${todayIso}T09:12:00`,
+  },
+  {
+    id: "mood-3",
+    colaboradorId: 6,
+    moodId: "steady",
+    energy: 5,
+    tags: ["Reunião demais"],
+    dateKey: todayIso,
+    createdAt: `${todayIso}T10:05:00`,
+    updatedAt: `${todayIso}T10:05:00`,
+  },
+  {
+    id: "mood-4",
+    colaboradorId: 8,
+    moodId: "rocket",
+    energy: 9,
+    tags: ["Tomei café", "Com ideia nova"],
+    dateKey: todayIso,
+    createdAt: `${todayIso}T10:44:00`,
+    updatedAt: `${todayIso}T10:44:00`,
+  },
 ];

@@ -2,6 +2,7 @@
 import { SkeletonPostCard, SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
 import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { DashboardMoodBoard } from "../components/DashboardMoodBoard";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
 import { useMural } from "../hooks/queries/useMural";
@@ -326,6 +327,7 @@ export function DashboardPage({
       )}
       <div className="dash-layout">
         <div>
+          <DashboardMoodBoard currentUser={currentUser} currentUserId={currentUserId} />
           <div className="section-header">
             <div>
               <div className="section-title">Feed da Pan</div>

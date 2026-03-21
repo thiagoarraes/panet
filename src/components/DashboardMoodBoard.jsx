@@ -1,0 +1,446 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Lock, RefreshCw } from "lucide-react";
+import { useSaveMoodCheckin } from "../hooks/mutations/useMoodCheckinMutations";
+import { useMoodCheckins } from "../hooks/queries/useMoodCheckins";
+import {
+  ENERGY_COLORS,
+  MAX_MOOD_TAGS,
+  MOOD_OPTIONS,
+  MOOD_TAGS,
+  getEnergyColor,
+  getEnergyGlyph,
+  getEnergyLabel,
+  getLocalDateKey,
+  getMoodOption,
+  normalizeMoodTags,
+} from "../lib/dashboardMood";
+
+const TEAM_WALL_CARD_MIN_WIDTH = 150;
+const TEAM_WALL_CARD_GAP = 10;
+
+const buildDraftFromEntry = (entry) => ({
+  moodId: entry?.moodId || "",
+  energy: entry?.energy || 5,
+  tags: normalizeMoodTags(entry?.tags).slice(0, MAX_MOOD_TAGS),
+});
+
+const getFirstName = (name) => String(name || "").trim().split(/\s+/).filter(Boolean)[0] || "time";
+
+const formatTodayLabel = () =>
+  new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+
+const formatTimeLabel = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+};
+
+const getEnergySegmentStyle = (color) => ({
+  background: `linear-gradient(180deg, color-mix(in srgb, ${color} 86%, #ffffff), ${color})`,
+  borderColor: `color-mix(in srgb, ${color} 44%, transparent)`,
+  boxShadow: `0 12px 22px color-mix(in srgb, ${color} 24%, transparent)`,
+});
+
+const getEnergyFillStyle = (width, color) => ({
+  width,
+  background: `linear-gradient(90deg, color-mix(in srgb, ${color} 76%, #ffffff), ${color})`,
+});
+
+export function DashboardMoodBoard({ currentUser, currentUserId }) {
+  const dateKey = getLocalDateKey();
+  const moodCheckinsQuery = useMoodCheckins(currentUserId, { dateKey });
+  const saveMoodCheckin = useSaveMoodCheckin(currentUserId);
+  const hydratedEntryRef = useRef("");
+  const teamWallViewportRef = useRef(null);
+  const teamWallGroupRef = useRef(null);
+  const [step, setStep] = useState(1);
+  const [draft, setDraft] = useState(() => buildDraftFromEntry(null));
+  const [submitError, setSubmitError] = useState("");
+  const [isTeamWallPaused, setIsTeamWallPaused] = useState(false);
+  const [teamWallViewportWidth, setTeamWallViewportWidth] = useState(0);
+  const [teamWallLoopWidth, setTeamWallLoopWidth] = useState(0);
+
+  const entries = useMemo(
+    () => (Array.isArray(moodCheckinsQuery.data) ? moodCheckinsQuery.data : []),
+    [moodCheckinsQuery.data]
+  );
+  const myEntry = useMemo(
+    () => entries.find((entry) => String(entry.colaboradorId) === String(currentUserId)) || null,
+    [currentUserId, entries]
+  );
+  const currentUserFirstName = useMemo(() => getFirstName(currentUser?.nome), [currentUser?.nome]);
+  const maxVisibleTeamWallCards = useMemo(() => {
+    if (teamWallViewportWidth <= 0) return entries.length;
+    return Math.max(
+      1,
+      Math.floor((teamWallViewportWidth + TEAM_WALL_CARD_GAP) / (TEAM_WALL_CARD_MIN_WIDTH + TEAM_WALL_CARD_GAP))
+    );
+  }, [entries.length, teamWallViewportWidth]);
+  const shouldAutoScrollTeamWall = entries.length > maxVisibleTeamWallCards;
+  const teamWallAnimationDuration = useMemo(() => `${Math.max(24, entries.length * 4)}s`, [entries.length]);
+
+  useEffect(() => {
+    if (!myEntry) return;
+
+    const signature = `${myEntry.id}:${myEntry.updatedAt}`;
+    if (hydratedEntryRef.current === signature) return;
+
+    hydratedEntryRef.current = signature;
+    setDraft(buildDraftFromEntry(myEntry));
+    setStep(3);
+  }, [myEntry]);
+
+  useEffect(() => {
+    const node = teamWallViewportRef.current;
+    if (!node) return undefined;
+
+    let frameId = 0;
+    const measure = () => {
+      frameId = window.requestAnimationFrame(() => {
+        const nextWidth = node.clientWidth || 0;
+        setTeamWallViewportWidth((current) => (current === nextWidth ? current : nextWidth));
+      });
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => {
+        window.cancelAnimationFrame(frameId);
+        window.removeEventListener("resize", measure);
+      };
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
+  }, [entries.length, step]);
+
+  useEffect(() => {
+    if (shouldAutoScrollTeamWall) return;
+    setIsTeamWallPaused(false);
+  }, [shouldAutoScrollTeamWall]);
+
+  useEffect(() => {
+    if (!shouldAutoScrollTeamWall) {
+      setTeamWallLoopWidth(0);
+      return undefined;
+    }
+
+    const node = teamWallGroupRef.current;
+    if (!node) return undefined;
+
+    let frameId = 0;
+    const measure = () => {
+      frameId = window.requestAnimationFrame(() => {
+        const nextWidth = node.scrollWidth || 0;
+        setTeamWallLoopWidth((current) => (current === nextWidth ? current : nextWidth));
+      });
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => {
+        window.cancelAnimationFrame(frameId);
+        window.removeEventListener("resize", measure);
+      };
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
+  }, [entries, shouldAutoScrollTeamWall]);
+
+  const handlePauseTeamWall = () => {
+    if (!shouldAutoScrollTeamWall) return;
+    setIsTeamWallPaused(true);
+  };
+
+  const handleResumeTeamWall = () => {
+    if (!shouldAutoScrollTeamWall) return;
+    setIsTeamWallPaused(false);
+  };
+
+  const renderTeamWallCard = (entry, keyPrefix = "") => {
+    const mood = getMoodOption(entry.moodId);
+    const energyWidth = `${Math.max(10, entry.energy * 10)}%`;
+    const energyColor = getEnergyColor(entry.energy);
+    const cardKey = keyPrefix ? `${keyPrefix}${entry.id}` : entry.id;
+
+    return (
+      <article
+        key={cardKey}
+        className="mood-team-card mood-team-card--wall"
+        style={{ "--energy-color": energyColor }}
+        onMouseEnter={handlePauseTeamWall}
+        onMouseLeave={handleResumeTeamWall}
+        onTouchStart={handlePauseTeamWall}
+        onTouchEnd={handleResumeTeamWall}
+        onTouchCancel={handleResumeTeamWall}
+      >
+        <div className="mood-team-emoji-wrap">{mood.emoji}</div>
+        <div className="mood-team-energy-bar">
+          <span className="mood-team-energy-fill" style={getEnergyFillStyle(energyWidth, energyColor)} />
+        </div>
+        <div className="mood-team-energy-label">
+          {getEnergyGlyph(entry.energy)} {getEnergyLabel(entry.energy)}
+        </div>
+        {entry.tags.length > 0 && (
+          <div className="mood-mini-chips is-compact">
+            {entry.tags.map((tag) => (
+              <span key={tag} className="mood-mini-chip">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mood-team-time mood-team-time--foot">{formatTimeLabel(entry.updatedAt || entry.createdAt)}</div>
+      </article>
+    );
+  };
+
+  const handleSelectMood = (moodId) => {
+    setDraft((previous) => ({ ...previous, moodId }));
+    setSubmitError("");
+    setStep(2);
+  };
+
+  const handleToggleTag = (tag) => {
+    setDraft((previous) => {
+      const hasTag = previous.tags.includes(tag);
+      if (hasTag) {
+        return { ...previous, tags: previous.tags.filter((item) => item !== tag) };
+      }
+      if (previous.tags.length >= MAX_MOOD_TAGS) return previous;
+      return { ...previous, tags: [...previous.tags, tag] };
+    });
+  };
+
+  const handleEditVibe = () => {
+    setSubmitError("");
+    setDraft(buildDraftFromEntry(myEntry));
+    setStep(myEntry?.moodId ? 2 : 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!draft.moodId || saveMoodCheckin.isPending) return;
+
+    try {
+      setSubmitError("");
+      await saveMoodCheckin.mutateAsync({
+        colaboradorId: currentUserId,
+        moodId: draft.moodId,
+        energy: draft.energy,
+        tags: draft.tags,
+      });
+      setStep(3);
+    } catch (error) {
+      setSubmitError(error?.message || "Não foi possível registrar sua vibe agora.");
+    }
+  };
+
+  return (
+    <section className="card mood-check-card">
+      <div className="mood-check-shell is-single">
+        {(step === 1 || step === 2) && (
+          <div className="mood-check-main mood-check-main--flow">
+            <div className="mood-check-hero mood-check-hero--compact">
+              <div>
+                <h2 className="mood-check-title">
+                  Em que vibe você tá hoje, <span className="mood-check-title-accent">{currentUserFirstName}</span>?
+                </h2>
+                <p className="mood-check-subtitle">{formatTodayLabel()}</p>
+              </div>
+            </div>
+
+            <div className="mood-stepper" aria-hidden="true">
+              {[1, 2].map((value) => (
+                <span
+                  key={value}
+                  className={`mood-stepper-dot ${step === value ? "is-active" : ""} ${step > value ? "is-done" : ""}`}
+                />
+              ))}
+            </div>
+
+            {step === 1 && (
+              <div className="mood-panel">
+                <div className="mood-check-privacy mood-check-privacy--compact">
+                  <Lock size={15} />
+                  <span>100% anônimo. Ninguém vê quem registrou a vibe.</span>
+                </div>
+
+                <div className="mood-grid">
+                  {MOOD_OPTIONS.map((mood) => (
+                    <button
+                      key={mood.id}
+                      type="button"
+                      className="mood-choice"
+                      style={{ "--mood-accent": mood.accent, "--mood-soft": mood.soft }}
+                      onClick={() => handleSelectMood(mood.id)}
+                    >
+                      <span className="mood-choice-emoji">{mood.emoji}</span>
+                      <strong className="mood-choice-label">{mood.label}</strong>
+                      <span className="mood-choice-vibe">{mood.vibe}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="mood-panel">
+                <div className="mood-panel-head">
+                  <div>
+                    <div className="mood-panel-eyebrow">Nível de energia</div>
+                    <h3>
+                      {getEnergyGlyph(draft.energy)} {getEnergyLabel(draft.energy)}
+                    </h3>
+                  </div>
+                  <button type="button" className="btn-ghost mood-inline-button" onClick={() => setStep(1)}>
+                    Voltar
+                  </button>
+                </div>
+
+                <div className="mood-energy-block">
+                  <div className="mood-energy-track" role="list" aria-label="Nível de energia">
+                    {Array.from({ length: 10 }, (_, index) => {
+                      const value = index + 1;
+                      const isActive = value <= draft.energy;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`mood-energy-segment ${isActive ? "is-on" : ""}`}
+                          style={isActive ? getEnergySegmentStyle(ENERGY_COLORS[index]) : undefined}
+                          onClick={() => setDraft((previous) => ({ ...previous, energy: value }))}
+                          aria-label={`Energia ${value}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="mood-energy-labels">
+                    <span>Morto por dentro</span>
+                    <span>Modo foguete</span>
+                  </div>
+                </div>
+
+                <div className="mood-tags-block">
+                  <div className="mood-energy-head">
+                    <span>O que define seu dia até agora?</span>
+                    <strong>{draft.tags.length}/{MAX_MOOD_TAGS}</strong>
+                  </div>
+                  <div className="mood-tag-list">
+                    {MOOD_TAGS.map((tag) => {
+                      const isSelected = draft.tags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          className={`mood-tag-chip ${isSelected ? "is-selected" : ""}`}
+                          onClick={() => handleToggleTag(tag)}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {submitError && <div className="mood-inline-error">{submitError}</div>}
+
+                <div className="mood-actions">
+                  <button
+                    type="button"
+                    className="btn-primary mood-submit-button"
+                    onClick={handleSubmit}
+                    disabled={!draft.moodId || saveMoodCheckin.isPending}
+                  >
+                    {saveMoodCheckin.isPending ? "Registrando..." : "Registrar vibe"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="mood-check-main mood-check-main--team">
+            <div className="mood-team-wall-head">
+              <div className="mood-team-wall-copy">
+                <h3 className="section-title mood-team-wall-title">Painel de vibes</h3>
+                <p className="section-sub mood-team-wall-subtitle">Vibes registradas pelo time hoje</p>
+              </div>
+              <button type="button" className="btn-ghost mood-inline-button" onClick={handleEditVibe}>
+                <RefreshCw size={14} />
+                Atualizar minha vibe
+              </button>
+            </div>
+
+            {moodCheckinsQuery.isLoading && entries.length === 0 && (
+              <div className="mood-loading-grid" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="mood-loading-card mood-loading-card--team" />
+                ))}
+              </div>
+            )}
+
+            {moodCheckinsQuery.isError && (
+              <div className="mood-empty-state">
+                Não foi possível carregar as vibes do time agora. Tente novamente em instantes.
+              </div>
+            )}
+
+            {!moodCheckinsQuery.isError && entries.length > 0 && (
+              <div ref={teamWallViewportRef}>
+                {shouldAutoScrollTeamWall ? (
+                  <div
+                    className={`mood-team-carousel ${teamWallLoopWidth > 0 ? "is-ready" : ""} ${isTeamWallPaused ? "is-paused" : ""}`}
+                    style={{
+                      "--mood-wall-duration": teamWallAnimationDuration,
+                      "--mood-wall-loop-width": `${teamWallLoopWidth}px`,
+                    }}
+                  >
+                    <div className="mood-team-carousel-track">
+                      <div ref={teamWallGroupRef} className="mood-team-carousel-group">
+                        {entries.map((entry) => renderTeamWallCard(entry))}
+                      </div>
+                      <div className="mood-team-carousel-group" aria-hidden="true">
+                        {entries.map((entry) => renderTeamWallCard(entry, "clone-"))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mood-team-grid mood-team-grid--wall">
+                    {entries.map((entry) => renderTeamWallCard(entry))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!moodCheckinsQuery.isError && entries.length === 0 && !moodCheckinsQuery.isLoading && (
+              <div className="mood-empty-state">
+                Ainda não houve check-ins hoje. O primeiro registro aparece aqui assim que alguém enviar a própria vibe.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
