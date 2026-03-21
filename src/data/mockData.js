@@ -3,13 +3,11 @@
 // Quando cada módulo for integrado ao banco, importe os dados reais
 // nos hooks correspondentes (src/hooks/) e remova daqui.
 
+import { getCurrentMoodDateKey } from "../lib/dashboardMood.js";
+
 const postImg    = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 const galeriaImg = (seed) => `https://picsum.photos/seed/${seed}/600/450`;
-const todayIso = (() => {
-  const now = new Date();
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-})();
+const todayIso = getCurrentMoodDateKey();
 
 export const COLABORADORES = [
   { id: 1,  nome: "Ana Paula Ferreira", cargo: "Diretora de Criação",      email: "ana.paula@agenciapan.com",    telefone: "(84) 99812-4401", foto: "AP", cor: "#E8826A", redes: { instagram: "anapaulaferreira",   linkedin: "ana-paula-ferreira" } },

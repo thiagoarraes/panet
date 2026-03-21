@@ -7,6 +7,7 @@
 -- ── Extensões ─────────────────────────────────────────────────────────────────
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto;
+create extension if not exists pg_cron;
 
 -- ── Enum: perfil de acesso ────────────────────────────────────────────────────
 create type perfil_acesso as enum ('colaborador', 'admin');
@@ -710,6 +711,29 @@ create policy "humor_checkins: colaborador atualiza proprio"
 create policy "humor_checkins: colaborador remove proprio"
   on public.humor_checkins for delete
   using (auth.uid() = colaborador_id);
+
+create or replace function public.cleanup_humor_checkins()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  deleted_count integer;
+begin
+  delete from public.humor_checkins
+  where data_ref < timezone('America/Sao_Paulo', now())::date;
+
+  get diagnostics deleted_count = row_count;
+  return deleted_count;
+end;
+$$;
+
+select cron.schedule(
+  'humor-checkins-daily-prune',
+  '59 10 * * *',
+  $$select public.cleanup_humor_checkins();$$
+);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- STORAGE: buckets públicos

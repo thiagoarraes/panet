@@ -1694,6 +1694,35 @@
     font-size: 12px;
     line-height: 1.5;
   }
+  .mood-window-note {
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+      color-mix(in srgb, var(--surface2) 82%, transparent);
+    padding: 14px 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .mood-window-note strong {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .mood-window-note--team {
+    margin-top: 12px;
+  }
+  .mood-choice:disabled,
+  .mood-energy-segment:disabled,
+  .mood-tag-chip:disabled,
+  .mood-submit-button:disabled,
+  .mood-inline-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.64;
+    transform: none;
+  }
   .mood-summary {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -2020,6 +2049,7 @@
   .theme-light .mood-check-privacy,
   .theme-light .mood-tag-chip,
   .theme-light .mood-mini-chip,
+  .theme-light .mood-window-note,
   .theme-light .mood-empty-state {
     background: color-mix(in srgb, #00a09d 6%, #ffffff);
     border-color: color-mix(in srgb, #00a09d 16%, #d1deea);

@@ -1,21 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
-import { getLocalDateKey, normalizeMoodEntry, upsertMoodEntry } from "../../lib/dashboardMood.js";
+import { getCurrentMoodDateKey, getMoodWindowState, normalizeMoodEntry, upsertMoodEntry } from "../../lib/dashboardMood.js";
 import { readStoredMoodCheckins, writeStoredMoodCheckins } from "../../lib/dashboardMoodStorage.js";
 
-export function useSaveMoodCheckin(userId) {
+export function useSaveMoodCheckin(userId, options = {}) {
   const queryClient = useQueryClient();
-  const dateKey = getLocalDateKey();
+  const dateKey = String(options?.dateKey || getCurrentMoodDateKey());
 
   return useMutation({
     mutationFn: async ({ colaboradorId, moodId, energy, tags }) => {
+      const moodWindow = getMoodWindowState();
+      if (!moodWindow.canSubmit) {
+        throw new Error("O registro de vibes fica disponível das 08:00 às 18:00, no horário de Brasília.");
+      }
+
+      const activeDateKey = moodWindow.dateKey;
       const nowIso = new Date().toISOString();
       const baseEntry = normalizeMoodEntry({
         colaboradorId,
         moodId,
         energy,
         tags,
-        dateKey,
+        dateKey: activeDateKey,
         updatedAt: nowIso,
       });
 
@@ -24,11 +30,11 @@ export function useSaveMoodCheckin(userId) {
         const existingEntry = storedEntries.find(
           (entry) =>
             String(entry.colaboradorId) === String(colaboradorId) &&
-            String(entry.dateKey) === String(dateKey)
+            String(entry.dateKey) === String(activeDateKey)
         );
         const localEntry = {
           ...baseEntry,
-          id: existingEntry?.id || `local-mood-${colaboradorId}-${dateKey}`,
+          id: existingEntry?.id || `local-mood-${colaboradorId}-${activeDateKey}`,
           createdAt: existingEntry?.createdAt || nowIso,
           updatedAt: nowIso,
         };
@@ -45,7 +51,7 @@ export function useSaveMoodCheckin(userId) {
             humor_id: baseEntry.moodId,
             energia: baseEntry.energy,
             tags: baseEntry.tags,
-            data_ref: dateKey,
+            data_ref: activeDateKey,
           },
           { onConflict: "colaborador_id,data_ref" }
         )

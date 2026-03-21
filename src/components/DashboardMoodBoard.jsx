@@ -5,12 +5,13 @@ import { useMoodCheckins } from "../hooks/queries/useMoodCheckins";
 import {
   ENERGY_COLORS,
   MAX_MOOD_TAGS,
+  MOOD_TIME_ZONE,
   MOOD_OPTIONS,
   MOOD_TAGS,
   getEnergyColor,
   getEnergyGlyph,
   getEnergyLabel,
-  getLocalDateKey,
+  getMoodWindowState,
   getMoodOption,
   normalizeMoodTags,
 } from "../lib/dashboardMood";
@@ -28,6 +29,7 @@ const getFirstName = (name) => String(name || "").trim().split(/\s+/).filter(Boo
 
 const formatTodayLabel = () =>
   new Intl.DateTimeFormat("pt-BR", {
+    timeZone: MOOD_TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -37,7 +39,7 @@ const formatTimeLabel = (value) => {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("pt-BR", { timeZone: MOOD_TIME_ZONE, hour: "2-digit", minute: "2-digit" });
 };
 
 const getEnergySegmentStyle = (color) => ({
@@ -51,10 +53,17 @@ const getEnergyFillStyle = (width, color) => ({
   background: `linear-gradient(90deg, color-mix(in srgb, ${color} 76%, #ffffff), ${color})`,
 });
 
+const getMoodWindowMessage = (moodWindow) => {
+  if (moodWindow.isAfterClose) {
+    return "Os registros de vibe ficam abertos até 18:00. Novas vibes voltam amanhã às 08:00, no horário de Brasília.";
+  }
+  if (moodWindow.isResetGap) {
+    return "As vibes do ciclo anterior foram encerradas. Novos registros abrem às 08:00, no horário de Brasília.";
+  }
+  return "Novas vibes ficam disponíveis às 08:00 e podem ser atualizadas até 18:00, no horário de Brasília.";
+};
+
 export function DashboardMoodBoard({ currentUser, currentUserId }) {
-  const dateKey = getLocalDateKey();
-  const moodCheckinsQuery = useMoodCheckins(currentUserId, { dateKey });
-  const saveMoodCheckin = useSaveMoodCheckin(currentUserId);
   const hydratedEntryRef = useRef("");
   const teamWallViewportRef = useRef(null);
   const teamWallGroupRef = useRef(null);
@@ -62,8 +71,14 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   const [draft, setDraft] = useState(() => buildDraftFromEntry(null));
   const [submitError, setSubmitError] = useState("");
   const [isTeamWallPaused, setIsTeamWallPaused] = useState(false);
+  const [timeTick, setTimeTick] = useState(() => Date.now());
   const [teamWallViewportWidth, setTeamWallViewportWidth] = useState(0);
   const [teamWallLoopWidth, setTeamWallLoopWidth] = useState(0);
+  const moodWindow = useMemo(() => getMoodWindowState(new Date(timeTick)), [timeTick]);
+  const dateKey = moodWindow.dateKey;
+  const moodWindowMessage = useMemo(() => getMoodWindowMessage(moodWindow), [moodWindow]);
+  const moodCheckinsQuery = useMoodCheckins(currentUserId, { dateKey });
+  const saveMoodCheckin = useSaveMoodCheckin(currentUserId, { dateKey });
 
   const entries = useMemo(
     () => (Array.isArray(moodCheckinsQuery.data) ? moodCheckinsQuery.data : []),
@@ -83,6 +98,17 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   }, [entries.length, teamWallViewportWidth]);
   const shouldAutoScrollTeamWall = entries.length > maxVisibleTeamWallCards;
   const teamWallAnimationDuration = useMemo(() => `${Math.max(24, entries.length * 4)}s`, [entries.length]);
+  const shouldShowTeamWall = step === 3 || (!moodWindow.canSubmit && entries.length > 0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setTimeTick(Date.now());
+    }, 30 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!myEntry) return;
@@ -94,6 +120,17 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
     setDraft(buildDraftFromEntry(myEntry));
     setStep(3);
   }, [myEntry]);
+
+  useEffect(() => {
+    hydratedEntryRef.current = "";
+    setSubmitError("");
+  }, [dateKey]);
+
+  useEffect(() => {
+    if (moodCheckinsQuery.isLoading || myEntry) return;
+    setDraft(buildDraftFromEntry(null));
+    setStep(1);
+  }, [dateKey, moodCheckinsQuery.isLoading, myEntry]);
 
   useEffect(() => {
     const node = teamWallViewportRef.current;
@@ -216,12 +253,14 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   };
 
   const handleSelectMood = (moodId) => {
+    if (!moodWindow.canSubmit) return;
     setDraft((previous) => ({ ...previous, moodId }));
     setSubmitError("");
     setStep(2);
   };
 
   const handleToggleTag = (tag) => {
+    if (!moodWindow.canSubmit) return;
     setDraft((previous) => {
       const hasTag = previous.tags.includes(tag);
       if (hasTag) {
@@ -233,13 +272,14 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   };
 
   const handleEditVibe = () => {
+    if (!moodWindow.canEdit) return;
     setSubmitError("");
     setDraft(buildDraftFromEntry(myEntry));
     setStep(myEntry?.moodId ? 2 : 1);
   };
 
   const handleSubmit = async () => {
-    if (!draft.moodId || saveMoodCheckin.isPending) return;
+    if (!draft.moodId || saveMoodCheckin.isPending || !moodWindow.canSubmit) return;
 
     try {
       setSubmitError("");
@@ -258,7 +298,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   return (
     <section className="card mood-check-card">
       <div className="mood-check-shell is-single">
-        {(step === 1 || step === 2) && (
+        {!shouldShowTeamWall && (
           <div className="mood-check-main mood-check-main--flow">
             <div className="mood-check-hero mood-check-hero--compact">
               <div>
@@ -269,16 +309,27 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
               </div>
             </div>
 
-            <div className="mood-stepper" aria-hidden="true">
-              {[1, 2].map((value) => (
-                <span
-                  key={value}
-                  className={`mood-stepper-dot ${step === value ? "is-active" : ""} ${step > value ? "is-done" : ""}`}
-                />
-              ))}
-            </div>
+            {moodWindow.canSubmit && (
+              <div className="mood-stepper" aria-hidden="true">
+                {[1, 2].map((value) => (
+                  <span
+                    key={value}
+                    className={`mood-stepper-dot ${step === value ? "is-active" : ""} ${step > value ? "is-done" : ""}`}
+                  />
+                ))}
+              </div>
+            )}
 
-            {step === 1 && (
+            {!moodWindow.canSubmit && (
+              <div className="mood-panel">
+                <div className="mood-window-note">
+                  <strong>Registro indisponível agora</strong>
+                  <span>{moodWindowMessage}</span>
+                </div>
+              </div>
+            )}
+
+            {moodWindow.canSubmit && step === 1 && (
               <div className="mood-panel">
                 <div className="mood-check-privacy mood-check-privacy--compact">
                   <Lock size={15} />
@@ -292,6 +343,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
                       type="button"
                       className="mood-choice"
                       style={{ "--mood-accent": mood.accent, "--mood-soft": mood.soft }}
+                      disabled={!moodWindow.canSubmit}
                       onClick={() => handleSelectMood(mood.id)}
                     >
                       <span className="mood-choice-emoji">{mood.emoji}</span>
@@ -303,7 +355,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
               </div>
             )}
 
-            {step === 2 && (
+            {moodWindow.canSubmit && step === 2 && (
               <div className="mood-panel">
                 <div className="mood-panel-head">
                   <div>
@@ -328,6 +380,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
                           type="button"
                           className={`mood-energy-segment ${isActive ? "is-on" : ""}`}
                           style={isActive ? getEnergySegmentStyle(ENERGY_COLORS[index]) : undefined}
+                          disabled={!moodWindow.canSubmit}
                           onClick={() => setDraft((previous) => ({ ...previous, energy: value }))}
                           aria-label={`Energia ${value}`}
                         />
@@ -353,6 +406,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
                           key={tag}
                           type="button"
                           className={`mood-tag-chip ${isSelected ? "is-selected" : ""}`}
+                          disabled={!moodWindow.canSubmit}
                           onClick={() => handleToggleTag(tag)}
                         >
                           {tag}
@@ -369,7 +423,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
                     type="button"
                     className="btn-primary mood-submit-button"
                     onClick={handleSubmit}
-                    disabled={!draft.moodId || saveMoodCheckin.isPending}
+                    disabled={!draft.moodId || saveMoodCheckin.isPending || !moodWindow.canSubmit}
                   >
                     {saveMoodCheckin.isPending ? "Registrando..." : "Registrar vibe"}
                   </button>
@@ -379,18 +433,31 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
           </div>
         )}
 
-        {step === 3 && (
+        {shouldShowTeamWall && (
           <div className="mood-check-main mood-check-main--team">
             <div className="mood-team-wall-head">
               <div className="mood-team-wall-copy">
                 <h3 className="section-title mood-team-wall-title">Painel de vibes</h3>
-                <p className="section-sub mood-team-wall-subtitle">Vibes registradas pelo time hoje</p>
+                <p className="section-sub mood-team-wall-subtitle">Vibes registradas no ciclo atual do time</p>
               </div>
-              <button type="button" className="btn-ghost mood-inline-button" onClick={handleEditVibe}>
+              <button
+                type="button"
+                className="btn-ghost mood-inline-button"
+                onClick={handleEditVibe}
+                disabled={!moodWindow.canEdit}
+                title={!moodWindow.canEdit ? moodWindowMessage : undefined}
+              >
                 <RefreshCw size={14} />
                 Atualizar minha vibe
               </button>
             </div>
+
+            {!moodWindow.canSubmit && (
+              <div className="mood-window-note mood-window-note--team">
+                <strong>Registro indisponível agora</strong>
+                <span>{moodWindowMessage}</span>
+              </div>
+            )}
 
             {moodCheckinsQuery.isLoading && entries.length === 0 && (
               <div className="mood-loading-grid" aria-hidden="true">

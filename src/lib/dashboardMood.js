@@ -1,5 +1,9 @@
 export const MAX_MOOD_TAGS = 4;
 export const MOOD_STORAGE_KEY = "panet:dashboard-mood:v1";
+export const MOOD_TIME_ZONE = "America/Sao_Paulo";
+export const MOOD_RESET_MINUTE = 7 * 60 + 59;
+export const MOOD_OPEN_MINUTE = 8 * 60;
+export const MOOD_CLOSE_MINUTE = 18 * 60;
 
 export const MOOD_OPTIONS = [
   {
@@ -86,6 +90,16 @@ export const MOOD_TAGS = [
   "Atrasado nos tasks",
 ];
 const ALLOWED_MOOD_TAGS = new Set(MOOD_TAGS);
+const BRASILIA_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: MOOD_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
 
 export const ENERGY_GLYPHS = ["🪫", "😵", "😮‍💨", "🙂", "👌", "⚡", "🚀", "🔥", "☀️", "💥"];
 export const ENERGY_TEXTS = [
@@ -115,8 +129,62 @@ export const ENERGY_COLORS = [
 
 const pad = (value) => String(value).padStart(2, "0");
 
+export function getBrasiliaDateParts(date = new Date()) {
+  const parts = BRASILIA_DATE_TIME_FORMATTER.formatToParts(date);
+  const byType = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+
+  return {
+    year: Number(byType.year),
+    month: Number(byType.month),
+    day: Number(byType.day),
+    hour: Number(byType.hour),
+    minute: Number(byType.minute),
+    second: Number(byType.second),
+  };
+}
+
+export function shiftDateKey(dateKey, offsetDays) {
+  const [year, month, day] = String(dateKey || "")
+    .split("-")
+    .map((value) => Number(value));
+
+  if (!year || !month || !day) return "";
+
+  const shifted = new Date(Date.UTC(year, month - 1, day + offsetDays, 12, 0, 0));
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
+}
+
+export function getBrasiliaDateKey(date = new Date()) {
+  const parts = getBrasiliaDateParts(date);
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+}
+
+export function getMoodWindowState(date = new Date()) {
+  const parts = getBrasiliaDateParts(date);
+  const currentDateKey = `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+  const minuteOfDay = parts.hour * 60 + parts.minute;
+  const isResetGap = minuteOfDay === MOOD_RESET_MINUTE;
+  const canSubmit = minuteOfDay >= MOOD_OPEN_MINUTE && minuteOfDay <= MOOD_CLOSE_MINUTE;
+
+  return {
+    dateKey: minuteOfDay < MOOD_RESET_MINUTE ? shiftDateKey(currentDateKey, -1) : currentDateKey,
+    currentDateKey,
+    minuteOfDay,
+    canSubmit,
+    canEdit: canSubmit,
+    isResetGap,
+    isBeforeOpen: minuteOfDay < MOOD_OPEN_MINUTE,
+    isAfterClose: minuteOfDay > MOOD_CLOSE_MINUTE,
+    parts,
+  };
+}
+
+export function getCurrentMoodDateKey(date = new Date()) {
+  return getMoodWindowState(date).dateKey;
+}
+
 export function getLocalDateKey(date = new Date()) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return getCurrentMoodDateKey(date);
 }
 
 export function clampEnergy(value) {
@@ -142,7 +210,7 @@ export function getMoodOption(moodId) {
 
 export function normalizeMoodEntry(entry) {
   const mood = getMoodOption(entry?.moodId || entry?.humor_id || entry?.mood_id);
-  const dateKey = String(entry?.dateKey || entry?.data_ref || getLocalDateKey());
+  const dateKey = String(entry?.dateKey || entry?.data_ref || getCurrentMoodDateKey());
   const createdAt = String(entry?.createdAt || entry?.created_at || "");
   const updatedAt = String(entry?.updatedAt || entry?.updated_at || createdAt || "");
 

@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
-import { getLocalDateKey, normalizeMoodEntry } from "../../lib/dashboardMood.js";
+import { getCurrentMoodDateKey, normalizeMoodEntry } from "../../lib/dashboardMood.js";
 import { getStoredMoodCheckinsForDate } from "../../lib/dashboardMoodStorage.js";
 
 export function useMoodCheckins(userId, options = {}) {
   const queryClient = useQueryClient();
   const queryEnabled = options?.enabled ?? true;
-  const dateKey = String(options?.dateKey || getLocalDateKey());
+  const dateKey = String(options?.dateKey || getCurrentMoodDateKey());
   const initialData = Array.isArray(options?.initialData)
     ? options.initialData.map((entry) => normalizeMoodEntry(entry))
     : undefined;
@@ -32,7 +32,6 @@ export function useMoodCheckins(userId, options = {}) {
     enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
     initialData,
     staleTime: 30 * 1000,
-    placeholderData: (previousData) => previousData,
   });
 
   useEffect(() => {
