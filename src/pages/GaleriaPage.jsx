@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
 import { ImageIcon } from "lucide-react";
+import { SkeletonGaleriaCard } from "../components/Skeleton";
 import { useGalerias } from "../hooks/queries/useGalerias.js";
 
 const loadGaleriaLightbox = () => import("../components/GaleriaLightbox");
@@ -105,12 +106,14 @@ export function GaleriaPage({ currentUserId }) {
           </div>
         </div>
       </div>
-      {galeriasQuery.isLoading && eventos.length === 0 && (
-        <div className="empty-state">Carregando galerias...</div>
-      )}
       {!galeriasQuery.isLoading && eventos.length === 0 && (
         <div className="empty-state">Nenhuma galeria criada ainda.</div>
       )}
+      {galeriasQuery.isLoading && eventos.length === 0 ? (
+        <div className="galeria-grid">
+          {Array.from({ length: 6 }, (_, i) => <SkeletonGaleriaCard key={i} />)}
+        </div>
+      ) : (
       <div className="galeria-grid stagger">
         {eventos.map((g) => (
           <div key={g.id} className="galeria-card" onClick={() => abrirEvento(g, { syncUrl: true })}>
@@ -122,6 +125,7 @@ export function GaleriaPage({ currentUserId }) {
           </div>
         ))}
       </div>
+      )}
 
       {eventoAberto && (
         <Suspense fallback={null}>

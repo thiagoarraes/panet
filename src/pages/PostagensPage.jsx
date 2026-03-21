@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PostCard } from "../components/PostCard";
+import { SkeletonPostCard } from "../components/Skeleton";
 import { usePostagens } from "../hooks/queries/usePostagens";
 import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 
@@ -75,7 +76,9 @@ export function PostagensPage({ onOpen, currentUserId }) {
         />
       </div>
       {postagensQuery.isLoading && filtradas.length === 0 ? (
-        <div className="empty-state">Carregando postagens...</div>
+        <div className="grid-3">
+          {Array.from({ length: 6 }, (_, i) => <SkeletonPostCard key={i} />)}
+        </div>
       ) : (
         <div className="grid-3 stagger">
           {filtradas.map((post) => (

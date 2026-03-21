@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { SkeletonCollabCard } from "../components/Skeleton";
 import { FaInstagram, FaLinkedin, FaWhatsapp, FaEnvelope } from "react-icons/fa6";
 import { useColaboradores } from "../hooks/queries/useColaboradores.js";
 
@@ -74,25 +75,27 @@ export function ColaboradoresPage({ currentUserId }) {
         </div>
       </div>
 
-      <div className="grid-4 stagger">
-        {colaboradores.map((col) => (
-          <div key={col.id} className="collab-card" onClick={() => setSelected(col)}>
-            {col.isMe && <span className="collab-ribbon">VOCÊ</span>}
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <Avatar col={col} size={64} />
+      {colaboradoresQuery.isLoading && colaboradores.length === 0 ? (
+        <div className="grid-4">
+          {Array.from({ length: 8 }, (_, i) => <SkeletonCollabCard key={i} />)}
+        </div>
+      ) : (
+        <div className="grid-4 stagger">
+          {colaboradores.map((col) => (
+            <div key={col.id} className="collab-card" onClick={() => setSelected(col)}>
+              {col.isMe && <span className="collab-ribbon">VOCÊ</span>}
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <Avatar col={col} size={64} />
+              </div>
+              <div className="collab-name">{col.nome}</div>
+              <div className="collab-cargo">{col.cargo}</div>
+              <div className="collab-click-hint" aria-hidden="true">
+                Ver detalhes
+                <ArrowUpRight size={14} />
+              </div>
             </div>
-            <div className="collab-name">{col.nome}</div>
-            <div className="collab-cargo">{col.cargo}</div>
-            <div className="collab-click-hint" aria-hidden="true">
-              Ver detalhes
-              <ArrowUpRight size={14} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {colaboradoresQuery.isLoading && colaboradores.length === 0 && (
-        <div className="empty-state">Carregando colaboradores...</div>
+          ))}
+        </div>
       )}
       {!colaboradoresQuery.isLoading && colaboradores.length === 0 && (
         <div className="empty-state">Nenhum colaborador encontrado.</div>

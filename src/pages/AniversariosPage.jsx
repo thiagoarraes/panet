@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState } from "react";
 import { Cake, CalendarDays } from "lucide-react";
 import { Avatar } from "../components/Avatar";
+import { SkeletonAnivItem } from "../components/Skeleton";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 
@@ -162,8 +163,6 @@ export function AniversariosPage({ currentUserId }) {
       <div className="section-title" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: 8 }}>
         <Cake size={22} /> Aniversários
       </div>
-      {(aniversariosQuery.isLoading || colaboradoresQuery.isLoading) &&
-        aniversariantesTodos.length === 0 && <div className="empty-state" style={{ marginBottom: 14 }}>Carregando aniversários...</div>}
 
       <div className="grid-2" style={{ marginBottom: 16 }}>
         <div className="card">
@@ -173,13 +172,12 @@ export function AniversariosPage({ currentUserId }) {
             </span>
           </div>
           <div className="card-body" style={{ padding: "8px 16px" }}>
-            {aniversariantesMesAtual.length === 0 ? (
-              <div className="empty-state" style={{ padding: 20 }}>
-                Nenhum aniversariante neste mês
-              </div>
-            ) : (
-              aniversariantesMesAtual.map((a) => <AnivCard key={a.id} a={a} />)
-            )}
+            {(aniversariosQuery.isLoading || colaboradoresQuery.isLoading) && aniversariantesTodos.length === 0
+              ? Array.from({ length: 4 }, (_, i) => <SkeletonAnivItem key={i} />)
+              : aniversariantesMesAtual.length === 0
+                ? <div className="empty-state" style={{ padding: 20 }}>Nenhum aniversariante neste mês</div>
+                : aniversariantesMesAtual.map((a) => <AnivCard key={a.id} a={a} />)
+            }
           </div>
         </div>
 
@@ -202,15 +200,16 @@ export function AniversariosPage({ currentUserId }) {
             </select>
           </div>
           <div className="card-body" style={{ padding: "8px 16px", maxHeight: 420, overflowY: "auto" }}>
-            {aniversariantesFiltrados.length === 0 ? (
-              <div className="empty-state" style={{ padding: 20 }}>
-                {mesSelecionado === "todos"
-                  ? "Nenhum aniversariante cadastrado no perfil."
-                  : `Nenhum aniversariante em ${MESES[Number(mesSelecionado)]}.`}
-              </div>
-            ) : (
-              aniversariantesFiltrados.map((a) => <AnivCard key={a.id} a={a} />)
-            )}
+            {(aniversariosQuery.isLoading || colaboradoresQuery.isLoading) && aniversariantesTodos.length === 0
+              ? Array.from({ length: 6 }, (_, i) => <SkeletonAnivItem key={i} />)
+              : aniversariantesFiltrados.length === 0
+                ? <div className="empty-state" style={{ padding: 20 }}>
+                    {mesSelecionado === "todos"
+                      ? "Nenhum aniversariante cadastrado no perfil."
+                      : `Nenhum aniversariante em ${MESES[Number(mesSelecionado)]}.`}
+                  </div>
+                : aniversariantesFiltrados.map((a) => <AnivCard key={a.id} a={a} />)
+            }
           </div>
         </div>
       </div>

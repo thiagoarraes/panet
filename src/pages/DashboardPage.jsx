@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { SkeletonPostCard, SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
 import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
@@ -332,7 +333,9 @@ export function DashboardPage({
             </div>
           </div>
           {postagens.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && postagensQuery.isLoading)) && (
-            <div className="empty-state" style={{ marginBottom: 12 }}>Carregando feed...</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
+              {Array.from({ length: 3 }, (_, i) => <SkeletonPostCard key={i} />)}
+            </div>
           )}
           <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {postsPag.map((post) => (
@@ -376,7 +379,9 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximos.map((a) => (
+              {proximos.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && aniversariosQuery.isLoading))
+                ? Array.from({ length: 4 }, (_, i) => <SkeletonAnivItem key={i} />)
+                : proximos.map((a) => (
                 <div key={a.colaborador.id} className="aniv-item">
                   <div className="aniv-date">
                     <div className="aniv-day">{a.data.split("/")[0]}</div>
@@ -401,6 +406,11 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
+              {proximasFolgas.length === 0 && ausentesAgora.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && (feriasQuery.isLoading || ausenciasQuery.isLoading))) && (
+                <div style={{ marginTop: 10, marginBottom: 12 }}>
+                  {Array.from({ length: 3 }, (_, i) => <SkeletonFolgaEntry key={i} />)}
+                </div>
+              )}
               {ausentesAgora.length > 0 && (
                 <div style={{ marginTop: 10, marginBottom: 8 }}>
                   {ausentesAgora.map((a) => (
