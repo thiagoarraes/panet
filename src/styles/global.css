@@ -1,5 +1,4 @@
 
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@100..800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #152132; --surface: #1a2a3e; --surface2: #1f3149; --border: #243d57;

@@ -32,7 +32,15 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
   return (
     <div className="post-card">
       <div className="post-thumb">
-        <img src={post.imagem} alt={post.titulo} />
+        <img
+          src={post.imagem}
+          alt={post.titulo}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          width="800"
+          height="400"
+        />
       </div>
       <div className="post-body">
         <div className="post-card-head">

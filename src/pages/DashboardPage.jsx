@@ -1,8 +1,8 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SkeletonPostCard, SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
+import { Suspense, lazy } from "react";
 import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
-import { DashboardMoodBoard } from "../components/DashboardMoodBoard";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
 import { useMural } from "../hooks/queries/useMural";
@@ -18,6 +18,30 @@ import { useDashboardSnapshot } from "../hooks/queries/useDashboardSnapshot";
 import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
 import { getAusenciaMeta, getFeriasStatusByDate, getPeriodoFolgaLabel, parseBrDate } from "../lib/panoff.js";
 import { isSupabaseEnabled } from "../lib/supabase.js";
+
+const DashboardMoodBoard = lazy(() =>
+  import("../components/DashboardMoodBoard").then((module) => ({
+    default: module.DashboardMoodBoard,
+  }))
+);
+
+const scheduleIdleTask = (callback, timeoutMs = 1800) => {
+  if (typeof window === "undefined") return () => {};
+  if (typeof window.requestIdleCallback === "function") {
+    const id = window.requestIdleCallback(callback, { timeout: timeoutMs });
+    return () => window.cancelIdleCallback(id);
+  }
+  const id = window.setTimeout(callback, timeoutMs);
+  return () => window.clearTimeout(id);
+};
+
+const MoodBoardFallback = () => (
+  <section className="card mood-check-card" style={{ marginBottom: 14 }}>
+    <div className="card-body" style={{ padding: 16 }}>
+      <div className="section-sub">Carregando painel de vibes...</div>
+    </div>
+  </section>
+);
 
 const formatDiasRestantes = (diasRestantes) => {
   if (diasRestantes === 0) return "Hoje";
@@ -53,6 +77,7 @@ export function DashboardPage({
   currentUserId,
 }) {
   const [fullSnapshotEnabled, setFullSnapshotEnabled] = useState(false);
+  const [moodBoardReady, setMoodBoardReady] = useState(false);
   const dashboardInitialSnapshotQuery = useDashboardSnapshot(currentUserId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS);
   const hasInitialSnapshotData = Boolean(dashboardInitialSnapshotQuery.data);
   const shouldLoadFullSnapshot = fullSnapshotEnabled && hasInitialSnapshotData && !dashboardInitialSnapshotQuery.isError;
@@ -70,11 +95,19 @@ export function DashboardPage({
       setFullSnapshotEnabled(false);
       return;
     }
-    const timer = window.setTimeout(() => {
+    const cancel = scheduleIdleTask(() => {
       setFullSnapshotEnabled(true);
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    }, 1800);
+    return cancel;
   }, [hasInitialSnapshotData, dashboardInitialSnapshotQuery.isError, currentUserId]);
+
+  useEffect(() => {
+    setMoodBoardReady(false);
+    const cancel = scheduleIdleTask(() => {
+      setMoodBoardReady(true);
+    }, 350);
+    return cancel;
+  }, [currentUserId]);
 
   const postagensQuery = usePostagens(currentUserId, { limit: 20, enabled: useLegacyQueries });
   const toggleCurtida = useToggleCurtida();
@@ -326,7 +359,13 @@ export function DashboardPage({
       )}
       <div className="dash-layout">
         <div>
-          <DashboardMoodBoard currentUser={currentUser} currentUserId={currentUserId} />
+          {moodBoardReady ? (
+            <Suspense fallback={<MoodBoardFallback />}>
+              <DashboardMoodBoard currentUser={currentUser} currentUserId={currentUserId} />
+            </Suspense>
+          ) : (
+            <MoodBoardFallback />
+          )}
           <div className="section-header">
             <div>
               <div className="section-title">Feed da Pan</div>
