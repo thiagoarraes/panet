@@ -32,3 +32,12 @@ pnpm-debug.log*
 Thumbs.db
 
 .vercel
+
+# Ferramentas locais / artefatos de agentes
+.agents/
+.claire/
+.claude/
+skills-lock.json
+
+# Supabase local temp
+supabase/.temp/
