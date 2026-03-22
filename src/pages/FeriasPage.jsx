@@ -4,31 +4,8 @@ import { Avatar } from "../components/Avatar";
 import { SkeletonFolgaEntry } from "../components/Skeleton";
 import { useFerias } from "../hooks/queries/useFerias";
 import { useAusencias } from "../hooks/queries/useAusencias";
-import { getAusenciaDiaTodoReturnDate, getAusenciaEffectiveEnd, isAusenciaSingleFullDayWindow } from "../lib/ausencias.js";
-
-const parseBrDate = (brDate) => {
-  const [day, month, year] = String(brDate || "").split("/").map(Number);
-  if (!day || !month || !year) return null;
-  return new Date(year, month - 1, day, 12, 0, 0);
-};
-
-const isSameCalendarDay = (left, right) =>
-  left?.getDate?.() === right?.getDate?.() &&
-  left?.getMonth?.() === right?.getMonth?.() &&
-  left?.getFullYear?.() === right?.getFullYear?.();
-
-const getFeriasStatusByDate = (item) => {
-  if (!item) return "marcado";
-  if (item.status === "em_andamento") return "em_andamento";
-
-  const inicioDate = parseBrDate(item.inicio);
-  const fimDate = parseBrDate(item.fim || item.inicio);
-  if (!inicioDate || !fimDate) return item.status || "marcado";
-
-  const now = new Date();
-  const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
-  return todayNoon >= inicioDate && todayNoon <= fimDate ? "em_andamento" : item.status || "marcado";
-};
+import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
+import { getAusenciaMeta, getFeriasStatusByDate, getPeriodoFolgaLabel, parseBrDate } from "../lib/panoff.js";
 
 const getFolgaTotalDias = (item) => {
   const inicioDate = parseBrDate(item?.inicio);
@@ -38,69 +15,6 @@ const getFolgaTotalDias = (item) => {
   const diffMs = fimDate.getTime() - inicioDate.getTime();
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
   return Number.isFinite(days) && days > 0 ? days : null;
-};
-
-const getPeriodoFolgaLabel = (item) => {
-  const inicio = item?.inicio || "";
-  const fim = item?.fim || item?.inicio || "";
-
-  const toDayMonth = (brDate) => {
-    const [day, month] = String(brDate || "").split("/");
-    if (!day || !month) return String(brDate || "");
-    return `${day}/${month}`;
-  };
-
-  if (!inicio) return "";
-  if (!fim || inicio === fim) return toDayMonth(inicio);
-  return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
-};
-
-const formatDisplayDayMonth = (date) =>
-  date?.toLocaleDateString?.("pt-BR", { day: "2-digit", month: "2-digit" }) || "";
-
-const formatDisplayTime = (date) =>
-  date?.toLocaleTimeString?.("pt-BR", { hour: "2-digit", minute: "2-digit" }) || "";
-
-const getAusenciaMeta = (item) => {
-  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
-
-  const inicio = new Date(item.inicio);
-  const fim = item.fim ? new Date(item.fim) : null;
-  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
-
-  const now = new Date();
-  const hasFimValido = fim && !Number.isNaN(fim.getTime());
-  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
-  const isToday = isSameCalendarDay(inicio, now);
-
-  if (item.diaTodo) {
-    const retorno = getAusenciaDiaTodoReturnDate(item);
-    return {
-      dateLabel: retorno ? `${formatDisplayDayMonth(inicio)} · volta ${formatDisplayDayMonth(retorno)}` : formatDisplayDayMonth(inicio),
-      timeLabel: "",
-    };
-  }
-
-  if (isAusenciaSingleFullDayWindow(item)) {
-    return {
-      dateLabel: `${formatDisplayDayMonth(inicio)} · dia todo`,
-      timeLabel: "",
-    };
-  }
-
-  if (crossesDays) {
-    return {
-      dateLabel: "",
-      timeLabel: `${formatDisplayDayMonth(inicio)} ${formatDisplayTime(inicio)} → ${formatDisplayDayMonth(fim)} ${formatDisplayTime(fim)}`,
-    };
-  }
-
-  const dateLabel = !isToday ? formatDisplayDayMonth(inicio) : "";
-  const timeLabel = hasFimValido
-    ? `${formatDisplayTime(inicio)} às ${formatDisplayTime(fim)}`
-    : `${formatDisplayTime(inicio)} · sem previsão`;
-
-  return { dateLabel, timeLabel };
 };
 
 const getAusenciasVisiveis = (ausencias) => {

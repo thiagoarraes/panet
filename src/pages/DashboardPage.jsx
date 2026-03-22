@@ -15,7 +15,8 @@ import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
 import { useDashboardSnapshot } from "../hooks/queries/useDashboardSnapshot";
-import { getAusenciaDiaTodoReturnDate, getAusenciaEffectiveEnd, isAusenciaSingleFullDayWindow } from "../lib/ausencias.js";
+import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
+import { getAusenciaMeta, getFeriasStatusByDate, getPeriodoFolgaLabel, parseBrDate } from "../lib/panoff.js";
 import { isSupabaseEnabled } from "../lib/supabase.js";
 
 const formatDiasRestantes = (diasRestantes) => {
@@ -34,90 +35,14 @@ const daysUntilBirthday = (isoDate) => {
   return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 };
 
-const parseBrDate = (brDate) => {
-  const [day, month, year] = String(brDate || "").split("/").map(Number);
-  if (!day || !month || !year) return null;
-  return new Date(year, month - 1, day, 12, 0, 0);
+const DASHBOARD_SNAPSHOT_INITIAL_LIMITS = {
+  postsLimit: 5,
+  muralLimit: 12,
 };
 
-const getFeriasStatusByDate = (item) => {
-  if (!item) return "marcado";
-  if (item.status === "em_andamento") return "em_andamento";
-  const inicioDate = parseBrDate(item.inicio);
-  const fimDate = parseBrDate(item.fim || item.inicio);
-  if (!inicioDate || !fimDate) return item.status || "marcado";
-  const now = new Date();
-  const todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
-  return todayNoon >= inicioDate && todayNoon <= fimDate ? "em_andamento" : (item.status || "marcado");
-};
-
-const getPeriodoFolgaLabel = (item) => {
-  const inicio = item?.inicio || "";
-  const fim = item?.fim || item?.inicio || "";
-  const toDayMonth = (brDate) => {
-    const [day, month] = String(brDate || "").split("/");
-    if (!day || !month) return String(brDate || "");
-    return `${day}/${month}`;
-  };
-  if (!inicio) return "";
-  if (!fim || inicio === fim) return toDayMonth(inicio);
-  return `${toDayMonth(inicio)} a ${toDayMonth(fim)}`;
-};
-
-const isSameCalendarDay = (left, right) =>
-  left?.getDate?.() === right?.getDate?.() &&
-  left?.getMonth?.() === right?.getMonth?.() &&
-  left?.getFullYear?.() === right?.getFullYear?.();
-
-const formatDisplayDayMonth = (date) =>
-  date?.toLocaleDateString?.("pt-BR", { day: "2-digit", month: "2-digit" }) || "";
-
-const formatDisplayTime = (date) =>
-  date?.toLocaleTimeString?.("pt-BR", { hour: "2-digit", minute: "2-digit" }) || "";
-
-const getAusenciaMeta = (item) => {
-  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
-
-  const inicio = new Date(item.inicio);
-  const fim = item.fim ? new Date(item.fim) : null;
-  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
-
-  const now = new Date();
-  const hasFimValido = fim && !Number.isNaN(fim.getTime());
-  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
-  const isToday = isSameCalendarDay(inicio, now);
-
-  if (item.diaTodo) {
-    const retorno = getAusenciaDiaTodoReturnDate(item);
-    return {
-      dateLabel: retorno ? `${formatDisplayDayMonth(inicio)} · volta ${formatDisplayDayMonth(retorno)}` : formatDisplayDayMonth(inicio),
-      timeLabel: "",
-    };
-  }
-
-  if (isAusenciaSingleFullDayWindow(item)) {
-    return {
-      dateLabel: `${formatDisplayDayMonth(inicio)} · dia todo`,
-      timeLabel: "",
-    };
-  }
-
-  if (crossesDays) {
-    return {
-      dateLabel: "",
-      timeLabel: `${formatDisplayDayMonth(inicio)} ${formatDisplayTime(inicio)} → ${formatDisplayDayMonth(fim)} ${formatDisplayTime(fim)}`,
-    };
-  }
-
-  const dateLabel = !isToday
-    ? formatDisplayDayMonth(inicio)
-    : "";
-
-  const timeLabel = hasFimValido
-    ? `${formatDisplayTime(inicio)} às ${formatDisplayTime(fim)}`
-    : `${formatDisplayTime(inicio)} · sem previsão`;
-
-  return { dateLabel, timeLabel };
+const DASHBOARD_SNAPSHOT_FULL_LIMITS = {
+  postsLimit: 20,
+  muralLimit: 60,
 };
 
 export function DashboardPage({
@@ -127,12 +52,29 @@ export function DashboardPage({
   currentUser,
   currentUserId,
 }) {
-  const dashboardSnapshotQuery = useDashboardSnapshot(currentUserId, {
-    postsLimit: 20,
-    muralLimit: 60,
+  const [fullSnapshotEnabled, setFullSnapshotEnabled] = useState(false);
+  const dashboardInitialSnapshotQuery = useDashboardSnapshot(currentUserId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS);
+  const hasInitialSnapshotData = Boolean(dashboardInitialSnapshotQuery.data);
+  const shouldLoadFullSnapshot = fullSnapshotEnabled && hasInitialSnapshotData && !dashboardInitialSnapshotQuery.isError;
+  const dashboardFullSnapshotQuery = useDashboardSnapshot(currentUserId, {
+    ...DASHBOARD_SNAPSHOT_FULL_LIMITS,
+    enabled: shouldLoadFullSnapshot,
   });
-  const hasSnapshotData = Boolean(dashboardSnapshotQuery.data);
-  const useLegacyQueries = !isSupabaseEnabled || dashboardSnapshotQuery.isError;
+  const dashboardSnapshotData = dashboardFullSnapshotQuery.data || dashboardInitialSnapshotQuery.data || null;
+  const hasSnapshotData = Boolean(dashboardSnapshotData);
+  const snapshotIsLoading = !hasSnapshotData && dashboardInitialSnapshotQuery.isLoading;
+  const useLegacyQueries = !isSupabaseEnabled || dashboardInitialSnapshotQuery.isError;
+
+  useEffect(() => {
+    if (!hasInitialSnapshotData || dashboardInitialSnapshotQuery.isError) {
+      setFullSnapshotEnabled(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setFullSnapshotEnabled(true);
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [hasInitialSnapshotData, dashboardInitialSnapshotQuery.isError, currentUserId]);
 
   const postagensQuery = usePostagens(currentUserId, { limit: 20, enabled: useLegacyQueries });
   const toggleCurtida = useToggleCurtida();
@@ -147,30 +89,30 @@ export function DashboardPage({
   });
 
   const postagens = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.postagens || [] : postagensQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotQuery.data, postagensQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.postagens || [] : postagensQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotData, postagensQuery.data]
   );
   const muralMsgs = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.mural || [] : muralQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotQuery.data, muralQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.mural || [] : muralQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotData, muralQuery.data]
   );
   const feriasData = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.feriasData || null : feriasQuery.data || null),
-    [hasSnapshotData, dashboardSnapshotQuery.data, feriasQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.feriasData || null : feriasQuery.data || null),
+    [hasSnapshotData, dashboardSnapshotData, feriasQuery.data]
   );
   const ferias = useMemo(() => feriasData?.ferias || [], [feriasData]);
   const dayoff = useMemo(() => feriasData?.dayoff || [], [feriasData]);
   const ausencias = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.ausencias || [] : ausenciasQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotQuery.data, ausenciasQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.ausencias || [] : ausenciasQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotData, ausenciasQuery.data]
   );
   const aniversariantes = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.aniversariantes || [] : aniversariosQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotQuery.data, aniversariosQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.aniversariantes || [] : aniversariosQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotData, aniversariosQuery.data]
   );
   const colaboradores = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotQuery.data?.colaboradores || [] : colaboradoresQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotQuery.data, colaboradoresQuery.data]
+    () => (hasSnapshotData ? dashboardSnapshotData?.colaboradores || [] : colaboradoresQuery.data || []),
+    [hasSnapshotData, dashboardSnapshotData, colaboradoresQuery.data]
   );
 
   const parabenizarMutation = useParabenizarAniversario(currentUserId);
@@ -391,7 +333,7 @@ export function DashboardPage({
               <div className="section-sub">Últimas notícias, comunicados e eventos</div>
             </div>
           </div>
-          {postagens.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && postagensQuery.isLoading)) && (
+          {postagens.length === 0 && (snapshotIsLoading || (useLegacyQueries && postagensQuery.isLoading)) && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 12 }}>
               {Array.from({ length: 3 }, (_, i) => <SkeletonPostCard key={i} />)}
             </div>
@@ -438,7 +380,7 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximos.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && aniversariosQuery.isLoading))
+              {proximos.length === 0 && (snapshotIsLoading || (useLegacyQueries && aniversariosQuery.isLoading))
                 ? Array.from({ length: 4 }, (_, i) => <SkeletonAnivItem key={i} />)
                 : proximos.map((a) => (
                 <div key={a.colaborador.id} className="aniv-item">
@@ -465,7 +407,7 @@ export function DashboardPage({
               </span>
             </div>
             <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximasFolgas.length === 0 && ausentesAgora.length === 0 && (dashboardSnapshotQuery.isLoading || (useLegacyQueries && (feriasQuery.isLoading || ausenciasQuery.isLoading))) && (
+              {proximasFolgas.length === 0 && ausentesAgora.length === 0 && (snapshotIsLoading || (useLegacyQueries && (feriasQuery.isLoading || ausenciasQuery.isLoading))) && (
                 <div style={{ marginTop: 10, marginBottom: 12 }}>
                   {Array.from({ length: 3 }, (_, i) => <SkeletonFolgaEntry key={i} />)}
                 </div>

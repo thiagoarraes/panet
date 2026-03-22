@@ -137,6 +137,7 @@ export function useDashboardSnapshot(userId, options = {}) {
   const safeMuralLimit = Number.isFinite(Number(options?.muralLimit))
     ? Math.max(1, Math.min(200, Number(options.muralLimit)))
     : 60;
+  const queryEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: [
@@ -144,7 +145,7 @@ export function useDashboardSnapshot(userId, options = {}) {
       userId,
       { postsLimit: safePostsLimit, muralLimit: safeMuralLimit },
     ],
-    enabled: Boolean(userId) && isSupabaseEnabled,
+    enabled: queryEnabled && Boolean(userId) && isSupabaseEnabled,
     staleTime: 45 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_dashboard_snapshot", {

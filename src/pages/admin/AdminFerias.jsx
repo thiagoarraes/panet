@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CalendarDays, Clock, Pencil, Plane, Trash2, UserMinus } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
@@ -9,7 +9,18 @@ import { useAdminAusencias } from "../../hooks/queries/admin/useAdminAusencias.j
 import { useCreateFerias, useDeleteFerias, useUpdateFerias } from "../../hooks/mutations/useFeriasMutations.js";
 import { useCreateAusencia, useDeleteAusencia, useUpdateAusencia } from "../../hooks/mutations/useAusenciasMutations.js";
 import { useColaboradores } from "../../hooks/queries/useColaboradores.js";
-import { getAusenciaDiaTodoReturnDate, isAusenciaSingleFullDayWindow, isSameCalendarDay } from "../../lib/ausencias.js";
+import {
+  formatAusenciaValueForForm,
+  formatDateForStore,
+  getAusenciaFormComputed,
+  localDateToIsoBoundary,
+  localToIso,
+} from "../../lib/adminAusenciaForm.js";
+import { getAusenciaMeta, getAusenciaMobileMeta } from "../../lib/panoff.js";
+
+const AdminAusenciaModal = lazy(() =>
+  import("./AdminAusenciaModal").then((m) => ({ default: m.AdminAusenciaModal }))
+);
 
 const toIso = (brDate) => {
   const [day, month, year] = String(brDate || "").split("/");
@@ -21,172 +32,6 @@ const parseIsoToDate = (isoDate) => {
   const [year, month, day] = String(isoDate).split("-").map(Number);
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day, 12, 0, 0);
-};
-
-const formatDateForStore = (date) => {
-  if (!date || Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const parseLocalDateTime = (value) => {
-  if (!value) return null;
-  const [datePart, timePart = "00:00"] = String(value).split("T");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const [hours, minutes] = timePart.split(":").map(Number);
-  if (!year || !month || !day || Number.isNaN(hours) || Number.isNaN(minutes)) return null;
-  return new Date(year, month - 1, day, hours, minutes, 0, 0);
-};
-
-const formatDateTimeForStore = (date) => {
-  if (!date || Number.isNaN(date.getTime())) return "";
-  const pad = (value) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
-    date.getMinutes()
-  )}`;
-};
-
-const getLocalDatePart = (value) => String(value || "").split("T")[0] || "";
-
-const getLocalTimePart = (value) => {
-  const [, timePart = ""] = String(value || "").split("T");
-  return timePart.slice(0, 5);
-};
-
-const combineLocalDateAndTime = (datePart, timePart = "00:00") => {
-  if (!datePart) return "";
-  return `${datePart}T${timePart || "00:00"}`;
-};
-
-const AUSENCIA_TIME_OPTIONS = Array.from({ length: 96 }, (_, index) => {
-  const totalMinutes = index * 15;
-  const hours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
-  const minutes = String(totalMinutes % 60).padStart(2, "0");
-  return `${hours}:${minutes}`;
-});
-
-const formatDisplayDate = (isoString) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-const formatDisplayTime = (isoString) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-};
-
-const formatAusenciaValueForForm = (isoString, diaTodo = false) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return "";
-  return diaTodo ? formatDateForStore(date) : formatDateTimeForStore(date);
-};
-
-const localDateToIsoBoundary = (localStr, boundary = "start") => {
-  if (!localStr) return null;
-  const date = parseLocalDateTime(localStr);
-  if (!date || Number.isNaN(date.getTime())) return null;
-  const normalized = new Date(date);
-  if (boundary === "end") {
-    normalized.setHours(23, 59, 59, 999);
-  } else {
-    normalized.setHours(0, 0, 0, 0);
-  }
-  return normalized.toISOString();
-};
-
-const getAusenciaMeta = (item) => {
-  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
-
-  const inicio = new Date(item.inicio);
-  const fim = item.fim ? new Date(item.fim) : null;
-  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
-
-  const now = new Date();
-  const hasFimValido = fim && !Number.isNaN(fim.getTime());
-  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
-  const isToday = isSameCalendarDay(inicio, now);
-
-  if (item.diaTodo) {
-    const retorno = getAusenciaDiaTodoReturnDate(item);
-    return {
-      dateLabel: retorno ? `${formatDisplayDate(item.inicio)} · volta ${formatDisplayDate(retorno)}` : formatDisplayDate(item.inicio),
-      timeLabel: "",
-    };
-  }
-
-  if (isAusenciaSingleFullDayWindow(item)) {
-    return {
-      dateLabel: `${formatDisplayDate(item.inicio)} · dia todo`,
-      timeLabel: "",
-    };
-  }
-
-  if (crossesDays) {
-    return {
-      dateLabel: "",
-      timeLabel: `${formatDisplayDate(item.inicio)} ${formatDisplayTime(item.inicio)} → ${formatDisplayDate(item.fim)} ${formatDisplayTime(item.fim)}`,
-    };
-  }
-
-  return {
-    dateLabel: !isToday ? formatDisplayDate(item.inicio) : "",
-    timeLabel: hasFimValido
-      ? `${formatDisplayTime(item.inicio)} às ${formatDisplayTime(item.fim)}`
-      : `${formatDisplayTime(item.inicio)} · sem previsão`,
-  };
-};
-
-const getAusenciaMobileMeta = (item, meta) => {
-  if (!meta?.dateLabel && !meta?.timeLabel) return { label: "", icon: "calendar", isTime: false };
-
-  const inicio = item?.inicio ? new Date(item.inicio) : null;
-  const fim = item?.fim ? new Date(item.fim) : null;
-  const hasFimValido = fim && !Number.isNaN(fim.getTime());
-  const crossesDays = inicio && !Number.isNaN(inicio.getTime()) && hasFimValido && !isSameCalendarDay(inicio, fim);
-
-  if (meta.dateLabel && meta.timeLabel) {
-    return {
-      label: `${meta.dateLabel} ${meta.timeLabel}`,
-      icon: "calendar",
-      isTime: false,
-    };
-  }
-
-  if (meta.dateLabel) {
-    return {
-      label: meta.dateLabel,
-      icon: "calendar",
-      isTime: false,
-    };
-  }
-
-  return {
-    label: meta.timeLabel,
-    icon: crossesDays ? "calendar" : "clock",
-    isTime: !crossesDays,
-  };
-};
-
-const compareLocalDateTime = (leftValue, rightValue) => {
-  const left = parseLocalDateTime(leftValue);
-  const right = parseLocalDateTime(rightValue);
-  if (!left || !right) return null;
-  return right.getTime() - left.getTime();
 };
 
 export function AdminFerias({ currentUserId }) {
@@ -332,30 +177,10 @@ export function AdminFerias({ currentUserId }) {
     setAusenciaModal("novo");
   };
 
-  const localToIso = (localStr) => {
-    if (!localStr) return null;
-    const date = parseLocalDateTime(localStr);
-    return !date || Number.isNaN(date.getTime()) ? null : date.toISOString();
-  };
-
-  const toggleAusenciaDiaTodo = (checked) => {
-    setAusenciaForm((prev) => {
-      const inicioDate = parseLocalDateTime(prev.inicio);
-      const fimDate = parseLocalDateTime(prev.fim);
-
-      return {
-        ...prev,
-        diaTodo: checked,
-        inicio: inicioDate ? (checked ? formatDateForStore(inicioDate) : formatDateTimeForStore(inicioDate)) : "",
-        fim: fimDate ? (checked ? formatDateForStore(fimDate) : formatDateTimeForStore(fimDate)) : prev.fim || "",
-      };
-    });
-  };
-
   const salvarAusencia = async () => {
+    const { retornoObrigatorio, retornoInvalido } = getAusenciaFormComputed(ausenciaForm);
     if (!ausenciaForm.colaboradorId || !ausenciaForm.motivo || !ausenciaForm.inicio) return;
-    if (ausenciaRetornoObrigatorio) return;
-    if (ausenciaRetornoInvalido) return;
+    if (retornoObrigatorio || retornoInvalido) return;
 
     try {
       setAusenciaSaving(true);
@@ -403,19 +228,6 @@ export function AdminFerias({ currentUserId }) {
       });
     }
   };
-
-  const ausenciaInicioDate = parseLocalDateTime(ausenciaForm.inicio);
-  const ausenciaRetornoDate = parseLocalDateTime(ausenciaForm.fim);
-  const ausenciaInicioDatePart = getLocalDatePart(ausenciaForm.inicio);
-  const ausenciaInicioTimePart = getLocalTimePart(ausenciaForm.inicio);
-  const ausenciaRetornoDatePart = getLocalDatePart(ausenciaForm.fim);
-  const ausenciaRetornoTimePart = getLocalTimePart(ausenciaForm.fim);
-  const ausenciaRetornoDiff = compareLocalDateTime(ausenciaForm.inicio, ausenciaForm.fim);
-  const ausenciaRetornoObrigatorio = ausenciaForm.tipoTempo === "especifico" && !ausenciaForm.fim;
-  const ausenciaRetornoInvalido =
-    ausenciaForm.tipoTempo === "especifico" &&
-    ausenciaRetornoDiff !== null &&
-    (ausenciaForm.diaTodo ? ausenciaRetornoDiff < 0 : ausenciaRetornoDiff <= 0);
 
   const placeholderBuscaFerias =
     sub === "dayoff" ? "Buscar por colaborador, cargo ou motivo" : "Buscar por colaborador, cargo ou período";
@@ -617,7 +429,7 @@ export function AdminFerias({ currentUserId }) {
         <>
           <div className="stagger admin-ausencia-grid">
             {ausenciaRows.map((item) => {
-              const ausenciaMeta = getAusenciaMeta(item);
+              const ausenciaMeta = getAusenciaMeta(item, { dateVariant: "full-date" });
               const ausenciaMobileMeta = getAusenciaMobileMeta(item, ausenciaMeta);
 
               return (
@@ -879,6 +691,20 @@ export function AdminFerias({ currentUserId }) {
       )}
 
       {ausenciaModal !== null && (
+        <Suspense fallback={null}>
+          <AdminAusenciaModal
+            modal={ausenciaModal}
+            form={ausenciaForm}
+            setForm={setAusenciaForm}
+            colaboradoresOpts={colaboradoresOpts}
+            saving={ausenciaSaving}
+            onClose={() => setAusenciaModal(null)}
+            onSave={salvarAusencia}
+          />
+        </Suspense>
+      )}
+
+      {/* legacy inline ausencia modal kept disabled after extraction
         <div
           className="modal-overlay"
           style={{ alignItems: "center", justifyItems: "center" }}
@@ -1157,7 +983,7 @@ export function AdminFerias({ currentUserId }) {
             </div>
           </div>
         </div>
-      )}
+      */}
 
       {confirmarExcluir !== null && (
         <div
