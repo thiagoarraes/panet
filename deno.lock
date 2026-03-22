@@ -12,7 +12,9 @@
     "packageJson": {
       "dependencies": [
         "npm:@supabase/supabase-js@^2.99.1",
+        "npm:@tanstack/query-sync-storage-persister@^5.94.5",
         "npm:@tanstack/react-query-devtools@^5.91.3",
+        "npm:@tanstack/react-query-persist-client@^5.94.5",
         "npm:@tanstack/react-query@^5.91.2",
         "npm:@tiptap/extension-link@^3.20.1",
         "npm:@tiptap/extension-placeholder@^3.20.1",

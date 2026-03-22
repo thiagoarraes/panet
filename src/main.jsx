@@ -3,6 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
+import { initQueryPersistence } from "./lib/queryPersistence";
 import App from "./App.jsx";
 
 const Devtools =
@@ -13,6 +14,8 @@ const Devtools =
         }))
       )
     : null;
+
+initQueryPersistence(queryClient);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

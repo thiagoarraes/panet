@@ -129,6 +129,14 @@ const mapColaboradorBirthdayToUi = (item) => {
 };
 
 const safeArray = (value) => (Array.isArray(value) ? value : []);
+const isMissingExtendedSnapshotFunction = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  if (!message) return false;
+  return (
+    message.includes("could not find the function public.get_dashboard_snapshot") ||
+    (message.includes("get_dashboard_snapshot") && message.includes("does not exist"))
+  );
+};
 
 export function useDashboardSnapshot(userId, options = {}) {
   const safePostsLimit = Number.isFinite(Number(options?.postsLimit))
@@ -137,21 +145,47 @@ export function useDashboardSnapshot(userId, options = {}) {
   const safeMuralLimit = Number.isFinite(Number(options?.muralLimit))
     ? Math.max(1, Math.min(200, Number(options.muralLimit)))
     : 60;
+  const safeFeriasLimit = Number.isFinite(Number(options?.feriasLimit))
+    ? Math.max(1, Math.min(500, Number(options.feriasLimit)))
+    : 120;
+  const safeAusenciasLimit = Number.isFinite(Number(options?.ausenciasLimit))
+    ? Math.max(1, Math.min(500, Number(options.ausenciasLimit)))
+    : 120;
+  const safeColaboradoresLimit = Number.isFinite(Number(options?.colaboradoresLimit))
+    ? Math.max(1, Math.min(1000, Number(options.colaboradoresLimit)))
+    : 500;
   const queryEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: [
       "dashboard-snapshot",
       userId,
-      { postsLimit: safePostsLimit, muralLimit: safeMuralLimit },
+      {
+        postsLimit: safePostsLimit,
+        muralLimit: safeMuralLimit,
+        feriasLimit: safeFeriasLimit,
+        ausenciasLimit: safeAusenciasLimit,
+        colaboradoresLimit: safeColaboradoresLimit,
+      },
     ],
     enabled: queryEnabled && Boolean(userId) && isSupabaseEnabled,
     staleTime: 45 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_dashboard_snapshot", {
+      let { data, error } = await supabase.rpc("get_dashboard_snapshot", {
         p_posts_limit: safePostsLimit,
         p_mural_limit: safeMuralLimit,
+        p_ferias_limit: safeFeriasLimit,
+        p_ausencias_limit: safeAusenciasLimit,
+        p_colaboradores_limit: safeColaboradoresLimit,
       });
+      if (error && isMissingExtendedSnapshotFunction(error)) {
+        const fallback = await supabase.rpc("get_dashboard_snapshot", {
+          p_posts_limit: safePostsLimit,
+          p_mural_limit: safeMuralLimit,
+        });
+        data = fallback.data;
+        error = fallback.error;
+      }
       if (error) throw new Error(error.message || "Não foi possível carregar o snapshot do dashboard.");
 
       let payload = data;
