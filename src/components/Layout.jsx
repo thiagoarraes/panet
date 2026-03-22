@@ -149,7 +149,7 @@ const resolveRoute = (pathname) => {
     case "/perfil":
       return { pagina: "perfil", adminAba: "colaboradores", known: true };
     case "/admin":
-      return { pagina: "admin", adminAba: "colaboradores", known: true };
+      return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/colaboradores":
       return { pagina: "admin", adminAba: "colaboradores", known: true };
     case "/admin/pannews":

@@ -234,7 +234,7 @@ export function AdminEnquetes({ currentUserId }) {
                   </span>
                 </div>
                 <div className="admin-enquete-meta">
-                  <span>{row.options.length} opcoes</span>
+                  <span>{row.options.length} opções</span>
                   <span>{toTotalVotesLabel(row.totalVotes)}</span>
                   <span>
                     Resultado parcial: {row.showPartial ? "sim" : "nao"}
@@ -466,7 +466,7 @@ export function AdminEnquetes({ currentUserId }) {
                 Excluir enquete?
               </div>
               <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 20 }}>
-                Esta acao remove pergunta, opcoes e votos.
+                Esta ação remove pergunta, opções e votos.
               </div>
               <div className="admin-modal-actions" style={{ justifyContent: "center" }}>
                 <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>

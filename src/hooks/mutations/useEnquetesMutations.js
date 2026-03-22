@@ -13,12 +13,12 @@ const sanitizeOptions = (options) =>
 
 const assertValidPollPayload = ({ question, options }) => {
   if (!question) throw new Error("Informe a pergunta da enquete.");
-  if (options.length < 2) throw new Error("A enquete precisa ter pelo menos 2 opcoes.");
-  if (options.length > 6) throw new Error("A enquete aceita no maximo 6 opcoes.");
+  if (options.length < 2) throw new Error("A enquete precisa ter pelo menos 2 opções.");
+  if (options.length > 6) throw new Error("A enquete aceita no máximo 6 opções.");
 
   const normalizedUnique = new Set(options.map((item) => item.text.toLowerCase()));
   if (normalizedUnique.size !== options.length) {
-    throw new Error("As opcoes precisam ser diferentes entre si.");
+    throw new Error("As opções precisam ser diferentes entre si.");
   }
 };
 

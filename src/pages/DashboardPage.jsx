@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SkeletonPostCard, SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
 import { Suspense, lazy } from "react";
-import { BarChart3, Cake, CalendarDays, CheckCircle2, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
+import { BarChart3, Cake, CalendarDays, CheckCircle2, Clock, Heart, MessageSquare, Plane, SendHorizonal, Sparkles } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
@@ -322,6 +322,7 @@ export function DashboardPage({
   const shouldShowEnqueteHiddenResultNotice = Boolean(
     activeEnquete && !activeEnquete.isClosed && activeEnquete.hasVoted && !activeEnquete.showPartial
   );
+  const birthdayFirstName = String(today?.colaborador?.nome || "").split(" ")[0] || "";
 
   return (
     <div className="fade-up">
@@ -337,49 +338,28 @@ export function DashboardPage({
         </div>
       )}
       {today && (
-        <div
-          style={{
-            background: "linear-gradient(135deg, rgba(0,160,157,0.18), rgba(0,160,157,0.07))",
-            border: "1px solid rgba(0,160,157,0.32)",
-            borderRadius: 12,
-            padding: "16px 20px",
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            flexWrap: "wrap",
-            animation: "fadeUp 0.35s ease",
-          }}
-        >
-          <Cake size={28} color="var(--accent)" />
-          <div
-            style={{
-              minWidth: 220,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: parabenizadores.length > 0 ? "flex-start" : "center",
-            }}
-          >
-            <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>
-              Hoje é aniversário de <span style={{ color: "var(--accent)" }}>{today.colaborador.nome.split(" ")[0]}</span>!
+        <div className="birthday-hero">
+          <div className="birthday-hero-icon-wrap" aria-hidden="true">
+            <Cake size={26} />
+            <span className="birthday-hero-icon-spark">
+              <Sparkles size={12} />
+            </span>
+          </div>
+          <div className="birthday-hero-copy">
+            <div className="birthday-hero-badge">
+              <Sparkles size={12} />
+              Dia especial
             </div>
+            <div className="birthday-hero-title">
+              Hoje a Pan está em festa: <span className="birthday-hero-name">{birthdayFirstName}</span> faz aniversário!
+            </div>
+            <div className="birthday-hero-sub">Mande seu parabéns e ajude a tornar esse dia ainda mais inesquecível.</div>
             {parabenizadores.length > 0 && (
-              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <div className="birthday-hero-cheers">
                 {parabenizadores.map((c) => (
-                  <span
-                    key={c.id}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      border: "1px solid var(--border)",
-                      borderRadius: 999,
-                      padding: "3px 8px 3px 4px",
-                      background: "var(--surface)",
-                    }}
-                  >
+                  <span key={c.id} className="birthday-hero-cheer-chip">
                     <Avatar col={c} size={20} />
-                    <span style={{ fontSize: 11, color: "var(--text)", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <span className="birthday-hero-cheer-name">
                       {c.nome.split(" ")[0]} <span aria-hidden="true">🎉</span>
                     </span>
                   </span>
@@ -389,8 +369,7 @@ export function DashboardPage({
           </div>
 
           <button
-            className="btn-primary"
-            style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6 }}
+            className="btn-primary birthday-hero-action"
             disabled={parabenizando}
             onClick={handleParabenizarClick}
           >

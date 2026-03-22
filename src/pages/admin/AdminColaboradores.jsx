@@ -119,14 +119,56 @@ const clearCachedAdminColaboradores = () => {
 };
 
 const MODULES = [
-  { id: "colaboradores", label: "Colaboradores" },
   { id: "postagens", label: "PanNews" },
+  { id: "colaboradores", label: "Colaboradores" },
   { id: "ferias", label: "PanOff" },
   { id: "presencial", label: "Confirmar presença" },
+  { id: "enquetes", label: "Enquetes" },
   { id: "galeria", label: "Galerias" },
   { id: "mural", label: "PanZap" },
-  { id: "enquetes", label: "Enquetes" },
 ];
+
+const MONTH_OPTIONS = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
+const getBirthdayParts = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return { aniversarioDia: "", aniversarioMes: "" };
+
+  const normalized = raw.slice(0, 10);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return {
+      aniversarioDia: match[3],
+      aniversarioMes: match[2],
+    };
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return { aniversarioDia: "", aniversarioMes: "" };
+  return {
+    aniversarioDia: String(parsed.getDate()).padStart(2, "0"),
+    aniversarioMes: String(parsed.getMonth() + 1).padStart(2, "0"),
+  };
+};
+
+const toBirthdayIso = (dia, mes) => {
+  if (!dia || !mes) return null;
+  const year = new Date().getFullYear();
+  return `${year}-${mes}-${dia}`;
+};
 
 const mapProfileToRow = (profile, currentUserId) => {
   const iniciais = profile.nome
@@ -341,6 +383,8 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       nome: "",
       cargo: "Colaborador",
       aniversario: "",
+      aniversarioDia: "",
+      aniversarioMes: "",
       email: "",
       perfil: "colaborador",
       adminModulos: null,
@@ -350,7 +394,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   };
 
   const abrirEditar = (col) => {
-    setForm({ ...col, adminModulos: col.adminModulos ?? null });
+    const birthday = getBirthdayParts(col.aniversario);
+    setForm({
+      ...col,
+      adminModulos: col.adminModulos ?? null,
+      aniversarioDia: birthday.aniversarioDia,
+      aniversarioMes: birthday.aniversarioMes,
+    });
     setErrorMsg("");
     setModal(col);
   };
@@ -362,7 +412,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     }
     const normalizedEmail = String(form.email || "").trim().toLowerCase();
     const normalizedCargo = String(form.cargo || "").trim() || "Colaborador";
-    const normalizedBirthday = form.aniversario ? String(form.aniversario).trim() : null;
+    const hasBirthdayDay = Boolean(form.aniversarioDia);
+    const hasBirthdayMonth = Boolean(form.aniversarioMes);
+    if (hasBirthdayDay !== hasBirthdayMonth) {
+      setErrorMsg("Preencha dia e mês do aniversário.");
+      return;
+    }
+    const normalizedBirthday = toBirthdayIso(form.aniversarioDia, form.aniversarioMes);
     if (!isSupabaseEnabled) {
       const duplicatedEmail = lista.some(
         (c) => String(c?.email || "").trim().toLowerCase() === normalizedEmail && (modal === "novo" || c.id !== form.id)
@@ -753,13 +809,33 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">ANIVERSÁRIO</label>
-                  <input
-                    className="form-input"
-                    type="date"
-                    value={form.aniversario || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, aniversario: e.target.value }))}
-                  />
+                  <label className="form-label">ANIVERSÁRIO (DIA E MÊS)</label>
+                  <div className="grid-2 perfil-aniversario-grid">
+                    <select
+                      className="form-input"
+                      value={form.aniversarioDia || ""}
+                      onChange={(e) => setForm((p) => ({ ...p, aniversarioDia: e.target.value }))}
+                    >
+                      <option value="">Dia</option>
+                      {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="form-input"
+                      value={form.aniversarioMes || ""}
+                      onChange={(e) => setForm((p) => ({ ...p, aniversarioMes: e.target.value }))}
+                    >
+                      <option value="">Mês</option>
+                      {MONTH_OPTIONS.map((month) => (
+                        <option key={month.value} value={month.value}>
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
                     Essa data alimenta a página de aniversários da Panet.
                   </div>

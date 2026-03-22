@@ -22,34 +22,67 @@ export function useEnqueteAtiva(currentUserId, options = {}) {
     staleTime: 20 * 1000,
     refetchInterval: 30 * 1000,
     queryFn: async () => {
-      const { data: enquetesRows, error: enquetesError } = await supabase
+      const nowIso = new Date().toISOString();
+      const { data: enqueteAtivaRaw, error: enqueteError } = await supabase
+        .from("enquetes")
+        .select(
+          `
+            id,
+            pergunta,
+            mostrar_resultado_parcial,
+            encerra_em,
+            encerrada_em,
+            created_at,
+            enquete_opcoes(id,texto,ordem),
+            enquete_votos(enquete_opcao_id,colaborador_id)
+          `
+        )
+        .is("encerrada_em", null)
+        .or(`encerra_em.is.null,encerra_em.gt.${nowIso}`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!enqueteError) {
+        if (!enqueteAtivaRaw?.id) return null;
+        const enquete = mapEnqueteRow(enqueteAtivaRaw);
+        if (isEnqueteEncerrada(enquete)) return null;
+        return buildEnqueteResult({
+          enquete,
+          opcoes: enqueteAtivaRaw.enquete_opcoes || [],
+          votos: enqueteAtivaRaw.enquete_votos || [],
+          currentUserId,
+        });
+      }
+
+      const { data: enquetesRows, error: enquetesRowsError } = await supabase
         .from("enquetes")
         .select("id,pergunta,mostrar_resultado_parcial,encerra_em,encerrada_em,created_at")
         .is("encerrada_em", null)
         .order("created_at", { ascending: false })
         .limit(50);
 
-      if (enquetesError) throw new Error(enquetesError.message);
+      if (enquetesRowsError) throw new Error(enquetesRowsError.message);
 
-      const enqueteAtivaRaw = (enquetesRows || []).find((row) => !isEnqueteEncerrada(mapEnqueteRow(row)));
-      if (!enqueteAtivaRaw?.id) return null;
+      const legacyEnquete = (enquetesRows || []).find((row) => !isEnqueteEncerrada(mapEnqueteRow(row)));
+      if (!legacyEnquete?.id) return null;
 
       const [opcoesResult, votosResult] = await Promise.all([
         supabase
           .from("enquete_opcoes")
           .select("id,enquete_id,texto,ordem")
-          .eq("enquete_id", enqueteAtivaRaw.id)
+          .eq("enquete_id", legacyEnquete.id)
           .order("ordem", { ascending: true }),
         supabase
           .from("enquete_votos")
           .select("id,enquete_id,enquete_opcao_id,colaborador_id")
-          .eq("enquete_id", enqueteAtivaRaw.id),
+          .eq("enquete_id", legacyEnquete.id),
       ]);
 
       if (opcoesResult.error) throw new Error(opcoesResult.error.message);
       if (votosResult.error) throw new Error(votosResult.error.message);
 
-      const enquete = mapEnqueteRow(enqueteAtivaRaw);
+      const enquete = mapEnqueteRow(legacyEnquete);
       return buildEnqueteResult({
         enquete,
         opcoes: opcoesResult.data || [],
