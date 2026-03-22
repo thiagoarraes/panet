@@ -125,6 +125,7 @@ const MODULES = [
   { id: "presencial", label: "Confirmar presença" },
   { id: "galeria", label: "Galerias" },
   { id: "mural", label: "PanZap" },
+  { id: "enquetes", label: "Enquetes" },
 ];
 
 const mapProfileToRow = (profile, currentUserId) => {

@@ -116,6 +116,7 @@ const ADMIN_TAB_PATHS = {
   presencial: "/admin/confirmar-presenca",
   galeria: "/admin/galeria",
   mural: "/admin/mural",
+  enquetes: "/admin/enquetes",
 };
 
 const resolveRoute = (pathname) => {
@@ -163,6 +164,8 @@ const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "galeria", known: true };
     case "/admin/mural":
       return { pagina: "admin", adminAba: "mural", known: true };
+    case "/admin/enquetes":
+      return { pagina: "admin", adminAba: "enquetes", known: true };
     default:
       break;
   }

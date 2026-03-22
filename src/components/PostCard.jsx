@@ -28,6 +28,11 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
     : Array.isArray(post?.comentarios)
       ? post.comentarios.length
       : 0;
+  const imagePerformanceProps = {
+    loading: "lazy",
+    decoding: "async",
+    fetchpriority: "low",
+  };
 
   return (
     <div className="post-card">
@@ -35,9 +40,7 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
         <img
           src={post.imagem}
           alt={post.titulo}
-          loading="lazy"
-          decoding="async"
-          fetchPriority="low"
+          {...imagePerformanceProps}
           width="800"
           height="400"
         />

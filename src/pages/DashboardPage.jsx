@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { SkeletonPostCard, SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
 import { Suspense, lazy } from "react";
-import { Cake, CalendarDays, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
+import { BarChart3, Cake, CalendarDays, CheckCircle2, Clock, Heart, MessageSquare, Plane, SendHorizonal } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
@@ -15,7 +15,10 @@ import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
 import { useDashboardSnapshot } from "../hooks/queries/useDashboardSnapshot";
+import { useEnqueteAtiva } from "../hooks/queries/useEnqueteAtiva";
+import { useVoteEnquete } from "../hooks/mutations/useEnquetesMutations";
 import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
+import { formatEnqueteDateTime } from "../lib/enquetes.js";
 import { getAusenciaMeta, getFeriasStatusByDate, getPeriodoFolgaLabel, parseBrDate } from "../lib/panoff.js";
 import { isSupabaseEnabled } from "../lib/supabase.js";
 
@@ -155,10 +158,14 @@ export function DashboardPage({
   );
 
   const parabenizarMutation = useParabenizarAniversario(currentUserId);
+  const enqueteQuery = useEnqueteAtiva(currentUserId, { enabled: Boolean(currentUserId) });
+  const voteEnquete = useVoteEnquete();
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
   const [textoMural, setTextoMural] = useState("");
   const [enviandoMural, setEnviandoMural] = useState(false);
+  const [enqueteSelectedOptionId, setEnqueteSelectedOptionId] = useState("");
+  const [enqueteError, setEnqueteError] = useState("");
   const muralListRef = useRef(null);
   const { canvasRef, launch } = useConfetti();
   const POR_PAGINA = 5;
@@ -286,6 +293,35 @@ export function DashboardPage({
       }
     );
   };
+
+  useEffect(() => {
+    setEnqueteSelectedOptionId("");
+  }, [enqueteQuery.data?.id, enqueteQuery.data?.hasVoted, enqueteQuery.data?.isClosed]);
+
+  const handleVoteEnquete = async (optionId = enqueteSelectedOptionId) => {
+    const enquete = enqueteQuery.data;
+    if (!enquete?.id || !optionId || !currentUserId) return;
+
+    try {
+      setEnqueteError("");
+      await voteEnquete.mutateAsync({
+        enqueteId: enquete.id,
+        optionId,
+        colaboradorId: currentUserId,
+      });
+    } catch (error) {
+      setEnqueteError(error?.message || "Nao foi possivel registrar seu voto.");
+    }
+  };
+
+  const activeEnquete = enqueteQuery.data;
+  const shouldShowEnqueteResults = Boolean(
+    activeEnquete && (activeEnquete.isClosed || (activeEnquete.hasVoted && activeEnquete.showPartial))
+  );
+  const shouldShowEnqueteVoting = Boolean(activeEnquete && !activeEnquete.isClosed && !activeEnquete.hasVoted);
+  const shouldShowEnqueteHiddenResultNotice = Boolean(
+    activeEnquete && !activeEnquete.isClosed && activeEnquete.hasVoted && !activeEnquete.showPartial
+  );
 
   return (
     <div className="fade-up">
@@ -418,6 +454,120 @@ export function DashboardPage({
           )}
         </div>
         <div className="dash-aside">
+          {(enqueteQuery.isLoading || enqueteQuery.data) && (
+            <div className="card dashboard-enquete-card">
+              <div className="card-header">
+                <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <BarChart3 size={14} /> Enquete
+                </span>
+              </div>
+              <div className="card-body dashboard-enquete-body">
+                {enqueteQuery.isLoading ? (
+                  <div className="dashboard-enquete-loading">
+                    <span className="dashboard-enquete-loading-line" />
+                    <span className="dashboard-enquete-loading-line is-short" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="dashboard-enquete-question">{activeEnquete.question}</div>
+                    {activeEnquete.endsAt ? (
+                      <div className="dashboard-enquete-note">
+                        Encerra em {formatEnqueteDateTime(activeEnquete.endsAt)}
+                      </div>
+                    ) : null}
+                    {shouldShowEnqueteResults ? (
+                      <div className="dashboard-enquete-results">
+                        {activeEnquete.options.map((option) => (
+                          <div key={option.id} className="dashboard-enquete-result-row">
+                            <div className="dashboard-enquete-result-head">
+                              <span className="dashboard-enquete-result-label">{option.text}</span>
+                              <span className="dashboard-enquete-result-value">{option.percent}%</span>
+                            </div>
+                            <div className="dashboard-enquete-result-track">
+                              <span className="dashboard-enquete-result-fill" style={{ width: `${option.percent}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : shouldShowEnqueteVoting ? (
+                      <>
+                        <div className="dashboard-enquete-options" role="radiogroup" aria-label="Opções da enquete">
+                          {activeEnquete.options.map((option) => {
+                            const isSelected = enqueteSelectedOptionId === option.id;
+                            return (
+                              <label
+                                key={option.id}
+                                className={`dashboard-enquete-radio ${isSelected ? "is-selected" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`enquete-${activeEnquete.id}`}
+                                  value={option.id}
+                                  checked={isSelected}
+                                  onChange={() => setEnqueteSelectedOptionId(option.id)}
+                                  disabled={voteEnquete.isPending || !currentUserId}
+                                />
+                                <span className="dashboard-enquete-radio-dot" aria-hidden="true">
+                                  <span className="dashboard-enquete-radio-dot-inner" />
+                                </span>
+                                <span className="dashboard-enquete-radio-text">{option.text}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="dashboard-enquete-actions">
+                          <button
+                            className="btn-aniversarios-ver-todos dashboard-enquete-vote-btn"
+                            onClick={() => handleVoteEnquete()}
+                            disabled={!enqueteSelectedOptionId || voteEnquete.isPending || !currentUserId}
+                          >
+                            {voteEnquete.isPending ? "Enviando..." : "Votar"}
+                          </button>
+                        </div>
+                      </>
+                    ) : null}
+
+                    {shouldShowEnqueteHiddenResultNotice ? (
+                      <div className="dashboard-enquete-confirmation" role="status" aria-live="polite">
+                        <span className="dashboard-enquete-confirmation-icon">
+                          <CheckCircle2 size={14} />
+                        </span>
+                        <span className="dashboard-enquete-confirmation-copy">
+                          <strong>Voto registrado com sucesso.</strong>
+                          <span>Resultado final em breve, após o encerramento da enquete.</span>
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {shouldShowEnqueteResults ? (
+                      <div className="dashboard-enquete-footer">
+                        <span>{activeEnquete.totalVotes} voto(s)</span>
+                        <span>
+                          {activeEnquete.hasVoted ? "Voto registrado." : "Enquete encerrada."}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {enqueteError ? (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          fontSize: 12,
+                          color: "var(--danger)",
+                          border: "1px solid rgba(255,107,107,0.28)",
+                          borderRadius: 8,
+                          padding: "6px 8px",
+                          background: "rgba(255,107,107,0.08)",
+                        }}
+                      >
+                        {enqueteError}
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           <div className="card">
             <div className="card-header">
               <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
