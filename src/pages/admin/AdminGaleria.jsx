@@ -163,22 +163,24 @@ export function AdminGaleria() {
                 <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => setModalFotos(evento.id)}>
                   Fotos
                 </button>
-                <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => abrirEditarEvento(evento)}>
-                  <Pencil size={13} />
+                <button
+                  className="admin-action-icon"
+                  type="button"
+                  onClick={() => abrirEditarEvento(evento)}
+                  aria-label={`Editar ${evento.evento}`}
+                  title="Editar"
+                >
+                  <Pencil />
                 </button>
                 <button
-                  style={{
-                    background: "rgba(255,107,107,0.1)",
-                    border: "1px solid rgba(255,107,107,0.3)",
-                    color: "var(--danger)",
-                    borderRadius: 6,
-                    padding: "5px 10px",
-                    cursor: "pointer",
-                  }}
+                  className="admin-action-icon is-danger"
+                  type="button"
                   onClick={() => excluirEvento(evento.id)}
                   disabled={pendingDeleteIds.has(evento.id)}
+                  aria-label={pendingDeleteIds.has(evento.id) ? "Excluindo evento" : `Excluir ${evento.evento}`}
+                  title={pendingDeleteIds.has(evento.id) ? "Excluindo..." : "Excluir"}
                 >
-                  <Trash2 size={13} />
+                  <Trash2 />
                 </button>
               </div>
             </div>
@@ -345,18 +347,13 @@ export function AdminGaleria() {
                         Definir capa
                       </button>
                       <button
-                        style={{
-                          background: "rgba(255,107,107,0.1)",
-                          border: "1px solid rgba(255,107,107,0.3)",
-                          color: "var(--danger)",
-                          borderRadius: 6,
-                          padding: "4px 8px",
-                          fontSize: 12,
-                          cursor: "pointer",
-                        }}
+                        className="admin-action-icon is-danger"
+                        type="button"
                         onClick={() => deleteFoto.mutate(foto.id)}
+                        aria-label="Excluir foto"
+                        title="Excluir"
                       >
-                        Excluir
+                        <Trash2 />
                       </button>
                     </div>
                   </div>

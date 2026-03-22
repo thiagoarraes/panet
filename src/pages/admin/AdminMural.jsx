@@ -271,13 +271,13 @@ export function AdminMural() {
                 <div style={{ fontSize: 13, color: "var(--text)" }}>{m.texto}</div>
               </div>
               <button
-                className="btn-ghost admin-mural-item-delete"
-                style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))" }}
+                className="admin-action-icon is-danger admin-mural-item-delete"
                 onClick={() => setConfirmarExcluir(m)}
                 disabled={deletingId === m.id || deletingBulk}
+                aria-label="Excluir mensagem"
                 title="Excluir mensagem"
               >
-                <Trash2 size={14} />
+                <Trash2 />
               </button>
             </div>
           ))}

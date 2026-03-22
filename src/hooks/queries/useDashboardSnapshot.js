@@ -109,7 +109,7 @@ const mapDbAusenciaToUi = (item) => ({
   motivo: item?.motivo || "",
   inicio: item?.inicio || null,
   fim: item?.fim || null,
-  estimativa: item?.estimativa || null,
+  diaTodo: Boolean(item?.dia_todo),
   colaborador: toAvatar(item?.colaborador),
 });
 

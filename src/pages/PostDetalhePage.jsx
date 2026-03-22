@@ -13,6 +13,7 @@ import { useFerias } from "../hooks/queries/useFerias";
 import { useAusencias } from "../hooks/queries/useAusencias";
 import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
+import { getAusenciaDiaTodoReturnDate, getAusenciaEffectiveEnd, isAusenciaSingleFullDayWindow } from "../lib/ausencias.js";
 import { toPostSlug } from "../lib/postRouting.js";
 
 const getDateBoxParts = (iso) => {
@@ -99,6 +100,21 @@ const getAusenciaMeta = (item) => {
   const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
   const isToday = isSameCalendarDay(inicio, now);
 
+  if (item.diaTodo) {
+    const retorno = getAusenciaDiaTodoReturnDate(item);
+    return {
+      dateLabel: retorno ? `${formatDisplayDayMonth(inicio)} · volta ${formatDisplayDayMonth(retorno)}` : formatDisplayDayMonth(inicio),
+      timeLabel: "",
+    };
+  }
+
+  if (isAusenciaSingleFullDayWindow(item)) {
+    return {
+      dateLabel: `${formatDisplayDayMonth(inicio)} · dia todo`,
+      timeLabel: "",
+    };
+  }
+
   if (crossesDays) {
     return {
       dateLabel: "",
@@ -108,10 +124,8 @@ const getAusenciaMeta = (item) => {
 
   const dateLabel = !isToday ? formatDisplayDayMonth(inicio) : "";
   const timeLabel = hasFimValido
-    ? `${formatDisplayTime(inicio)} – ${formatDisplayTime(fim)}`
-    : item.estimativa
-      ? `${formatDisplayTime(inicio)} · ${item.estimativa}`
-      : `${formatDisplayTime(inicio)} · sem previsão`;
+    ? `${formatDisplayTime(inicio)} às ${formatDisplayTime(fim)}`
+    : `${formatDisplayTime(inicio)} · sem previsão`;
 
   return { dateLabel, timeLabel };
 };
@@ -235,7 +249,7 @@ export function PostDetalhePage({
     return (ausencias || [])
       .filter((item) => {
         if (!item?.inicio) return false;
-        const fim = item.fim ? new Date(item.fim) : null;
+        const fim = getAusenciaEffectiveEnd(item);
         return !fim || fim >= now;
       })
       .sort((a, b) => new Date(a.inicio) - new Date(b.inicio))

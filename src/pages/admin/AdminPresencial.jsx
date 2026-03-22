@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, Clock3, Gift, LockKeyhole, MapPin, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock3, Gift, LockKeyhole, MapPin, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -233,11 +233,16 @@ export function AdminPresencial({ currentUserId }) {
           const isDrawingThisAgenda = drawState.agendaId === agenda.id && drawState.status === "pending";
           const hasDrawFeedback = drawState.agendaId === agenda.id && drawState.status !== "idle";
           const canRunDraw = agenda.amigoSecretoAtivo && !agenda.amigoSecretoSorteadoAt && participantesSorteio >= 2 && !runSecretSanta.isPending;
+          const agendaStatusLabel = agenda.status === "encerrado" ? "Encerrado" : agenda.status === "cancelado" ? "Cancelado" : "Aberto";
+          const agendaStatusClass = agenda.status === "encerrado" ? "status-andamento" : "status-marcado";
           return (
             <div key={agenda.id} className="card" style={{ padding: 16 }}>
               <div className="admin-presencial-row">
                 <div className="admin-presencial-main">
-                  <div className="admin-presencial-title">{agenda.titulo}</div>
+                  <div className="admin-presencial-title-row">
+                    <div className="admin-presencial-title">{agenda.titulo}</div>
+                    <span className={`status-chip ${agendaStatusClass} admin-presencial-status-chip`}>{agendaStatusLabel}</span>
+                  </div>
                   <div className="admin-presencial-meta">
                     <span><CalendarDays size={13} /> {formatDateLabel(agenda.dataIso)}</span>
                     {agenda.horaIso && <span><Clock3 size={13} /> {formatTimeLabel(agenda.horaIso)}</span>}
@@ -258,11 +263,27 @@ export function AdminPresencial({ currentUserId }) {
                   {hasDrawFeedback && <div className={`admin-presencial-draw-feedback is-${drawState.status}`}><div className="admin-presencial-draw-feedback-title">{drawState.status === "pending" ? "Sorteando agora" : drawState.status === "success" ? "Sorteio concluido" : "Falha ao iniciar sorteio"}</div><div className="admin-presencial-draw-feedback-text">{drawState.message}</div></div>}
                 </div>
                 <div className="admin-presencial-side">
-                  <span className={`status-chip ${agenda.status === "encerrado" ? "status-andamento" : "status-marcado"}`}>{agenda.status === "encerrado" ? "Encerrado" : agenda.status === "cancelado" ? "Cancelado" : "Aberto"}</span>
                   <div className="admin-presencial-actions">
                     {agenda.amigoSecretoAtivo && <button className={`btn-ghost ${isDrawingThisAgenda ? "admin-presencial-draw-btn is-running" : "admin-presencial-draw-btn"}`} onClick={() => handleRunSecretSanta(agenda)} disabled={!canRunDraw}>{isDrawingThisAgenda ? "Sorteando..." : agenda.amigoSecretoSorteadoAt ? `Sorteio concluido (${participantesSorteio})` : participantesSorteio < 2 ? "Minimo 2 no sorteio" : "Iniciar sorteio"}</button>}
-                    <button className="btn-ghost" onClick={() => openEdit(agenda)}>Editar</button>
-                    <button className="btn-ghost" style={{ color: "var(--danger)", borderColor: "color-mix(in srgb, var(--danger) 35%, var(--border))" }} onClick={() => setConfirmarExcluir(agenda)} disabled={removingId === agenda.id}>{removingId === agenda.id ? "Removendo..." : "Remover"}</button>
+                    <button
+                      className="admin-action-icon"
+                      type="button"
+                      onClick={() => openEdit(agenda)}
+                      aria-label={`Editar ${agenda.titulo}`}
+                      title="Editar"
+                    >
+                      <Pencil />
+                    </button>
+                    <button
+                      className="admin-action-icon is-danger"
+                      type="button"
+                      onClick={() => setConfirmarExcluir(agenda)}
+                      disabled={removingId === agenda.id}
+                      aria-label={removingId === agenda.id ? "Removendo evento" : `Remover ${agenda.titulo}`}
+                      title={removingId === agenda.id ? "Removendo..." : "Remover"}
+                    >
+                      <Trash2 />
+                    </button>
                   </div>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { AlertTriangle, Heart, MessageCircle } from "lucide-react";
+import { AlertTriangle, Heart, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "../../components/Badge";
 import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
 import { useCreatePost, useUpdatePost, useDeletePost } from "../../hooks/mutations/usePostMutations.js";
@@ -153,24 +153,27 @@ export function AdminPostagens({ currentUserId }) {
                 <span className="admin-post-stats" style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <Heart size={12} /> {post.curtidas.length} · <MessageCircle size={12} /> {post.comentarios.length}
                 </span>
-                <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => abrirEditar(post)}>
-                  Editar
-                </button>
-                <button
-                  onClick={() => setConfirmarExcluir(post)}
-                  style={{
-                    background: "rgba(255,107,107,0.1)",
-                    border: "1px solid rgba(255,107,107,0.3)",
-                    color: "var(--danger)",
-                    borderRadius: 6,
-                    padding: "4px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                  disabled={pendingDeleteIds.has(post.id)}
-                >
-                  {pendingDeleteIds.has(post.id) ? "Excluindo..." : "Excluir"}
-                </button>
+                <div className="admin-post-action-buttons">
+                  <button
+                    className="admin-action-icon"
+                    type="button"
+                    onClick={() => abrirEditar(post)}
+                    aria-label={`Editar ${post.titulo}`}
+                    title="Editar"
+                  >
+                    <Pencil />
+                  </button>
+                  <button
+                    className="admin-action-icon is-danger"
+                    type="button"
+                    onClick={() => setConfirmarExcluir(post)}
+                    disabled={pendingDeleteIds.has(post.id)}
+                    aria-label={pendingDeleteIds.has(post.id) ? "Excluindo postagem" : `Excluir ${post.titulo}`}
+                    title={pendingDeleteIds.has(post.id) ? "Excluindo..." : "Excluir"}
+                  >
+                    <Trash2 />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

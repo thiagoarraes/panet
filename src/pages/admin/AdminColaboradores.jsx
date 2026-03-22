@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import { COLABORADORES } from "../../data/mockData.js";
 import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../../lib/supabase.js";
 import { Avatar } from "../../components/Avatar";
@@ -637,9 +637,6 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => abrirEditar(col)}>
-                        Editar
-                      </button>
                       <button
                         className="btn-ghost"
                         style={{ padding: "4px 10px", fontSize: 12 }}
@@ -648,20 +645,24 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
                       >
                         Alterar senha
                       </button>
+                      <button
+                        className="admin-action-icon"
+                        type="button"
+                        onClick={() => abrirEditar(col)}
+                        aria-label={`Editar ${col.nome}`}
+                        title="Editar"
+                      >
+                        <Pencil />
+                      </button>
                       {!col.isMe && (
                         <button
+                          className="admin-action-icon is-danger"
+                          type="button"
                           onClick={() => setConfirmarExcluir(col)}
-                          style={{
-                            background: "rgba(255,107,107,0.1)",
-                            border: "1px solid rgba(255,107,107,0.3)",
-                            color: "var(--danger)",
-                            borderRadius: 6,
-                            padding: "4px 10px",
-                            fontSize: 12,
-                            cursor: "pointer",
-                          }}
+                          aria-label={`Excluir ${col.nome}`}
+                          title="Excluir"
                         >
-                          Excluir
+                          <Trash2 />
                         </button>
                       )}
                     </div>
@@ -906,4 +907,3 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     </div>
   );
 }
-

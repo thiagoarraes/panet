@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
+import { AlertTriangle, CalendarDays, Clock, Pencil, Plane, Trash2, UserMinus } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -9,6 +9,7 @@ import { useAdminAusencias } from "../../hooks/queries/admin/useAdminAusencias.j
 import { useCreateFerias, useDeleteFerias, useUpdateFerias } from "../../hooks/mutations/useFeriasMutations.js";
 import { useCreateAusencia, useDeleteAusencia, useUpdateAusencia } from "../../hooks/mutations/useAusenciasMutations.js";
 import { useColaboradores } from "../../hooks/queries/useColaboradores.js";
+import { getAusenciaDiaTodoReturnDate, isAusenciaSingleFullDayWindow, isSameCalendarDay } from "../../lib/ausencias.js";
 
 const toIso = (brDate) => {
   const [day, month, year] = String(brDate || "").split("/");
@@ -47,32 +48,145 @@ const formatDateTimeForStore = (date) => {
   )}`;
 };
 
-const formatDateTimeLocal = (isoString) => {
-  if (!isoString) return "";
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return "";
-  return formatDateTimeForStore(date);
+const getLocalDatePart = (value) => String(value || "").split("T")[0] || "";
+
+const getLocalTimePart = (value) => {
+  const [, timePart = ""] = String(value || "").split("T");
+  return timePart.slice(0, 5);
 };
 
-const formatDisplayDateTime = (isoString) => {
+const combineLocalDateAndTime = (datePart, timePart = "00:00") => {
+  if (!datePart) return "";
+  return `${datePart}T${timePart || "00:00"}`;
+};
+
+const AUSENCIA_TIME_OPTIONS = Array.from({ length: 96 }, (_, index) => {
+  const totalMinutes = index * 15;
+  const hours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const minutes = String(totalMinutes % 60).padStart(2, "0");
+  return `${hours}:${minutes}`;
+});
+
+const formatDisplayDate = (isoString) => {
   if (!isoString) return "";
   const date = new Date(isoString);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("pt-BR", {
+  return date.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  });
+};
+
+const formatDisplayTime = (isoString) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 };
 
-const isSameLocalDateTime = (leftValue, rightValue) => {
+const formatAusenciaValueForForm = (isoString, diaTodo = false) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "";
+  return diaTodo ? formatDateForStore(date) : formatDateTimeForStore(date);
+};
+
+const localDateToIsoBoundary = (localStr, boundary = "start") => {
+  if (!localStr) return null;
+  const date = parseLocalDateTime(localStr);
+  if (!date || Number.isNaN(date.getTime())) return null;
+  const normalized = new Date(date);
+  if (boundary === "end") {
+    normalized.setHours(23, 59, 59, 999);
+  } else {
+    normalized.setHours(0, 0, 0, 0);
+  }
+  return normalized.toISOString();
+};
+
+const getAusenciaMeta = (item) => {
+  if (!item?.inicio) return { dateLabel: "", timeLabel: "" };
+
+  const inicio = new Date(item.inicio);
+  const fim = item.fim ? new Date(item.fim) : null;
+  if (Number.isNaN(inicio.getTime())) return { dateLabel: "", timeLabel: "" };
+
+  const now = new Date();
+  const hasFimValido = fim && !Number.isNaN(fim.getTime());
+  const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
+  const isToday = isSameCalendarDay(inicio, now);
+
+  if (item.diaTodo) {
+    const retorno = getAusenciaDiaTodoReturnDate(item);
+    return {
+      dateLabel: retorno ? `${formatDisplayDate(item.inicio)} · volta ${formatDisplayDate(retorno)}` : formatDisplayDate(item.inicio),
+      timeLabel: "",
+    };
+  }
+
+  if (isAusenciaSingleFullDayWindow(item)) {
+    return {
+      dateLabel: `${formatDisplayDate(item.inicio)} · dia todo`,
+      timeLabel: "",
+    };
+  }
+
+  if (crossesDays) {
+    return {
+      dateLabel: "",
+      timeLabel: `${formatDisplayDate(item.inicio)} ${formatDisplayTime(item.inicio)} → ${formatDisplayDate(item.fim)} ${formatDisplayTime(item.fim)}`,
+    };
+  }
+
+  return {
+    dateLabel: !isToday ? formatDisplayDate(item.inicio) : "",
+    timeLabel: hasFimValido
+      ? `${formatDisplayTime(item.inicio)} às ${formatDisplayTime(item.fim)}`
+      : `${formatDisplayTime(item.inicio)} · sem previsão`,
+  };
+};
+
+const getAusenciaMobileMeta = (item, meta) => {
+  if (!meta?.dateLabel && !meta?.timeLabel) return { label: "", icon: "calendar", isTime: false };
+
+  const inicio = item?.inicio ? new Date(item.inicio) : null;
+  const fim = item?.fim ? new Date(item.fim) : null;
+  const hasFimValido = fim && !Number.isNaN(fim.getTime());
+  const crossesDays = inicio && !Number.isNaN(inicio.getTime()) && hasFimValido && !isSameCalendarDay(inicio, fim);
+
+  if (meta.dateLabel && meta.timeLabel) {
+    return {
+      label: `${meta.dateLabel} ${meta.timeLabel}`,
+      icon: "calendar",
+      isTime: false,
+    };
+  }
+
+  if (meta.dateLabel) {
+    return {
+      label: meta.dateLabel,
+      icon: "calendar",
+      isTime: false,
+    };
+  }
+
+  return {
+    label: meta.timeLabel,
+    icon: crossesDays ? "calendar" : "clock",
+    isTime: !crossesDays,
+  };
+};
+
+const compareLocalDateTime = (leftValue, rightValue) => {
   const left = parseLocalDateTime(leftValue);
   const right = parseLocalDateTime(rightValue);
-  if (!left || !right) return false;
-  return left.getTime() === right.getTime();
+  if (!left || !right) return null;
+  return right.getTime() - left.getTime();
 };
 
 export function AdminFerias({ currentUserId }) {
@@ -212,8 +326,8 @@ export function AdminFerias({ currentUserId }) {
       motivo: "",
       inicio: "",
       fim: "",
-      estimativa: "",
       tipoTempo: "especifico",
+      diaTodo: false,
     });
     setAusenciaModal("novo");
   };
@@ -224,18 +338,39 @@ export function AdminFerias({ currentUserId }) {
     return !date || Number.isNaN(date.getTime()) ? null : date.toISOString();
   };
 
+  const toggleAusenciaDiaTodo = (checked) => {
+    setAusenciaForm((prev) => {
+      const inicioDate = parseLocalDateTime(prev.inicio);
+      const fimDate = parseLocalDateTime(prev.fim);
+
+      return {
+        ...prev,
+        diaTodo: checked,
+        inicio: inicioDate ? (checked ? formatDateForStore(inicioDate) : formatDateTimeForStore(inicioDate)) : "",
+        fim: fimDate ? (checked ? formatDateForStore(fimDate) : formatDateTimeForStore(fimDate)) : prev.fim || "",
+      };
+    });
+  };
+
   const salvarAusencia = async () => {
     if (!ausenciaForm.colaboradorId || !ausenciaForm.motivo || !ausenciaForm.inicio) return;
-    if (ausenciaForm.tipoTempo === "especifico" && isSameLocalDateTime(ausenciaForm.inicio, ausenciaForm.fim)) return;
+    if (ausenciaRetornoObrigatorio) return;
+    if (ausenciaRetornoInvalido) return;
 
     try {
       setAusenciaSaving(true);
       const payload = {
         colaborador_id: ausenciaForm.colaboradorId,
         motivo: ausenciaForm.motivo,
-        inicio: localToIso(ausenciaForm.inicio),
-        fim: ausenciaForm.tipoTempo === "especifico" && ausenciaForm.fim ? localToIso(ausenciaForm.fim) : null,
-        estimativa: ausenciaForm.tipoTempo === "estimativa" && ausenciaForm.estimativa ? ausenciaForm.estimativa : null,
+        inicio: ausenciaForm.diaTodo ? localDateToIsoBoundary(ausenciaForm.inicio, "start") : localToIso(ausenciaForm.inicio),
+        fim:
+          ausenciaForm.tipoTempo === "especifico" && ausenciaForm.fim
+            ? ausenciaForm.diaTodo
+              ? localDateToIsoBoundary(ausenciaForm.fim, "end")
+              : localToIso(ausenciaForm.fim)
+            : null,
+        estimativa: null,
+        dia_todo: Boolean(ausenciaForm.diaTodo),
       };
 
       if (ausenciaModal === "novo") {
@@ -269,8 +404,18 @@ export function AdminFerias({ currentUserId }) {
     }
   };
 
-  const ausenciaRetornoIgualAoInicio =
-    ausenciaForm.tipoTempo === "especifico" && isSameLocalDateTime(ausenciaForm.inicio, ausenciaForm.fim);
+  const ausenciaInicioDate = parseLocalDateTime(ausenciaForm.inicio);
+  const ausenciaRetornoDate = parseLocalDateTime(ausenciaForm.fim);
+  const ausenciaInicioDatePart = getLocalDatePart(ausenciaForm.inicio);
+  const ausenciaInicioTimePart = getLocalTimePart(ausenciaForm.inicio);
+  const ausenciaRetornoDatePart = getLocalDatePart(ausenciaForm.fim);
+  const ausenciaRetornoTimePart = getLocalTimePart(ausenciaForm.fim);
+  const ausenciaRetornoDiff = compareLocalDateTime(ausenciaForm.inicio, ausenciaForm.fim);
+  const ausenciaRetornoObrigatorio = ausenciaForm.tipoTempo === "especifico" && !ausenciaForm.fim;
+  const ausenciaRetornoInvalido =
+    ausenciaForm.tipoTempo === "especifico" &&
+    ausenciaRetornoDiff !== null &&
+    (ausenciaForm.diaTodo ? ausenciaRetornoDiff < 0 : ausenciaRetornoDiff <= 0);
 
   const placeholderBuscaFerias =
     sub === "dayoff" ? "Buscar por colaborador, cargo ou motivo" : "Buscar por colaborador, cargo ou período";
@@ -326,49 +471,43 @@ export function AdminFerias({ currentUserId }) {
 
       {sub !== "ausencia" && (
         <>
-          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div
+            className={`stagger ${sub === "dayoff" ? "admin-dayoff-grid" : ""}`}
+            style={
+              sub === "dayoff"
+                ? undefined
+                : { display: "flex", flexDirection: "column", gap: 10 }
+            }
+          >
             {rows.map((item) => (
-              <div key={item.id} className="card" style={{ padding: 16 }}>
-                <div className="admin-ferias-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div key={item.id} className={`card ${sub === "dayoff" ? "admin-dayoff-card" : ""}`} style={{ padding: 16 }}>
+                <div
+                  className={`admin-ferias-row ${sub === "dayoff" ? "admin-dayoff-row" : ""}`}
+                  style={{ display: "flex", alignItems: "center", gap: 12 }}
+                >
                   <Avatar col={item.colaborador} size={40} />
 
                   <div className="admin-ferias-main" style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{item.colaborador.cargo}</div>
+                    {sub === "dayoff" ? (
+                      <div className="admin-dayoff-header">
+                        <div className="admin-ferias-name">{item.colaborador.nome}</div>
+                        <span className="status-chip admin-ferias-status admin-dayoff-chip admin-dayoff-chip-inline">
+                          Day Off
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="admin-ferias-name">{item.colaborador.nome}</div>
+                    )}
+                    <div className="admin-ferias-role">{item.colaborador.cargo}</div>
                     <div
-                      className="admin-ferias-dates"
+                      className={`admin-ferias-dates admin-ferias-date-pill ${sub === "dayoff" ? "is-dayoff" : ""}`}
                       style={{ fontSize: 12, marginTop: 4, display: "inline-flex", alignItems: "center", gap: 4 }}
                     >
                       <CalendarDays size={12} /> {sub === "dayoff" ? item.inicio : `${item.inicio} - ${item.fim}`}
                     </div>
-
-                    {sub === "dayoff" && item.motivoReal ? (
-                      <div
-                        style={{
-                          marginTop: 6,
-                          padding: "6px 10px",
-                          background: "var(--surface2)",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          borderLeft: "3px solid #E84B7A",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: "var(--muted)",
-                            fontSize: 10,
-                            fontWeight: 600,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          Motivo real:{" "}
-                        </span>
-                        {item.motivoReal}
-                      </div>
-                    ) : null}
                   </div>
 
+                  <div className="admin-ferias-side">
                   {sub === "ferias" && (
                     <span
                       className={`status-chip admin-ferias-status ${
@@ -378,11 +517,10 @@ export function AdminFerias({ currentUserId }) {
                       {item.status === "em_andamento" ? "De férias" : "Agendado"}
                     </span>
                   )}
-
                   <div className="admin-ferias-actions" style={{ display: "flex", gap: 6 }}>
                     <button
-                      className="btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: 12 }}
+                      className="admin-action-icon"
+                      type="button"
                       onClick={() => {
                         setForm({
                           id: item.id,
@@ -394,26 +532,52 @@ export function AdminFerias({ currentUserId }) {
                         });
                         setModal(item.id);
                       }}
+                      aria-label="Editar registro"
+                      title="Editar"
                     >
-                      Editar
+                      <Pencil />
                     </button>
 
                     <button
+                      className="admin-action-icon is-danger"
+                      type="button"
                       onClick={() => setConfirmarExcluir(item)}
-                      style={{
-                        background: "rgba(255,107,107,0.1)",
-                        border: "1px solid rgba(255,107,107,0.3)",
-                        color: "var(--danger)",
-                        borderRadius: 6,
-                        padding: "4px 10px",
-                        fontSize: 12,
-                        cursor: "pointer",
-                      }}
                       disabled={pendingDeleteIds.has(item.id)}
+                      aria-label={pendingDeleteIds.has(item.id) ? "Removendo registro" : "Remover registro"}
+                      title={pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
                     >
-                      {pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
+                      <Trash2 />
                     </button>
                   </div>
+                  </div>
+
+                  {sub === "dayoff" && item.motivoReal ? (
+                    <div
+                      className="admin-dayoff-motivo"
+                      style={{
+                        marginTop: 6,
+                        padding: "6px 10px",
+                        background: "var(--surface2)",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        borderLeft: "3px solid #E84B7A",
+                      }}
+                    >
+                      <span
+                        className="admin-dayoff-motivo-label"
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        Motivo:{" "}
+                      </span>
+                      {item.motivoReal}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -451,25 +615,57 @@ export function AdminFerias({ currentUserId }) {
 
       {sub === "ausencia" && (
         <>
-          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {ausenciaRows.map((item) => (
-              <div key={item.id} className="card" style={{ padding: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <Avatar col={item.colaborador} size={40} />
+          <div className="stagger admin-ausencia-grid">
+            {ausenciaRows.map((item) => {
+              const ausenciaMeta = getAusenciaMeta(item);
+              const ausenciaMobileMeta = getAusenciaMobileMeta(item, ausenciaMeta);
 
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{item.colaborador.nome}</div>
+              return (
+                <div key={item.id} className="card admin-ausencia-card" style={{ padding: 16 }}>
+                  <div className="admin-ferias-row admin-ausencia-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <Avatar col={item.colaborador} size={40} />
+
+                  <div className="admin-ferias-main admin-ausencia-main" style={{ flex: 1 }}>
+                    <div className="admin-ausencia-header">
+                      <div className="admin-ferias-name admin-ausencia-name">{item.colaborador.nome}</div>
+                      <span
+                        className="status-chip admin-ferias-status admin-ausencia-status admin-ausencia-status-inline"
+                        style={{
+                          background: "rgba(255,160,50,0.15)",
+                          color: "#FFA032",
+                          border: "1px solid rgba(255,160,50,0.3)",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}
+                      >
+                        Ausente
+                      </span>
+                    </div>
                     <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{item.colaborador.cargo}</div>
-                    <div style={{ fontSize: 12, marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      <Clock size={12} />
-                      {formatDisplayDateTime(item.inicio)}
-                      {item.fim
-                        ? ` -> ${formatDisplayDateTime(item.fim)}`
-                        : item.estimativa
-                          ? ` · ${item.estimativa}`
-                          : " · sem previsão"}
+                    <div className="folga-meta admin-ausencia-meta admin-ausencia-meta-desktop" style={{ marginTop: 8 }}>
+                      {ausenciaMeta.dateLabel ? (
+                        <span className="folga-meta-chip">
+                          <CalendarDays size={12} />
+                          {ausenciaMeta.dateLabel}
+                        </span>
+                      ) : null}
+                      {ausenciaMeta.timeLabel ? (
+                        <span className="folga-meta-chip is-time">
+                          <Clock size={12} />
+                          {ausenciaMeta.timeLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="folga-meta admin-ausencia-meta admin-ausencia-meta-mobile" style={{ marginTop: 8 }}>
+                      {ausenciaMobileMeta.label ? (
+                        <span className={`folga-meta-chip${ausenciaMobileMeta.isTime ? " is-time" : ""}`}>
+                          {ausenciaMobileMeta.icon === "clock" ? <Clock size={12} /> : <CalendarDays size={12} />}
+                          {ausenciaMobileMeta.label}
+                        </span>
+                      ) : null}
                     </div>
                     <div
+                      className="admin-ausencia-motivo"
                       style={{
                         marginTop: 6,
                         padding: "6px 10px",
@@ -480,6 +676,7 @@ export function AdminFerias({ currentUserId }) {
                       }}
                     >
                       <span
+                        className="admin-ausencia-motivo-label"
                         style={{
                           color: "var(--muted)",
                           fontSize: 10,
@@ -494,57 +691,42 @@ export function AdminFerias({ currentUserId }) {
                     </div>
                   </div>
 
-                  <span
-                    className="status-chip"
-                    style={{
-                      background: "rgba(255,160,50,0.15)",
-                      color: "#FFA032",
-                      border: "1px solid rgba(255,160,50,0.3)",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    Ausente
-                  </span>
+                    <div className="admin-ferias-actions admin-ausencia-actions" style={{ display: "flex", gap: 6 }}>
+                      <button
+                        className="admin-action-icon"
+                        type="button"
+                        onClick={() => {
+                          setAusenciaForm({
+                            colaboradorId: String(item.colaborador.id),
+                            motivo: item.motivo,
+                            inicio: formatAusenciaValueForForm(item.inicio, item.diaTodo),
+                            fim: formatAusenciaValueForForm(item.fim, item.diaTodo),
+                            tipoTempo: item.fim ? "especifico" : "indefinido",
+                            diaTodo: Boolean(item.diaTodo),
+                          });
+                          setAusenciaModal(item.id);
+                        }}
+                        aria-label="Editar ausência"
+                        title="Editar"
+                      >
+                        <Pencil />
+                      </button>
 
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      className="btn-ghost"
-                      style={{ padding: "4px 10px", fontSize: 12 }}
-                      onClick={() => {
-                        setAusenciaForm({
-                          colaboradorId: String(item.colaborador.id),
-                          motivo: item.motivo,
-                          inicio: formatDateTimeLocal(item.inicio),
-                          fim: formatDateTimeLocal(item.fim),
-                          estimativa: item.estimativa || "",
-                          tipoTempo: item.fim ? "especifico" : item.estimativa ? "estimativa" : "indefinido",
-                        });
-                        setAusenciaModal(item.id);
-                      }}
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() => setAusenciaConfirmarExcluir(item)}
-                      style={{
-                        background: "rgba(255,107,107,0.1)",
-                        border: "1px solid rgba(255,107,107,0.3)",
-                        color: "var(--danger)",
-                        borderRadius: 6,
-                        padding: "4px 10px",
-                        fontSize: 12,
-                        cursor: "pointer",
-                      }}
-                      disabled={ausenciaPendingDelete.has(item.id)}
-                    >
-                      {ausenciaPendingDelete.has(item.id) ? "Removendo..." : "Remover"}
-                    </button>
+                      <button
+                        className="admin-action-icon is-danger"
+                        type="button"
+                        onClick={() => setAusenciaConfirmarExcluir(item)}
+                        disabled={ausenciaPendingDelete.has(item.id)}
+                        aria-label={ausenciaPendingDelete.has(item.id) ? "Removendo ausência" : "Remover ausência"}
+                        title={ausenciaPendingDelete.has(item.id) ? "Removendo..." : "Remover"}
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {ausenciaRows.length === 0 && (
               <div className="empty-state">{ausenciaLoading ? "Carregando..." : "Nenhuma ausência registrada."}</div>
@@ -658,7 +840,7 @@ export function AdminFerias({ currentUserId }) {
 
               {sub === "dayoff" && (
                 <div className="form-group">
-                  <label className="form-label">MOTIVO REAL</label>
+                  <label className="form-label">MOTIVO</label>
                   <input
                     className="form-input"
                     placeholder="Ex: consulta, compromisso pessoal, resolver documento..."
@@ -702,7 +884,7 @@ export function AdminFerias({ currentUserId }) {
           style={{ alignItems: "center", justifyItems: "center" }}
           onClick={() => setAusenciaModal(null)}
         >
-          <div className="modal" style={{ maxWidth: 500 }} onClick={(event) => event.stopPropagation()}>
+          <div className="modal admin-ausencia-modal" style={{ maxWidth: 560 }} onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
                 {ausenciaModal === "novo" ? "Registrar ausência" : "Editar ausência"}
@@ -730,119 +912,233 @@ export function AdminFerias({ currentUserId }) {
               </div>
 
               <div className="form-group">
-                <label className="form-label">MOTIVO REAL *</label>
+                <label className="form-label">MOTIVO *</label>
                 <input
                   className="form-input"
                   placeholder="Ex: Médico, problema no carro, buscar filho..."
                   value={ausenciaForm.motivo || ""}
                   onChange={(event) => setAusenciaForm((prev) => ({ ...prev, motivo: event.target.value }))}
                 />
-                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Visível apenas para administradores.</div>
+                <div className="admin-ausencia-field-note">Só admins veem.</div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">INÍCIO *</label>
-                <DatePicker
-                  selected={parseLocalDateTime(ausenciaForm.inicio)}
-                  onChange={(date) =>
-                    setAusenciaForm((prev) => {
-                      const nextInicio = formatDateTimeForStore(date);
-                      const prevFimDate = parseLocalDateTime(prev.fim);
-                      const nextInicioDate = parseLocalDateTime(nextInicio);
-
-                      return {
-                        ...prev,
-                        inicio: nextInicio,
-                        fim:
-                          prev.tipoTempo === "especifico" && prevFimDate && nextInicioDate && prevFimDate < nextInicioDate
-                            ? nextInicio
-                            : prev.fim,
-                      };
-                    })
-                  }
-                  locale={ptBR}
-                  dateFormat="dd/MM/yyyy HH:mm"
-                  timeFormat="HH:mm"
-                  timeCaption="Hora"
-                  showTimeSelect
-                  timeIntervals={15}
-                  placeholderText="dd/mm/aaaa --:--"
-                  className="form-input datepicker-input"
-                  calendarClassName="panet-datepicker panet-datepicker--datetime"
-                  popperClassName="panet-datepicker-popper"
-                />
+              <div className="form-group admin-ausencia-panel">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  INÍCIO
+                </label>
+                <div className="admin-ausencia-start-options">
+                  <label className={`admin-ausencia-return-option admin-ausencia-start-option ${!ausenciaForm.diaTodo ? "is-active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="ausenciaInicioModo"
+                      checked={!ausenciaForm.diaTodo}
+                      onChange={() => toggleAusenciaDiaTodo(false)}
+                    />
+                    <span className="admin-ausencia-return-option-title">Com hora</span>
+                    <span className="admin-ausencia-return-option-text">Escolher data e hora.</span>
+                  </label>
+                  <label className={`admin-ausencia-return-option admin-ausencia-start-option ${ausenciaForm.diaTodo ? "is-active" : ""}`}>
+                    <input
+                      type="radio"
+                      name="ausenciaInicioModo"
+                      checked={Boolean(ausenciaForm.diaTodo)}
+                      onChange={() => toggleAusenciaDiaTodo(true)}
+                    />
+                    <span className="admin-ausencia-return-option-title">Dia todo</span>
+                    <span className="admin-ausencia-return-option-text">Escolher só a data.</span>
+                  </label>
+                </div>
+                {ausenciaForm.diaTodo ? (
+                  <div className="admin-ausencia-inline-field">
+                    <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
+                    <DatePicker
+                      selected={ausenciaInicioDate}
+                      onChange={(date) =>
+                        setAusenciaForm((prev) => ({
+                          ...prev,
+                          inicio: formatDateForStore(date),
+                        }))
+                      }
+                      locale={ptBR}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="dd/mm/aaaa"
+                      className="form-input datepicker-input"
+                      calendarClassName="panet-datepicker panet-datepicker--datetime"
+                      popperClassName="panet-datepicker-popper"
+                    />
+                  </div>
+                ) : (
+                  <div className="admin-ausencia-date-time-row">
+                    <div className="admin-ausencia-inline-field">
+                      <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
+                      <DatePicker
+                        selected={ausenciaInicioDate}
+                        onChange={(date) =>
+                          setAusenciaForm((prev) => ({
+                            ...prev,
+                            inicio: combineLocalDateAndTime(formatDateForStore(date), getLocalTimePart(prev.inicio) || "00:00"),
+                          }))
+                        }
+                        locale={ptBR}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="dd/mm/aaaa"
+                        className="form-input datepicker-input"
+                        calendarClassName="panet-datepicker panet-datepicker--datetime"
+                        popperClassName="panet-datepicker-popper"
+                      />
+                    </div>
+                    <div className="admin-ausencia-inline-field is-time">
+                      <label className="form-label admin-ausencia-inline-label">Hora</label>
+                      <select
+                        className="form-input"
+                        value={ausenciaInicioTimePart || "00:00"}
+                        onChange={(event) =>
+                          setAusenciaForm((prev) => ({
+                            ...prev,
+                            inicio: combineLocalDateAndTime(getLocalDatePart(prev.inicio), event.target.value),
+                          }))
+                        }
+                        disabled={!ausenciaInicioDatePart}
+                      >
+                        {AUSENCIA_TIME_OPTIONS.map((timeOption) => (
+                          <option key={`inicio-${timeOption}`} value={timeOption}>
+                            {timeOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {ausenciaForm.diaTodo ? <div className="admin-ausencia-field-note">Sem horário.</div> : null}
               </div>
 
-              <div className="form-group">
-                <label className="form-label">TEMPO DE RETORNO</label>
-                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
+              <div className="form-group admin-ausencia-panel">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  RETORNO
+                </label>
+                <div className="admin-ausencia-return-options">
+                  <label
+                    className={`admin-ausencia-return-option ${ausenciaForm.tipoTempo === "especifico" ? "is-active" : ""}`}
+                  >
                     <input
                       type="radio"
                       name="tipoTempo"
                       checked={ausenciaForm.tipoTempo === "especifico"}
-                      onChange={() => setAusenciaForm((prev) => ({ ...prev, tipoTempo: "especifico", estimativa: "" }))}
+                      onChange={() => setAusenciaForm((prev) => ({ ...prev, tipoTempo: "especifico" }))}
                     />
-                    Horário específico
+                    <span className="admin-ausencia-return-option-title">Definido</span>
+                    <span className="admin-ausencia-return-option-text">
+                      {ausenciaForm.diaTodo ? "Escolher data." : "Escolher data e hora."}
+                    </span>
                   </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
-                    <input
-                      type="radio"
-                      name="tipoTempo"
-                      checked={ausenciaForm.tipoTempo === "estimativa"}
-                      onChange={() => setAusenciaForm((prev) => ({ ...prev, tipoTempo: "estimativa", fim: "" }))}
-                    />
-                    Estimativa
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 13 }}>
+                  <label
+                    className={`admin-ausencia-return-option ${ausenciaForm.tipoTempo === "indefinido" ? "is-active" : ""}`}
+                  >
                     <input
                       type="radio"
                       name="tipoTempo"
                       checked={ausenciaForm.tipoTempo === "indefinido"}
-                      onChange={() =>
-                        setAusenciaForm((prev) => ({ ...prev, tipoTempo: "indefinido", fim: "", estimativa: "" }))
-                      }
+                      onChange={() => setAusenciaForm((prev) => ({ ...prev, tipoTempo: "indefinido", fim: "" }))}
                     />
-                    Indefinido
+                    <span className="admin-ausencia-return-option-title">Sem previsão</span>
+                    <span className="admin-ausencia-return-option-text">Atualizar depois.</span>
                   </label>
                 </div>
 
                 {ausenciaForm.tipoTempo === "especifico" && (
                   <>
-                    <DatePicker
-                      selected={parseLocalDateTime(ausenciaForm.fim)}
-                      onChange={(date) =>
-                        setAusenciaForm((prev) => {
-                          const inicioDate = parseLocalDateTime(prev.inicio);
-                          const nextFimDate = date && inicioDate && date < inicioDate ? inicioDate : date;
-                          return { ...prev, fim: formatDateTimeForStore(nextFimDate) };
-                        })
-                      }
-                      locale={ptBR}
-                      dateFormat="dd/MM/yyyy HH:mm"
-                      timeFormat="HH:mm"
-                      timeCaption="Hora"
-                      showTimeSelect
-                      timeIntervals={15}
-                      placeholderText="dd/mm/aaaa --:--"
-                      className="form-input datepicker-input"
-                      calendarClassName="panet-datepicker panet-datepicker--datetime"
-                      popperClassName="panet-datepicker-popper"
-                      minDate={parseLocalDateTime(ausenciaForm.inicio)}
-                    />
-                    {ausenciaRetornoIgualAoInicio && (
-                      <div className="admin-presencial-form-error">O tempo de retorno precisa ser diferente do início.</div>
+                    {ausenciaForm.diaTodo ? (
+                      <>
+                        <label className="form-label" style={{ marginBottom: 6 }}>
+                          DATA DE RETORNO
+                        </label>
+                        <DatePicker
+                          selected={ausenciaRetornoDate}
+                          onChange={(date) =>
+                            setAusenciaForm((prev) => ({
+                              ...prev,
+                              fim: formatDateForStore(date),
+                            }))
+                          }
+                          locale={ptBR}
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="dd/mm/aaaa"
+                          className="form-input datepicker-input"
+                          calendarClassName="panet-datepicker panet-datepicker--datetime"
+                          popperClassName="panet-datepicker-popper"
+                          minDate={ausenciaInicioDate}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="admin-ausencia-date-time-row admin-ausencia-date-time-head">
+                          <label className="form-label admin-ausencia-inline-label">DATA DE RETORNO</label>
+                          <label className="form-label admin-ausencia-inline-label">Hora</label>
+                        </div>
+                        <div className="admin-ausencia-date-time-row">
+                          <div className="admin-ausencia-inline-field">
+                            <DatePicker
+                              selected={ausenciaRetornoDate}
+                              onChange={(date) =>
+                                setAusenciaForm((prev) => ({
+                                  ...prev,
+                                  fim: combineLocalDateAndTime(
+                                    formatDateForStore(date),
+                                    getLocalTimePart(prev.fim) || getLocalTimePart(prev.inicio) || "00:00"
+                                  ),
+                                }))
+                              }
+                              locale={ptBR}
+                              dateFormat="dd/MM/yyyy"
+                              placeholderText="dd/mm/aaaa"
+                              className="form-input datepicker-input"
+                              calendarClassName="panet-datepicker panet-datepicker--datetime"
+                              popperClassName="panet-datepicker-popper"
+                              minDate={ausenciaInicioDate}
+                            />
+                          </div>
+                          <div className="admin-ausencia-inline-field is-time">
+                            <select
+                              className="form-input"
+                              value={ausenciaRetornoTimePart || ""}
+                              aria-label="Hora de retorno"
+                              onChange={(event) =>
+                                setAusenciaForm((prev) => ({
+                                  ...prev,
+                                  fim: combineLocalDateAndTime(getLocalDatePart(prev.fim), event.target.value),
+                                }))
+                              }
+                              disabled={!ausenciaRetornoDatePart}
+                            >
+                              <option value="">Selecione</option>
+                              {AUSENCIA_TIME_OPTIONS.filter(
+                                (timeOption) =>
+                                  !ausenciaRetornoDatePart ||
+                                  ausenciaRetornoDatePart !== ausenciaInicioDatePart ||
+                                  !ausenciaInicioTimePart ||
+                                  timeOption >= ausenciaInicioTimePart
+                              ).map((timeOption) => (
+                                <option key={`retorno-${timeOption}`} value={timeOption}>
+                                  {timeOption}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {(ausenciaRetornoObrigatorio || ausenciaRetornoInvalido) && (
+                      <div className="admin-presencial-form-error">
+                        {ausenciaRetornoObrigatorio
+                          ? ausenciaForm.diaTodo
+                            ? "Escolha a data de retorno."
+                            : "Escolha a data e hora de retorno."
+                          : ausenciaForm.diaTodo
+                          ? "A data de retorno não pode ser antes do início."
+                          : "O retorno precisa ser depois do início."}
+                      </div>
                     )}
                   </>
-                )}
-
-                {ausenciaForm.tipoTempo === "estimativa" && (
-                  <input
-                    className="form-input"
-                    placeholder='Ex: "2h", "tarde toda", "1h30"'
-                    value={ausenciaForm.estimativa || ""}
-                    onChange={(event) => setAusenciaForm((prev) => ({ ...prev, estimativa: event.target.value }))}
-                  />
                 )}
               </div>
 
@@ -850,7 +1146,11 @@ export function AdminFerias({ currentUserId }) {
                 <button className="btn-ghost" onClick={() => setAusenciaModal(null)}>
                   Cancelar
                 </button>
-                <button className="btn-primary" onClick={salvarAusencia} disabled={ausenciaSaving || ausenciaRetornoIgualAoInicio}>
+                <button
+                  className="btn-primary"
+                  onClick={salvarAusencia}
+                  disabled={ausenciaSaving || ausenciaRetornoObrigatorio || ausenciaRetornoInvalido}
+                >
                   Salvar
                 </button>
               </div>

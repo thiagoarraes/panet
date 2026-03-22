@@ -1312,9 +1312,25 @@
     flex: 1;
     min-width: 0;
   }
+  .admin-post-action-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .admin-presencial-title-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+  }
   .admin-presencial-title {
     font-size: 15px;
     font-weight: 700;
+  }
+  .admin-presencial-status-chip {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .admin-presencial-meta {
     display: flex;
@@ -2413,6 +2429,410 @@
   .admin-users-table th,
   .admin-users-table td { white-space: nowrap; }
   .admin-modal-actions { display: flex; gap: 8px; }
+  .admin-action-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    background: color-mix(in srgb, var(--surface2) 82%, transparent);
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    flex-shrink: 0;
+  }
+  .admin-action-icon:hover {
+    border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
+    background: color-mix(in srgb, var(--surface2) 96%, transparent);
+    color: var(--text);
+    transform: translateY(-1px);
+  }
+  .admin-action-icon:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .admin-action-icon.is-danger {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+    background: rgba(255,107,107,0.08);
+  }
+  .admin-action-icon.is-danger:hover {
+    border-color: color-mix(in srgb, var(--danger) 52%, var(--border));
+    background: rgba(255,107,107,0.14);
+    color: #ff8f8f;
+  }
+  .admin-action-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .admin-action-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .admin-ferias-row {
+    align-items: stretch;
+  }
+  .admin-ferias-main {
+    min-width: 0;
+  }
+  .admin-ferias-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .admin-ferias-role {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .admin-ferias-date-pill {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+    background: color-mix(in srgb, var(--surface2) 82%, transparent);
+    line-height: 1.4;
+  }
+  .admin-ferias-date-pill.is-dayoff {
+    border-color: rgba(232, 75, 122, 0.26);
+    background: color-mix(in srgb, rgba(232, 75, 122, 0.12) 78%, var(--surface2));
+  }
+  .admin-dayoff-card {
+    border-color: color-mix(in srgb, #E84B7A 26%, var(--border));
+    background:
+      radial-gradient(circle at 100% 0%, color-mix(in srgb, #E84B7A 11%, transparent), transparent 34%),
+      linear-gradient(180deg, color-mix(in srgb, var(--surface2) 92%, transparent), color-mix(in srgb, var(--surface) 98%, transparent));
+  }
+  .admin-dayoff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .admin-dayoff-grid > .admin-dayoff-card {
+    height: 100%;
+  }
+  .admin-dayoff-row {
+    display: grid !important;
+    grid-template-columns: 40px minmax(0, 1fr) 112px;
+    align-items: start !important;
+    column-gap: 12px !important;
+    row-gap: 10px !important;
+  }
+  .admin-dayoff-chip {
+    background: rgba(232, 75, 122, 0.14);
+    color: #ff7fa5;
+    border: 1px solid rgba(232, 75, 122, 0.3);
+  }
+  .admin-dayoff-header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    max-width: 100%;
+  }
+  .admin-dayoff-chip-inline {
+    display: inline-flex;
+  }
+  .admin-dayoff-chip-mobile {
+    display: none;
+  }
+  .admin-dayoff-motivo {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    margin-top: 0;
+  }
+  .admin-dayoff-motivo-label {
+    color: var(--muted);
+  }
+  .admin-dayoff-row .admin-ferias-main {
+    grid-column: 2;
+    width: 100%;
+  }
+  .admin-dayoff-row .admin-ferias-side {
+    grid-column: 3;
+    width: 112px;
+    min-width: 112px;
+    align-items: flex-end;
+    justify-content: flex-start;
+  }
+  .admin-dayoff-card .admin-ferias-actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+  }
+  .admin-dayoff-card .admin-ferias-actions .btn-ghost,
+  .admin-dayoff-card .admin-ferias-actions button {
+    width: auto;
+    min-width: 34px;
+    justify-content: center;
+  }
+  .admin-ferias-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .admin-ferias-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .admin-ausencia-main {
+    min-width: 0;
+    grid-column: 2;
+    width: 100%;
+    display: block;
+  }
+  .admin-ausencia-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .admin-ausencia-grid > .admin-ausencia-card {
+    height: 100%;
+  }
+  .admin-ausencia-card {
+    --folga-accent: #FFA032;
+  }
+  .admin-ausencia-row {
+    display: grid !important;
+    grid-template-columns: 40px minmax(0, 1fr) 112px;
+    align-items: start !important;
+    column-gap: 12px !important;
+    row-gap: 10px !important;
+  }
+  .admin-ausencia-header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .admin-ausencia-name {
+    min-width: 0;
+  }
+  .admin-ausencia-modal .modal-body {
+    display: grid;
+    gap: 16px;
+  }
+  .admin-ausencia-panel {
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--surface2) 74%, transparent);
+  }
+  .admin-ausencia-panel-copy,
+  .admin-ausencia-field-note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .admin-ausencia-panel-copy {
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+  .admin-ausencia-field-note {
+    margin-top: 8px;
+  }
+  .admin-ausencia-field-note.is-inline {
+    margin-top: 0;
+  }
+  .admin-ausencia-date-time-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 140px;
+    gap: 10px;
+  }
+  .admin-ausencia-date-time-head {
+    margin-bottom: 6px;
+  }
+  .admin-ausencia-date-time-head .admin-ausencia-inline-label {
+    margin-bottom: 0;
+  }
+  .admin-ausencia-inline-field {
+    min-width: 0;
+  }
+  .admin-ausencia-inline-label {
+    margin-bottom: 6px;
+  }
+  .admin-ausencia-start-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+  .admin-ausencia-start-option {
+    margin: 0;
+    width: 100%;
+  }
+  .admin-ausencia-return-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+  .admin-ausencia-return-option {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+  .admin-ausencia-return-option:hover {
+    border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+    transform: translateY(-1px);
+  }
+  .admin-ausencia-return-option.is-active {
+    border-color: color-mix(in srgb, var(--accent) 56%, var(--border));
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .admin-ausencia-return-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .admin-ausencia-return-option-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .admin-ausencia-return-option-text {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .admin-ausencia-summary {
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface2) 88%, transparent), color-mix(in srgb, var(--accent) 8%, var(--surface)));
+  }
+  .admin-ausencia-summary-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .admin-ausencia-summary-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .admin-ausencia-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.5;
+  }
+  .admin-ausencia-meta-desktop {
+    display: inline-flex;
+  }
+  .admin-ausencia-meta-mobile {
+    display: none;
+  }
+  .admin-ausencia-meta-mobile-part {
+    min-width: 0;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 6px;
+    line-height: 1.35;
+  }
+  .admin-ausencia-meta-mobile-part-end {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .admin-ausencia-meta-mobile-label {
+    display: none;
+  }
+  .admin-ausencia-meta-mobile-part::before {
+    content: "INÍCIO";
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .admin-ausencia-meta-mobile-part-end::before {
+    content: "RETORNO";
+  }
+  .admin-ausencia-meta-mobile-part::before,
+  .admin-ausencia-meta-mobile-part-end::before {
+    content: none;
+  }
+  .admin-ausencia-meta-mobile-date {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .admin-ausencia-meta-mobile-time {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .admin-ausencia-meta-mobile-fallback {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .admin-ausencia-motivo {
+    width: 100%;
+    max-width: none;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+  }
+  .admin-ausencia-status {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .admin-ausencia-status-inline {
+    display: inline-flex;
+  }
+  .admin-ausencia-status-mobile {
+    display: none;
+  }
+  .admin-ausencia-actions {
+    grid-column: 3;
+    width: 112px;
+    min-width: 112px;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 8px;
+    justify-self: end;
+    align-self: start;
+  }
+  .admin-ausencia-actions .btn-ghost,
+  .admin-ausencia-actions button {
+    width: auto;
+    min-width: 34px;
+    justify-content: center;
+  }
 
   /* Login */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); position: relative; overflow: hidden; }
@@ -3149,6 +3569,35 @@
     .panoff-stat-value {
       font-size: 24px;
     }
+    .aniv-hero .panoff-hero-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .aniv-hero .panoff-stat {
+      min-height: 118px;
+      padding: 14px;
+    }
+    .aniv-hero .panoff-stat.is-aniv-weekday {
+      grid-column: 1 / -1;
+      min-height: 0;
+    }
+    .aniv-hero .panoff-stat-label {
+      min-height: 0;
+      font-size: 10px;
+      line-height: 1.25;
+      letter-spacing: 0.08em;
+    }
+    .aniv-hero .panoff-stat-note {
+      min-height: 0;
+      line-height: 1.45;
+    }
+    .aniv-hero .panoff-stat.is-aniv-weekday .panoff-stat-note {
+      max-width: 24ch;
+    }
+    .aniv-stat-value-name {
+      font-size: clamp(18px, 7vw, 26px);
+      line-height: 1.1;
+    }
     .panoff-column {
       padding: 14px;
       border-radius: 16px;
@@ -3208,7 +3657,6 @@
       white-space: nowrap;
       flex: 0 0 auto;
     }
-    .admin-post-row,
     .admin-ferias-row,
     .admin-galeria-row,
     .admin-presencial-row {
@@ -3216,11 +3664,33 @@
       align-items: flex-start !important;
       gap: 10px !important;
     }
+    .admin-post-row {
+      display: grid !important;
+      grid-template-columns: 72px minmax(0, 1fr);
+      position: relative;
+      align-items: start !important;
+      column-gap: 12px !important;
+      row-gap: 10px !important;
+    }
+    .admin-post-row > img:first-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
     .admin-post-main,
     .admin-ferias-main,
     .admin-galeria-main,
     .admin-presencial-main {
       width: 100%;
+    }
+    .admin-post-main {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .admin-presencial-title-row {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
     }
     .admin-post-meta {
       flex-wrap: wrap;
@@ -3234,15 +3704,153 @@
       justify-content: flex-start;
       gap: 8px;
     }
-    .admin-post-stats {
+    .admin-post-actions {
+      grid-column: 1 / -1;
+      grid-row: 3;
       width: 100%;
-      margin-bottom: 2px;
+      display: block;
+    }
+    .admin-post-action-buttons {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-post-stats {
+      width: auto;
+      margin-bottom: 0;
     }
     .admin-ferias-status {
       align-self: flex-start;
     }
     .admin-ferias-dates {
       flex-wrap: wrap;
+    }
+    .admin-ferias-side {
+      width: 100%;
+      align-items: stretch;
+    }
+    .admin-dayoff-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .admin-dayoff-row {
+      grid-template-columns: 40px minmax(0, 1fr) 96px;
+      column-gap: 10px !important;
+      row-gap: 10px !important;
+    }
+    .admin-dayoff-header {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .admin-dayoff-chip-inline {
+      display: inline-flex;
+    }
+    .admin-dayoff-row .admin-ferias-side {
+      width: 96px;
+      min-width: 96px;
+    }
+    .admin-ausencia-row {
+      display: grid !important;
+      grid-template-columns: 40px minmax(0, 1fr) 96px;
+      align-items: start !important;
+      column-gap: 10px !important;
+      row-gap: 10px !important;
+    }
+    .admin-ausencia-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .admin-ausencia-row > :first-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .admin-ausencia-main {
+      display: block;
+      grid-column: 2;
+      width: 100%;
+    }
+    .admin-ausencia-meta-desktop {
+      display: none !important;
+    }
+    .admin-ausencia-meta-mobile {
+      margin-top: 8px;
+      width: 100%;
+      margin-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .admin-ausencia-header {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .admin-ausencia-name {
+      font-size: 13px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .admin-ausencia-status-inline {
+      min-height: 20px;
+      padding: 0 8px;
+      font-size: 10px;
+    }
+    .admin-ausencia-start-head {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .admin-ausencia-panel {
+      padding: 12px;
+      border-radius: 14px;
+    }
+    .admin-ausencia-date-time-row {
+      grid-template-columns: 1fr;
+    }
+    .admin-ausencia-start-options {
+      grid-template-columns: 1fr;
+    }
+    .admin-ausencia-return-options {
+      grid-template-columns: 1fr;
+    }
+    .admin-ausencia-status-inline {
+      display: inline-flex;
+    }
+    .admin-ausencia-status-mobile {
+      display: none;
+    }
+    .admin-ausencia-actions {
+      grid-column: 3;
+      grid-row: 1;
+      width: 96px;
+      min-width: 96px;
+      display: flex !important;
+      flex-direction: row;
+      gap: 8px !important;
+      justify-content: flex-end;
+      justify-self: stretch;
+      align-self: start;
+    }
+    .admin-ausencia-actions .btn-ghost,
+    .admin-ausencia-actions button {
+      width: auto;
+      min-width: 34px;
+      justify-content: center;
+    }
+    .admin-ausencia-motivo {
+      width: calc(100% + 156px);
+      max-width: none;
+      margin-top: 10px;
+      margin-left: -50px;
     }
     .admin-galeria-fotos-toolbar {
       justify-content: stretch !important;

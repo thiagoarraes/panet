@@ -44,7 +44,7 @@ export function useAdminAusencias({ page = 1, pageSize = 20, search = "" } = {})
       let rowsQuery = supabase
         .from("ausencias")
         .select(
-          "id,motivo,inicio,fim,estimativa,colaborador:colaboradores!ausencias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
+          "id,motivo,inicio,fim,dia_todo,colaborador:colaboradores!ausencias_colaborador_id_fkey(id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github)"
         )
         .order("inicio", { ascending: false });
       let countQuery = supabase.from("ausencias").select("id", { count: "exact", head: true });
@@ -70,7 +70,7 @@ export function useAdminAusencias({ page = 1, pageSize = 20, search = "" } = {})
         motivo: item.motivo,
         inicio: item.inicio,
         fim: item.fim || null,
-        estimativa: item.estimativa || null,
+        diaTodo: Boolean(item.dia_todo),
         colaborador: toAvatar(item.colaborador),
       }));
       const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;

@@ -15,6 +15,7 @@ import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
 import { useParabenizarAniversario } from "../hooks/mutations/useAniversarioMutations";
 import { useDashboardSnapshot } from "../hooks/queries/useDashboardSnapshot";
+import { getAusenciaDiaTodoReturnDate, getAusenciaEffectiveEnd, isAusenciaSingleFullDayWindow } from "../lib/ausencias.js";
 import { isSupabaseEnabled } from "../lib/supabase.js";
 
 const formatDiasRestantes = (diasRestantes) => {
@@ -86,6 +87,21 @@ const getAusenciaMeta = (item) => {
   const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
   const isToday = isSameCalendarDay(inicio, now);
 
+  if (item.diaTodo) {
+    const retorno = getAusenciaDiaTodoReturnDate(item);
+    return {
+      dateLabel: retorno ? `${formatDisplayDayMonth(inicio)} · volta ${formatDisplayDayMonth(retorno)}` : formatDisplayDayMonth(inicio),
+      timeLabel: "",
+    };
+  }
+
+  if (isAusenciaSingleFullDayWindow(item)) {
+    return {
+      dateLabel: `${formatDisplayDayMonth(inicio)} · dia todo`,
+      timeLabel: "",
+    };
+  }
+
   if (crossesDays) {
     return {
       dateLabel: "",
@@ -98,10 +114,8 @@ const getAusenciaMeta = (item) => {
     : "";
 
   const timeLabel = hasFimValido
-    ? `${formatDisplayTime(inicio)} – ${formatDisplayTime(fim)}`
-    : item.estimativa
-      ? `${formatDisplayTime(inicio)} · ${item.estimativa}`
-      : `${formatDisplayTime(inicio)} · sem previsão`;
+    ? `${formatDisplayTime(inicio)} às ${formatDisplayTime(fim)}`
+    : `${formatDisplayTime(inicio)} · sem previsão`;
 
   return { dateLabel, timeLabel };
 };
@@ -227,7 +241,7 @@ export function DashboardPage({
     return ausencias
       .filter((a) => {
         if (!a.inicio) return false;
-        const fim = a.fim ? new Date(a.fim) : null;
+        const fim = getAusenciaEffectiveEnd(a);
         // mostra ausências que ainda não terminaram (ativas ou futuras próximas)
         return !fim || fim >= now;
       })

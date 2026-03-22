@@ -42,7 +42,7 @@ export function useAusencias(userId, options = {}) {
         motivo: "",
         inicio: item.inicio,
         fim: item.fim,
-        estimativa: item.estimativa || null,
+        diaTodo: Boolean(item.dia_todo),
         colaborador: toAvatar({
           id: item.colaborador_id,
           nome: item.nome,

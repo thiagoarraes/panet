@@ -4,6 +4,7 @@ import { Avatar } from "../components/Avatar";
 import { SkeletonFolgaEntry } from "../components/Skeleton";
 import { useFerias } from "../hooks/queries/useFerias";
 import { useAusencias } from "../hooks/queries/useAusencias";
+import { getAusenciaDiaTodoReturnDate, getAusenciaEffectiveEnd, isAusenciaSingleFullDayWindow } from "../lib/ausencias.js";
 
 const parseBrDate = (brDate) => {
   const [day, month, year] = String(brDate || "").split("/").map(Number);
@@ -72,6 +73,21 @@ const getAusenciaMeta = (item) => {
   const crossesDays = hasFimValido && !isSameCalendarDay(inicio, fim);
   const isToday = isSameCalendarDay(inicio, now);
 
+  if (item.diaTodo) {
+    const retorno = getAusenciaDiaTodoReturnDate(item);
+    return {
+      dateLabel: retorno ? `${formatDisplayDayMonth(inicio)} · volta ${formatDisplayDayMonth(retorno)}` : formatDisplayDayMonth(inicio),
+      timeLabel: "",
+    };
+  }
+
+  if (isAusenciaSingleFullDayWindow(item)) {
+    return {
+      dateLabel: `${formatDisplayDayMonth(inicio)} · dia todo`,
+      timeLabel: "",
+    };
+  }
+
   if (crossesDays) {
     return {
       dateLabel: "",
@@ -81,10 +97,8 @@ const getAusenciaMeta = (item) => {
 
   const dateLabel = !isToday ? formatDisplayDayMonth(inicio) : "";
   const timeLabel = hasFimValido
-    ? `${formatDisplayTime(inicio)} – ${formatDisplayTime(fim)}`
-    : item.estimativa
-      ? `${formatDisplayTime(inicio)} · ${item.estimativa}`
-      : `${formatDisplayTime(inicio)} · sem previsão`;
+    ? `${formatDisplayTime(inicio)} às ${formatDisplayTime(fim)}`
+    : `${formatDisplayTime(inicio)} · sem previsão`;
 
   return { dateLabel, timeLabel };
 };
@@ -96,12 +110,12 @@ const getAusenciasVisiveis = (ausencias) => {
   return (ausencias || [])
     .filter((item) => {
       if (!item.inicio) return false;
-      const fim = item.fim ? new Date(item.fim) : null;
+      const fim = getAusenciaEffectiveEnd(item);
       return !fim || fim >= threshold;
     })
     .sort((left, right) => {
-      const leftFim = left.fim ? new Date(left.fim) : null;
-      const rightFim = right.fim ? new Date(right.fim) : null;
+      const leftFim = getAusenciaEffectiveEnd(left);
+      const rightFim = getAusenciaEffectiveEnd(right);
       const leftOpen = !leftFim || leftFim >= now;
       const rightOpen = !rightFim || rightFim >= now;
 
@@ -117,11 +131,11 @@ const getAusenciaTimingState = (item, referenceDate = new Date()) => {
   if (!item?.inicio) return "agendada";
 
   const inicio = new Date(item.inicio);
-  const fim = item.fim ? new Date(item.fim) : null;
+  const fim = getAusenciaEffectiveEnd(item);
 
   if (Number.isNaN(inicio.getTime())) return "agendada";
   if (inicio > referenceDate) return "agendada";
-  if (fim && !Number.isNaN(fim.getTime()) && fim < referenceDate) return "recente";
+  if (fim && fim < referenceDate) return "recente";
   return "em_andamento";
 };
 
