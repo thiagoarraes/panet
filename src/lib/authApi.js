@@ -94,7 +94,10 @@ export async function apiGetSession() {
   try {
     const res = await fetch("/api/auth/session", { credentials: "include" });
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    // { session: null } means no active session (not an error)
+    if (!data || data.session === null) return null;
+    return data;
   } catch (_) {
     return null;
   }

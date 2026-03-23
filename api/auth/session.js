@@ -76,7 +76,7 @@ export default async function handler(req, res) {
   const refreshToken = cookies.panet_rt;
 
   if (!accessToken && !refreshToken) {
-    return res.status(401).json({ error: "Sem sessão" });
+    return res.status(200).json({ session: null });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
   // Access token missing/expired — try refresh
   if (!refreshToken) {
     clearAuthCookies(res);
-    return res.status(401).json({ error: "Sessão expirada" });
+    return res.status(200).json({ session: null });
   }
 
   const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
 
   if (refreshError || !refreshData?.session) {
     clearAuthCookies(res);
-    return res.status(401).json({ error: "Sessão expirada" });
+    return res.status(200).json({ session: null });
   }
 
   setAuthCookies(res, refreshData.session);
