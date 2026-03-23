@@ -3,6 +3,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Home, FileText, Users, Cake, Plane, Images, Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut, Menu, X, CalendarDays } from "lucide-react";
 import { COLABORADORES } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabase.js";
+import {
+  USE_SECURE_COOKIES,
+  apiLogin,
+  apiLogout,
+  apiGetSession,
+  apiSyncSession,
+  hasSessionCookie,
+  clearSessionIndicatorCookie,
+} from "../lib/authApi.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
 import { extractPostSlugFromPathname, toPostSlug } from "../lib/postRouting.js";
 import { Avatar } from "./Avatar";
@@ -45,6 +54,9 @@ const getFreshSessionAccessToken = async () => {
   if (refreshError || !refreshed?.session?.access_token) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
+  if (USE_SECURE_COOKIES) {
+    apiSyncSession(refreshed.session.access_token, refreshed.session.refresh_token, refreshed.session.expires_at);
+  }
   return refreshed.session.access_token;
 };
 
@@ -59,7 +71,6 @@ const invokeEdgeFunctionHttp = async (fnName, body, accessToken, fallbackMessage
       "Content-Type": "application/json",
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${accessToken}`,
-      "x-client-jwt": accessToken,
     },
     body: JSON.stringify(body || {}),
   });
@@ -266,6 +277,7 @@ const signInWithPasswordRetry = async (email, password) => {
 };
 
 const hasStoredSupabaseSession = () => {
+  if (USE_SECURE_COOKIES) return hasSessionCookie();
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i) || "";
@@ -282,6 +294,10 @@ const hasStoredSupabaseSession = () => {
 };
 
 const clearStoredSupabaseSession = () => {
+  if (USE_SECURE_COOKIES) {
+    clearSessionIndicatorCookie();
+    return;
+  }
   try {
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i += 1) {
@@ -503,10 +519,23 @@ export default function PanetApp() {
         setAuthLoading(false);
       }
       try {
-        const { data, error } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, "session_timeout");
-        if (error) throw error;
+        let session = null;
+        if (USE_SECURE_COOKIES) {
+          // Restore session from httpOnly cookies via the API route
+          const apiSession = await withTimeout(apiGetSession(), AUTH_TIMEOUT_MS, "session_timeout");
+          if (apiSession?.access_token) {
+            const { data: setData, error: setError } = await supabase.auth.setSession({
+              access_token: apiSession.access_token,
+              refresh_token: apiSession.refresh_token || "",
+            });
+            if (!setError) session = setData?.session || null;
+          }
+        } else {
+          const { data, error } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, "session_timeout");
+          if (error) throw error;
+          session = data.session;
+        }
         if (!isMounted) return;
-        const session = data.session;
         if (!session?.user?.id) {
           setSessionUserId(null);
           setCurrentProfile(null);
@@ -604,6 +633,10 @@ export default function PanetApp() {
         currentProfileIdRef.current &&
         String(currentProfileIdRef.current) === String(nextSession?.user?.id || "")
       ) {
+        // Sync the refreshed tokens to httpOnly cookies so the next page load restores properly.
+        if (USE_SECURE_COOKIES && nextSession?.access_token && nextSession?.refresh_token) {
+          apiSyncSession(nextSession.access_token, nextSession.refresh_token, nextSession.expires_at);
+        }
         return;
       }
 
@@ -692,14 +725,26 @@ export default function PanetApp() {
       setTela("primeiro_acesso");
       return;
     }
-    const { data, error } = await signInWithPasswordRetry(email, password);
-    if (error) {
-      const msg = isRetryableLoginError(error)
-        ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
-        : error.message || "Não foi possível fazer login.";
-      throw new Error(msg);
+    let activeSession = null;
+    if (USE_SECURE_COOKIES) {
+      // Login via httpOnly cookie route — tokens never touch localStorage
+      const apiData = await apiLogin(email, password); // throws on failure
+      const { data: setData, error: setError } = await supabase.auth.setSession({
+        access_token: apiData.access_token,
+        refresh_token: apiData.refresh_token,
+      });
+      if (setError) throw new Error(setError.message);
+      activeSession = setData?.session || null;
+    } else {
+      const { data, error } = await signInWithPasswordRetry(email, password);
+      if (error) {
+        const msg = isRetryableLoginError(error)
+          ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
+          : error.message || "Não foi possível fazer login.";
+        throw new Error(msg);
+      }
+      activeSession = data?.session || (await supabase.auth.getSession()).data.session;
     }
-    const activeSession = data?.session || (await supabase.auth.getSession()).data.session;
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
     setSessionUserId(String(activeSession?.user?.id || ""));
     await loadProfileAndRoute(activeSession);
@@ -864,6 +909,9 @@ export default function PanetApp() {
       setTimeout(() => {
         supabase.auth.signOut().catch(() => {});
       }, 0);
+    }
+    if (USE_SECURE_COOKIES) {
+      apiLogout(); // clears httpOnly cookies server-side (fire-and-forget)
     }
   };
 

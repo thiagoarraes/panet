@@ -16,6 +16,25 @@ if (!isSupabaseEnabled) {
   );
 }
 
+// In production, tokens live only in memory — never in localStorage.
+// The real persistence layer is handled by httpOnly cookies via /api/auth/*.
+// In dev (vite dev), localStorage is kept so sessions survive hot reloads.
+const memStore = {};
+const inMemoryStorage = {
+  getItem: (key) => memStore[key] ?? null,
+  setItem: (key, value) => { memStore[key] = value; },
+  removeItem: (key) => { delete memStore[key]; },
+};
+
 export const supabase = isSupabaseEnabled
-  ? createClient(supabaseUrl, supabaseAnon)
+  ? createClient(supabaseUrl, supabaseAnon, {
+      auth: import.meta.env.PROD
+        ? {
+            storage: inMemoryStorage,
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+          }
+        : {},
+    })
   : null;

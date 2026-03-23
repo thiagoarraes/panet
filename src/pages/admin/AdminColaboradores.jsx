@@ -41,7 +41,6 @@ const invokeAdminFunctionHttp = async (fnName, body, accessToken, fallbackMessag
       "Content-Type": "application/json",
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${accessToken}`,
-      "x-client-jwt": accessToken,
     },
     body: JSON.stringify(body || {}),
   });

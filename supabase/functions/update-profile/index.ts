@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-client-jwt",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -23,9 +23,8 @@ serve(async (req) => {
     if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase env vars are missing.");
 
     const authHeader = req.headers.get("Authorization");
-    const clientJwtHeader = req.headers.get("x-client-jwt");
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
-    const callerToken = String(clientJwtHeader || bearerToken || "").trim();
+    const callerToken = bearerToken.trim();
     if (!callerToken) {
       return new Response(JSON.stringify({ error: "Missing bearer token" }), {
         status: 401,
