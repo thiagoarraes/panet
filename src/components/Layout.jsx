@@ -294,21 +294,19 @@ const hasStoredSupabaseSession = () => {
 };
 
 const clearStoredSupabaseSession = () => {
-  if (USE_SECURE_COOKIES) {
-    clearSessionIndicatorCookie();
-    return;
-  }
+  // Always purge legacy localStorage tokens regardless of mode
   try {
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i) || "";
-      if (key.startsWith("sb-") && key.endsWith("-auth-token")) {
-        keysToRemove.push(key);
-      }
+      if (key.startsWith("sb-") && key.endsWith("-auth-token")) keysToRemove.push(key);
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
   } catch (_err) {
-    // ignore cache failures
+    // ignore
+  }
+  if (USE_SECURE_COOKIES) {
+    clearSessionIndicatorCookie();
   }
 };
 
