@@ -4,12 +4,28 @@ import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { getCurrentMoodDateKey, normalizeMoodEntry } from "../../lib/dashboardMood.js";
 import { getStoredMoodCheckinsForDate } from "../../lib/dashboardMoodStorage.js";
 
+const dedupeMoodEntriesByCollaborator = (entries) => {
+  const list = Array.isArray(entries) ? entries : [];
+  const seen = new Set();
+  const deduped = [];
+
+  for (const rawEntry of list) {
+    const entry = normalizeMoodEntry(rawEntry);
+    const key = entry.colaboradorId ? `col:${entry.colaboradorId}` : `id:${entry.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(entry);
+  }
+
+  return deduped;
+};
+
 export function useMoodCheckins(userId, options = {}) {
   const queryClient = useQueryClient();
   const queryEnabled = options?.enabled ?? true;
   const dateKey = String(options?.dateKey || getCurrentMoodDateKey());
   const initialData = Array.isArray(options?.initialData)
-    ? options.initialData.map((entry) => normalizeMoodEntry(entry))
+    ? dedupeMoodEntriesByCollaborator(options.initialData)
     : undefined;
 
   const query = useQuery({
@@ -27,7 +43,7 @@ export function useMoodCheckins(userId, options = {}) {
 
       if (error) throw new Error(error.message || "Nao foi possivel carregar o painel de vibe.");
 
-      return (data || []).map((entry) => normalizeMoodEntry(entry));
+      return dedupeMoodEntriesByCollaborator(data || []);
     },
     enabled: queryEnabled && (!!userId || !isSupabaseEnabled),
     initialData,

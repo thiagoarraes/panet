@@ -16,8 +16,9 @@ import {
   normalizeMoodTags,
 } from "../lib/dashboardMood";
 
-const TEAM_WALL_CARD_MIN_WIDTH = 150;
+const TEAM_WALL_CARD_MIN_WIDTH = 172;
 const TEAM_WALL_CARD_GAP = 10;
+const TEAM_WALL_MIN_CARDS_TO_SCROLL = 5;
 
 const buildDraftFromEntry = (entry) => ({
   moodId: entry?.moodId || "",
@@ -65,14 +66,11 @@ const getMoodWindowMessage = (moodWindow) => {
 
 export function DashboardMoodBoard({ currentUser, currentUserId }) {
   const hydratedEntryRef = useRef("");
-  const teamWallViewportRef = useRef(null);
   const teamWallGroupRef = useRef(null);
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState(() => buildDraftFromEntry(null));
   const [submitError, setSubmitError] = useState("");
-  const [isTeamWallPaused, setIsTeamWallPaused] = useState(false);
   const [timeTick, setTimeTick] = useState(() => Date.now());
-  const [teamWallViewportWidth, setTeamWallViewportWidth] = useState(0);
   const [teamWallLoopWidth, setTeamWallLoopWidth] = useState(0);
   const moodWindow = useMemo(() => getMoodWindowState(new Date(timeTick)), [timeTick]);
   const dateKey = moodWindow.dateKey;
@@ -89,15 +87,13 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
     [currentUserId, entries]
   );
   const currentUserFirstName = useMemo(() => getFirstName(currentUser?.nome), [currentUser?.nome]);
-  const maxVisibleTeamWallCards = useMemo(() => {
-    if (teamWallViewportWidth <= 0) return entries.length;
-    return Math.max(
-      1,
-      Math.floor((teamWallViewportWidth + TEAM_WALL_CARD_GAP) / (TEAM_WALL_CARD_MIN_WIDTH + TEAM_WALL_CARD_GAP))
-    );
-  }, [entries.length, teamWallViewportWidth]);
-  const shouldAutoScrollTeamWall = entries.length > maxVisibleTeamWallCards;
-  const teamWallAnimationDuration = useMemo(() => `${Math.max(24, entries.length * 4)}s`, [entries.length]);
+  const shouldAutoScrollTeamWall = entries.length >= TEAM_WALL_MIN_CARDS_TO_SCROLL;
+  const estimatedLoopWidth = useMemo(
+    () => Math.max(0, entries.length * (TEAM_WALL_CARD_MIN_WIDTH + TEAM_WALL_CARD_GAP) - TEAM_WALL_CARD_GAP),
+    [entries.length]
+  );
+  const effectiveTeamWallLoopWidth = teamWallLoopWidth > 0 ? teamWallLoopWidth : estimatedLoopWidth;
+  const teamWallAnimationDuration = useMemo(() => `${Math.max(18, entries.length * 3.2)}s`, [entries.length]);
   const isMoodBoardLoading = moodCheckinsQuery.isLoading && entries.length === 0 && !moodCheckinsQuery.isError;
   const shouldShowTeamWall = step === 3 || (Boolean(myEntry) && step === 1) || (!moodWindow.canSubmit && entries.length > 0);
 
@@ -132,42 +128,6 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
     setDraft(buildDraftFromEntry(null));
     setStep(1);
   }, [dateKey, moodCheckinsQuery.isLoading, myEntry]);
-
-  useEffect(() => {
-    const node = teamWallViewportRef.current;
-    if (!node) return undefined;
-
-    let frameId = 0;
-    const measure = () => {
-      frameId = window.requestAnimationFrame(() => {
-        const nextWidth = node.clientWidth || 0;
-        setTeamWallViewportWidth((current) => (current === nextWidth ? current : nextWidth));
-      });
-    };
-
-    measure();
-
-    if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", measure);
-      return () => {
-        window.cancelAnimationFrame(frameId);
-        window.removeEventListener("resize", measure);
-      };
-    }
-
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      observer.disconnect();
-    };
-  }, [entries.length, step]);
-
-  useEffect(() => {
-    if (shouldAutoScrollTeamWall) return;
-    setIsTeamWallPaused(false);
-  }, [shouldAutoScrollTeamWall]);
 
   useEffect(() => {
     if (!shouldAutoScrollTeamWall) {
@@ -205,16 +165,6 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
     };
   }, [entries, shouldAutoScrollTeamWall]);
 
-  const handlePauseTeamWall = () => {
-    if (!shouldAutoScrollTeamWall) return;
-    setIsTeamWallPaused(true);
-  };
-
-  const handleResumeTeamWall = () => {
-    if (!shouldAutoScrollTeamWall) return;
-    setIsTeamWallPaused(false);
-  };
-
   const renderTeamWallCard = (entry, keyPrefix = "") => {
     const mood = getMoodOption(entry.moodId);
     const energyWidth = `${Math.max(10, entry.energy * 10)}%`;
@@ -226,11 +176,6 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
         key={cardKey}
         className="mood-team-card mood-team-card--wall"
         style={{ "--energy-color": energyColor }}
-        onMouseEnter={handlePauseTeamWall}
-        onMouseLeave={handleResumeTeamWall}
-        onTouchStart={handlePauseTeamWall}
-        onTouchEnd={handleResumeTeamWall}
-        onTouchCancel={handleResumeTeamWall}
       >
         <div className="mood-team-emoji-wrap">{mood.emoji}</div>
         <div className="mood-team-energy-bar">
@@ -495,13 +440,13 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
             )}
 
             {!moodCheckinsQuery.isError && entries.length > 0 && (
-              <div ref={teamWallViewportRef}>
+              <div>
                 {shouldAutoScrollTeamWall ? (
                   <div
-                    className={`mood-team-carousel ${teamWallLoopWidth > 0 ? "is-ready" : ""} ${isTeamWallPaused ? "is-paused" : ""}`}
+                    className={`mood-team-carousel ${effectiveTeamWallLoopWidth > 0 ? "is-ready" : ""}`}
                     style={{
                       "--mood-wall-duration": teamWallAnimationDuration,
-                      "--mood-wall-loop-width": `${teamWallLoopWidth}px`,
+                      "--mood-wall-loop-width": `${effectiveTeamWallLoopWidth}px`,
                     }}
                   >
                     <div className="mood-team-carousel-track">
