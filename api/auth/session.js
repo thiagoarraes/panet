@@ -90,7 +90,7 @@ export default async function handler(req, res) {
     if (exp > nowSec + 30) {
       const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
       if (!userError && userData?.user) {
-        return res.status(200).json({ access_token: accessToken, user: userData.user });
+        return res.status(200).json({ access_token: accessToken, refresh_token: refreshToken, user: userData.user });
       }
     }
   }

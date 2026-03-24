@@ -5,7 +5,6 @@ import { COLABORADORES } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabase.js";
 import {
   USE_SECURE_COOKIES,
-  apiLogin,
   apiLogout,
   apiGetSession,
   apiSyncSession,
@@ -727,24 +726,21 @@ export default function PanetApp() {
       return;
     }
     let activeSession = null;
-    if (USE_SECURE_COOKIES) {
-      // Login via httpOnly cookie route — tokens never touch localStorage
-      const apiData = await apiLogin(email, password); // throws on failure
-      const { data: setData, error: setError } = await supabase.auth.setSession({
-        access_token: apiData.access_token,
-        refresh_token: apiData.refresh_token,
-      });
-      if (setError) throw new Error(setError.message);
-      activeSession = setData?.session || null;
-    } else {
-      const { data, error } = await signInWithPasswordRetry(email, password);
-      if (error) {
-        const msg = isRetryableLoginError(error)
-          ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
-          : error.message || "Não foi possível fazer login.";
-        throw new Error(msg);
-      }
-      activeSession = data?.session || (await supabase.auth.getSession()).data.session;
+    // Authenticate directly against Supabase — eliminates the Vercel function
+    // round-trip from the critical path. Tokens are synced to httpOnly cookies
+    // immediately after (in parallel with the profile fetch).
+    const { data, error } = await signInWithPasswordRetry(email, password);
+    if (error) {
+      const msg = isRetryableLoginError(error)
+        ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
+        : error.message || "Não foi possível fazer login.";
+      throw new Error(msg);
+    }
+    activeSession = data?.session || null;
+    if (USE_SECURE_COOKIES && activeSession) {
+      // Sync tokens to httpOnly cookies. Fire-and-forget — does not block the
+      // profile load, but completes before the user can trigger a page refresh.
+      apiSyncSession(activeSession.access_token, activeSession.refresh_token, activeSession.expires_at);
     }
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
     setSessionUserId(String(activeSession?.user?.id || ""));
