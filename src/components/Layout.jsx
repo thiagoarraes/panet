@@ -309,12 +309,22 @@ const clearStoredSupabaseSession = () => {
   }
 };
 
+const PROFILE_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 const readCachedProfile = () => {
   try {
-    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY);
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
+    if (!parsed || typeof parsed !== "object") return null;
+    // Check TTL
+    if (parsed._cachedAt && Date.now() - parsed._cachedAt > PROFILE_CACHE_TTL_MS) {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+      return null;
+    }
+    // Strip internal cache metadata before returning
+    const { _cachedAt, ...profile } = parsed;
+    return profile;
   } catch (_err) {
     return null;
   }
@@ -323,10 +333,12 @@ const readCachedProfile = () => {
 const writeCachedProfile = (profile) => {
   try {
     if (!profile) {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+      // Also clean legacy sessionStorage
       sessionStorage.removeItem(PROFILE_CACHE_KEY);
       return;
     }
-    sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({ ...profile, _cachedAt: Date.now() }));
   } catch (_err) {
     // ignore cache failures
   }
@@ -338,6 +350,57 @@ const PageFallback = () => (
       <div className="section-sub">Carregando página...</div>
     </div>
   </div>
+);
+
+const AppShellSkeleton = ({ theme }) => (
+  <>
+    <nav className="sidebar">
+      <div className="sidebar-logo">
+        <img
+          src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"}
+          alt="Panet"
+          className="logo-image"
+        />
+      </div>
+      <div className="nav-section">
+        <div className="nav-label">MENU</div>
+        {Array.from({ length: 7 }, (_, i) => (
+          <div key={i} className="nav-item" style={{ pointerEvents: "none" }}>
+            <span className="nav-icon"><span className="skeleton" style={{ width: 16, height: 16, borderRadius: 4, display: "block" }} /></span>
+            <span className="skeleton" style={{ width: `${50 + (i % 3) * 20}px`, height: 13, borderRadius: 6 }} />
+          </div>
+        ))}
+      </div>
+      <div className="sidebar-user-wrap">
+        <div className="sidebar-user" style={{ pointerEvents: "none" }}>
+          <span className="skeleton" style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0 }} />
+          <div className="user-info">
+            <span className="skeleton" style={{ width: 90, height: 12, borderRadius: 6, display: "block", marginBottom: 4 }} />
+            <span className="skeleton" style={{ width: 60, height: 10, borderRadius: 6, display: "block" }} />
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div className="main-wrap">
+      <div className="mobile-topbar">
+        <img
+          src={theme === "light" ? "/pan-logo-animado-light.svg" : "/pan-logo-animado.svg"}
+          alt="Panet"
+          className="mobile-topbar-logo"
+        />
+      </div>
+      <div className="content">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="skeleton" style={{ width: "100%", height: 140, borderRadius: 16 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
+            <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
+          </div>
+          <div className="skeleton" style={{ width: "100%", height: 120, borderRadius: 14 }} />
+        </div>
+      </div>
+    </div>
+  </>
 );
 
 export default function PanetApp() {
@@ -982,13 +1045,7 @@ export default function PanetApp() {
   };
 
   if (authLoading) {
-    return (
-      <div className="login-wrap">
-        <div className="login-card">
-          <div className="login-title">Carregando...</div>
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton theme={theme} />;
   }
 
   if (tela === "login") {
