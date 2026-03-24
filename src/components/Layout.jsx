@@ -509,12 +509,15 @@ export default function PanetApp() {
     const bootstrapAuth = async () => {
       const cachedProfile = readCachedProfile();
       if (cachedProfile && isMounted) {
-        // Open immediately on refresh; confirm session/profile in background.
+        // Pre-populate profile for instant visual feedback.
+        // In production, keep authLoading=true until the httpOnly cookie session is
+        // confirmed — otherwise Supabase queries fire before setSession() and fail RLS.
+        // In dev, localStorage session is sync so we can release loading immediately.
         setSessionUserId(String(cachedProfile.id || ""));
         setCurrentProfile(cachedProfile);
         setAdminServerConfirmed(cachedProfile.perfil === "admin");
         setTela(cachedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
-        setAuthLoading(false);
+        if (!USE_SECURE_COOKIES) setAuthLoading(false);
       }
       try {
         let session = null;
