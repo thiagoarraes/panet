@@ -19,13 +19,12 @@ const getFolgaTotalDias = (item) => {
 
 const getAusenciasVisiveis = (ausencias) => {
   const now = new Date();
-  const threshold = new Date(now.getTime() - 4 * 60 * 60 * 1000);
 
   return (ausencias || [])
     .filter((item) => {
       if (!item.inicio) return false;
       const fim = getAusenciaEffectiveEnd(item);
-      return !fim || fim >= threshold;
+      return !fim || fim >= now;
     })
     .sort((left, right) => {
       const leftFim = getAusenciaEffectiveEnd(left);
@@ -95,6 +94,12 @@ export function FeriasPage({ currentUserId }) {
   const feriasData = feriasQuery.data;
   const ferias = feriasData?.ferias || [];
   const dayoff = feriasData?.dayoff || [];
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const dayoffVisiveis = dayoff.filter((d) => {
+    const fimDate = parseBrDate(d.fim || d.inicio);
+    return !fimDate || fimDate >= startOfToday;
+  });
   const ausencias = ausenciasQuery.data || [];
   const ausenciasVisiveis = getAusenciasVisiveis(ausencias);
   const ausenciaCounts = useMemo(() => {
@@ -113,7 +118,7 @@ export function FeriasPage({ currentUserId }) {
   const isLoadingPage =
     (feriasQuery.isLoading || ausenciasQuery.isLoading) &&
     ferias.length === 0 &&
-    dayoff.length === 0 &&
+    dayoffVisiveis.length === 0 &&
     ausenciasVisiveis.length === 0;
 
   return (
@@ -157,7 +162,7 @@ export function FeriasPage({ currentUserId }) {
               <CalendarDays size={14} />
               Day Off
             </div>
-            <div className="panoff-stat-value">{dayoff.length}</div>
+            <div className="panoff-stat-value">{dayoffVisiveis.length}</div>
             <div className="panoff-stat-note">Folgas de um dia</div>
           </div>
 
@@ -229,7 +234,7 @@ export function FeriasPage({ currentUserId }) {
             icon={<CalendarDays size={16} />}
             title="Day Off"
             subtitle="Folgas pontuais de um único dia."
-            count={dayoff.length}
+            count={dayoffVisiveis.length}
             tone="dayoff"
           />
 
@@ -238,7 +243,7 @@ export function FeriasPage({ currentUserId }) {
               Array.from({ length: 3 }, (_, index) => <SkeletonFolgaEntry key={`dayoff-skeleton-${index}`} />)}
 
             {!isLoadingPage &&
-              dayoff.map((item) => (
+              dayoffVisiveis.map((item) => (
                 <div key={`dayoff-${item.id}`} className="folga-entry is-dayoff">
                   <div className="folga-avatar-wrap">
                     <Avatar col={item.colaborador} size={32} />
@@ -269,7 +274,7 @@ export function FeriasPage({ currentUserId }) {
                 </div>
               ))}
 
-            {!isLoadingPage && dayoff.length === 0 && <EmptyState>Nenhum day off registrado.</EmptyState>}
+            {!isLoadingPage && dayoffVisiveis.length === 0 && <EmptyState>Nenhum day off registrado.</EmptyState>}
           </div>
         </div>
 
