@@ -376,6 +376,41 @@ export function DashboardPage({
             )}
           </div>
 
+          {parabenizadores.length >= 4 && (
+            <div className="birthday-cheer-rows">
+              {[0, 1, 2].map((rowIndex) => {
+                const rowItems = parabenizadores.filter((_, i) => i % 3 === rowIndex);
+                if (rowItems.length === 0) return null;
+                const dir = rowIndex === 1 ? "right" : "left";
+                const duration = Math.max(12, rowItems.length * 3);
+                return (
+                  <div
+                    key={rowIndex}
+                    className={`birthday-cheer-carousel birthday-cheer-carousel--${dir}`}
+                    style={{ "--cheer-duration": `${duration}s` }}
+                  >
+                    <div className="birthday-cheer-track">
+                      {[0, 1, 2].map((copy) =>
+                        rowItems.map((c) => (
+                          <span
+                            key={`${copy}-${c.id}`}
+                            aria-hidden={copy > 0 ? true : undefined}
+                            className="birthday-hero-cheer-chip"
+                          >
+                            <Avatar col={c} size={20} />
+                            <span className="birthday-hero-cheer-name">
+                              {c.nome.split(" ")[0]} <span aria-hidden="true">🎉</span>
+                            </span>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <button
             className="btn-primary birthday-hero-action"
             disabled={parabenizando}

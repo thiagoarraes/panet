@@ -96,6 +96,10 @@ export function FeriasPage({ currentUserId }) {
   const dayoff = feriasData?.dayoff || [];
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
+  const feriasVisiveis = ferias.filter((f) => {
+    const fimDate = parseBrDate(f.fim || f.inicio);
+    return !fimDate || fimDate >= startOfToday;
+  });
   const dayoffVisiveis = dayoff.filter((d) => {
     const fimDate = parseBrDate(d.fim || d.inicio);
     return !fimDate || fimDate >= startOfToday;
@@ -117,7 +121,7 @@ export function FeriasPage({ currentUserId }) {
 
   const isLoadingPage =
     (feriasQuery.isLoading || ausenciasQuery.isLoading) &&
-    ferias.length === 0 &&
+    feriasVisiveis.length === 0 &&
     dayoffVisiveis.length === 0 &&
     ausenciasVisiveis.length === 0;
 
@@ -153,7 +157,7 @@ export function FeriasPage({ currentUserId }) {
               <Plane size={14} />
               Férias
             </div>
-            <div className="panoff-stat-value">{ferias.length}</div>
+            <div className="panoff-stat-value">{feriasVisiveis.length}</div>
             <div className="panoff-stat-note">Agendadas ou em andamento</div>
           </div>
 
@@ -183,7 +187,7 @@ export function FeriasPage({ currentUserId }) {
             icon={<Plane size={16} />}
             title="Férias"
             subtitle="Períodos completos, com status e duração."
-            count={ferias.length}
+            count={feriasVisiveis.length}
             tone="ferias"
           />
 
@@ -192,7 +196,7 @@ export function FeriasPage({ currentUserId }) {
               Array.from({ length: 3 }, (_, index) => <SkeletonFolgaEntry key={`ferias-skeleton-${index}`} />)}
 
             {!isLoadingPage &&
-              ferias.map((item) => {
+              feriasVisiveis.map((item) => {
                 const totalDias = getFolgaTotalDias(item);
                 const status = getFeriasStatusByDate(item);
 
@@ -225,7 +229,7 @@ export function FeriasPage({ currentUserId }) {
                 );
               })}
 
-            {!isLoadingPage && ferias.length === 0 && <EmptyState>Nenhuma férias registrada.</EmptyState>}
+            {!isLoadingPage && feriasVisiveis.length === 0 && <EmptyState>Nenhuma férias registrada.</EmptyState>}
           </div>
         </div>
 

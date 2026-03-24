@@ -45,16 +45,22 @@ export const isAusenciaSingleFullDayWindow = (item) => {
 };
 
 export const getAusenciaEffectiveEnd = (item) => {
-  const fim = toDate(item?.fim);
-  if (!fim) return null;
-  if (!item?.diaTodo) return fim;
+  if (!item?.diaTodo) {
+    // Ausência por horário: usa fim direto (null = sem previsão, exibe sempre)
+    return toDate(item?.fim) ?? null;
+  }
 
+  // diaTodo = true: ausência de dia inteiro
   const inicio = toDate(item?.inicio);
-  if (!inicio) return fim;
+  if (!inicio) return null;
 
-  if (isSameCalendarDay(inicio, fim)) {
+  const fim = toDate(item?.fim);
+
+  // Sem fim ou mesmo dia → ausência de um dia só: encerra ao fim do dia de início
+  if (!fim || isSameCalendarDay(inicio, fim)) {
     return endOfLocalDay(inicio);
   }
 
+  // Multi-dia: fim é a data de retorno → encerra na meia-noite desse dia
   return startOfLocalDay(fim);
 };

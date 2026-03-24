@@ -13,31 +13,18 @@
     --avatar-empty-bg: #00a09d; --avatar-empty-text: #ffffff;
   }
   .theme-light .sidebar {
-    background: linear-gradient(
-      180deg,
-      #ffffff 0%,
-      color-mix(in srgb, #00a09d 6%, #f8fcff) 42%,
-      color-mix(in srgb, #00a09d 10%, #f2f8ff) 100%
-    );
+    background: color-mix(in srgb, #00a09d 6%, #f8fcff);
     box-shadow: 0 0 0 1px rgba(16, 36, 55, 0.03);
   }
   .theme-light .main-wrap {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, #00a09d 6%, #f6faff) 0%,
-      color-mix(in srgb, #00a09d 3%, #eff5fb) 100%
-    );
+    background: color-mix(in srgb, #00a09d 4%, #f4f9fe);
   }
   .theme-light .card,
   .theme-light .post-card {
     box-shadow: 0 6px 18px rgba(16, 36, 55, 0.06);
   }
   .theme-light .card-header {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, #00a09d 5%, #ffffff),
-      color-mix(in srgb, #00a09d 9%, #f6fafe)
-    );
+    background: color-mix(in srgb, #00a09d 7%, #fafcfe);
   }
   .theme-light .nav-label { color: #40566f; }
   .theme-light .section-sub,
@@ -77,12 +64,12 @@
     box-shadow: 0 12px 28px rgba(16, 36, 55, 0.1);
   }
   .theme-light .btn-primary {
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 82%, #fff), #008684);
+    background: #00a09d;
     border: 1px solid color-mix(in srgb, #007d7b 55%, transparent);
     box-shadow: 0 8px 18px color-mix(in srgb, #00a09d 30%, transparent);
   }
   .theme-light .btn-primary:hover {
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 70%, #fff), color-mix(in srgb, #007d7b 94%, #000));
+    background: #008e8b;
     box-shadow: 0 12px 24px color-mix(in srgb, #00a09d 36%, transparent);
   }
   .theme-light .btn-ghost {
@@ -133,6 +120,159 @@
   .theme-light .btn-aniversarios-ver-todos:hover {
     color: #ffffff;
   }
+
+  /* Light theme: solid backgrounds (no radial-gradient) */
+  .theme-light .collab-card {
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  }
+  .theme-light .panoff-hero {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .theme-light .aniv-hero {
+    background: color-mix(in srgb, #ffb347 6%, var(--surface));
+  }
+  .theme-light .presencial-hero {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .theme-light .presencial-card {
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  }
+  .theme-light .presencial-secret-santa-summary {
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  }
+  .theme-light .presencial-secret-santa-result {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .theme-light .presencial-suggestion-modal {
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  }
+  .theme-light .birthday-hero {
+    background: color-mix(in srgb, var(--accent) 10%, #f0f8ff);
+  }
+  .theme-light .dashboard-enquete-confirmation {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .theme-light .dashboard-enquete-radio {
+    background: color-mix(in srgb, var(--surface2) 84%, transparent);
+  }
+  .theme-light .dashboard-enquete-radio:hover {
+    background: color-mix(in srgb, var(--surface2) 92%, transparent);
+  }
+  .theme-light .dashboard-enquete-radio.is-selected {
+    background: color-mix(in srgb, var(--accent) 11%, var(--surface2));
+  }
+  .theme-light .mood-choice.is-selected {
+    background: color-mix(in srgb, var(--mood-soft) 24%, var(--surface));
+  }
+  .theme-light .mood-window-note {
+    background: color-mix(in srgb, #00a09d 6%, #ffffff);
+  }
+  .theme-light .mood-summary {
+    background: color-mix(in srgb, var(--mood-soft) 12%, var(--surface));
+  }
+  .theme-light .mood-team-card {
+    background: color-mix(in srgb, #00a09d 4%, #ffffff);
+  }
+  .theme-light .admin-enquete-card {
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  }
+  .theme-light .admin-dayoff-card {
+    background: color-mix(in srgb, #E84B7A 4%, var(--surface));
+  }
+  .theme-light .login-bg {
+    background: none;
+  }
+  .theme-light .login-wrap--premium .login-bg {
+    background: color-mix(in srgb, var(--accent) 4%, var(--bg));
+  }
+  .theme-light .login-bubbles .bubble {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .theme-light .panoff-stat {
+    background: color-mix(in srgb, var(--surface2) 88%, var(--surface));
+  }
+  .theme-light .panoff-column {
+    background: color-mix(in srgb, var(--surface2) 78%, var(--surface));
+  }
+  .theme-light .folga-entry {
+    background: color-mix(in srgb, var(--surface2) 72%, var(--surface));
+  }
+  .theme-light .aniv-signo-badge {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface2));
+  }
+  .theme-light .mood-choice {
+    background: color-mix(in srgb, #00a09d 3%, #ffffff);
+  }
+  .theme-light .mood-energy-block,
+  .theme-light .mood-tags-block,
+  .theme-light .mood-stat-card {
+    background: color-mix(in srgb, #00a09d 3%, #ffffff);
+  }
+  .theme-light .mood-check-meta-pill {
+    background: color-mix(in srgb, #00a09d 5%, #ffffff);
+  }
+  .theme-light .mood-loading-card {
+    background: color-mix(in srgb, #00a09d 3%, #ffffff);
+  }
+  .theme-light .login-wrap--premium .login-card {
+    background: color-mix(in srgb, var(--surface2) 82%, var(--surface));
+  }
+  .theme-light .admin-ausencia-summary {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .theme-light .dashboard-enquete-confirmation-icon {
+    background: color-mix(in srgb, var(--accent) 24%, var(--surface));
+  }
+  .theme-light .post-card-datebox,
+  .theme-light .post-detalhe-datebox,
+  .theme-light .presencial-datebox {
+    background: var(--accent);
+  }
+  .theme-light .panoff-column.is-ferias::before {
+    background: rgba(91, 141, 239, 0.85);
+  }
+  .theme-light .panoff-column.is-dayoff::before {
+    background: rgba(232, 75, 122, 0.85);
+  }
+  .theme-light .panoff-column.is-ausencia::before {
+    background: rgba(255, 160, 50, 0.85);
+  }
+  .theme-light .birthday-hero::after {
+    background: transparent;
+    animation: none;
+  }
+  .theme-light .birthday-hero-icon-wrap {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface2));
+  }
+  .theme-light .dashboard-enquete-result-fill {
+    background: var(--accent);
+  }
+  .theme-light .presencial-progress-bar {
+    background: var(--accent);
+  }
+  .theme-light .galeria-overlay {
+    background: rgba(10, 25, 41, 0.75);
+  }
+  .theme-light .mood-energy-fill {
+    background: var(--mood-accent);
+  }
+  .theme-light .mood-team-energy-bar-fill {
+    background: var(--energy-color);
+  }
+  .theme-light .mood-team-energy-bar-bg {
+    background: color-mix(in srgb, var(--energy-color) 12%, #e8f0f8);
+  }
+  .theme-light .admin-presencial-progress-bar {
+    background: var(--accent);
+  }
+  .theme-light .post-modal-close:hover {
+    background: var(--accent);
+  }
+  .theme-light .skeleton {
+    background: color-mix(in srgb, #00a09d 4%, #edf4fb);
+    background-size: 200% 100%;
+  }
+
   body { background: var(--bg); color: var(--text); font-family: 'Sora', sans-serif; line-height: 1.5; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1775,6 +1915,61 @@
     gap: 6px;
     flex-wrap: wrap;
   }
+  /* Carrosséis de parabenizadores — mobile only */
+  .birthday-cheer-rows {
+    display: none;
+  }
+  .birthday-cheer-carousel {
+    position: relative;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent 100%
+    );
+  }
+  .birthday-cheer-track {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: max-content;
+    padding: 2px 0;
+    will-change: transform;
+  }
+  .birthday-cheer-carousel--left .birthday-cheer-track {
+    animation: cheerScrollLeft var(--cheer-duration, 18s) linear infinite;
+  }
+  .birthday-cheer-carousel--right .birthday-cheer-track {
+    animation: cheerScrollRight var(--cheer-duration, 22s) linear infinite;
+  }
+  @keyframes cheerScrollLeft {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-33.333%); }
+  }
+  @keyframes cheerScrollRight {
+    from { transform: translateX(-33.333%); }
+    to   { transform: translateX(0); }
+  }
+  @media (max-width: 640px) {
+    .birthday-hero-cheers { display: none; }
+    .birthday-cheer-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-basis: 100%;
+      margin: 6px 0 -4px -20px;
+      width: calc(100% + 40px);
+    }
+  }
   .birthday-hero-cheer-chip {
     display: inline-flex;
     align-items: center;
@@ -2783,24 +2978,23 @@
   }
   .theme-light .mood-check-main {
     border-right-color: color-mix(in srgb, #00a09d 22%, #d4e0ea);
-    background:
-      radial-gradient(circle at 6% 0%, color-mix(in srgb, #00a09d 12%, transparent), transparent 36%),
-      linear-gradient(180deg, color-mix(in srgb, #00a09d 4%, #ffffff), color-mix(in srgb, #00a09d 7%, #f7fbff));
+    background: color-mix(in srgb, #00a09d 5%, #f9fcff);
   }
   .theme-light .mood-check-aside {
-    background:
-      radial-gradient(circle at 100% 0%, color-mix(in srgb, #00a09d 8%, transparent), transparent 32%),
-      linear-gradient(180deg, color-mix(in srgb, #00a09d 4%, #ffffff), color-mix(in srgb, #00a09d 6%, #f5fbff));
+    background: color-mix(in srgb, #00a09d 5%, #f8fbff);
   }
   .theme-light .mood-check-meta-pill,
   .theme-light .mood-choice,
   .theme-light .mood-energy-block,
   .theme-light .mood-tags-block,
   .theme-light .mood-stat-card,
-  .theme-light .mood-team-card,
   .theme-light .mood-loading-card {
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 3%, #ffffff), color-mix(in srgb, #00a09d 8%, #f6faff));
+    background: color-mix(in srgb, #00a09d 5%, #ffffff);
     border-color: color-mix(in srgb, #00a09d 16%, #d1deea);
+  }
+  .theme-light .mood-team-card {
+    background: color-mix(in srgb, var(--mood-accent, #00a09d) 10%, #f5faff);
+    border-color: color-mix(in srgb, var(--mood-accent, #00a09d) 36%, #c0d4e4);
   }
   .theme-light .mood-check-privacy,
   .theme-light .mood-tag-chip,
@@ -2814,28 +3008,39 @@
     box-shadow: 0 14px 26px color-mix(in srgb, var(--mood-accent) 10%, transparent);
   }
   .theme-light .mood-team-card--wall {
-    background:
-      radial-gradient(circle at 50% -6%, color-mix(in srgb, var(--energy-color) 14%, #ffffff), transparent 42%),
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--energy-color) 4%, #ffffff),
-        color-mix(in srgb, var(--energy-color) 8%, #f6faff)
-      );
-    border-color: color-mix(in srgb, var(--energy-color) 18%, #d1deea);
+    background: color-mix(in srgb, var(--energy-color) 18%, #f0f7ff);
+    border-color: color-mix(in srgb, var(--energy-color) 58%, #b8cede);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.62),
-      0 14px 28px color-mix(in srgb, var(--energy-color) 10%, transparent);
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 6px 20px color-mix(in srgb, var(--energy-color) 30%, transparent);
   }
   .theme-light .mood-team-card--wall .mood-team-emoji-wrap {
-    background:
-      radial-gradient(circle at 35% 30%, color-mix(in srgb, #ffffff 88%, var(--energy-color)), transparent 52%),
-      color-mix(in srgb, var(--energy-color) 8%, #ffffff);
-    border-color: color-mix(in srgb, var(--energy-color) 18%, #d1deea);
+    background: color-mix(in srgb, var(--energy-color) 26%, #ffffff);
+    border-color: color-mix(in srgb, var(--energy-color) 62%, #b8cede);
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--energy-color) 34%, transparent);
+  }
+  .theme-light .mood-team-card--wall .mood-team-energy-bar {
+    background: color-mix(in srgb, var(--energy-color) 22%, #d8e8f4);
+  }
+  .theme-light .mood-team-energy-fill {
+    background: color-mix(in srgb, var(--energy-color) 88%, #1a3040);
+  }
+  .theme-light .mood-team-card--wall .mood-team-energy-label {
+    color: color-mix(in srgb, var(--energy-color) 82%, #0f2030);
+    font-weight: 700;
   }
   .theme-light .mood-team-card--wall .mood-mini-chip {
-    background: color-mix(in srgb, var(--energy-color) 6%, #ffffff);
-    border-color: color-mix(in srgb, var(--energy-color) 16%, #d1deea);
-    color: color-mix(in srgb, var(--energy-color) 28%, #203342);
+    background: color-mix(in srgb, var(--energy-color) 18%, #ffffff);
+    border-color: color-mix(in srgb, var(--energy-color) 46%, #b8cede);
+    color: color-mix(in srgb, var(--energy-color) 80%, #0f2030);
+    font-weight: 600;
+  }
+  .theme-light .mood-team-card--wall .mood-team-time--foot {
+    color: color-mix(in srgb, var(--energy-color) 56%, #2a4560);
+    font-weight: 600;
+  }
+  .theme-light .mood-team-card--wall .mood-team-title {
+    color: color-mix(in srgb, var(--energy-color) 70%, #0d1f2e);
   }
 
   /* Filters */
@@ -3623,11 +3828,7 @@
     box-shadow: 0 16px 28px rgba(16, 36, 55, 0.16);
   }
   .theme-light .panet-datepicker .react-datepicker__header {
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, #00a09d 14%, #ffffff),
-      color-mix(in srgb, #00a09d 7%, #f7fbff)
-    ) !important;
+    background: color-mix(in srgb, #00a09d 10%, #ffffff) !important;
     border-bottom-color: color-mix(in srgb, #00a09d 28%, #c7d6e4) !important;
   }
   .theme-light .panet-datepicker .react-datepicker__day:hover {
@@ -3636,19 +3837,19 @@
   }
   .theme-light .panet-datepicker .react-datepicker__day--selected,
   .theme-light .panet-datepicker .react-datepicker__day--keyboard-selected {
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 88%, #fff), #008684) !important;
+    background: #00a09d !important;
     color: #ffffff !important;
   }
   .theme-light .panet-datepicker .react-datepicker__time-container {
     border-left-color: color-mix(in srgb, #00a09d 22%, #c7d6e4) !important;
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 6%, #ffffff), #ffffff) !important;
+    background: color-mix(in srgb, #00a09d 4%, #ffffff) !important;
   }
   .theme-light .panet-datepicker .react-datepicker__time-list-item:hover {
     background: color-mix(in srgb, #00a09d 22%, #ffffff) !important;
     color: #007d7b !important;
   }
   .theme-light .panet-datepicker .react-datepicker__time-list-item--selected {
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 88%, #fff), #008684) !important;
+    background: #00a09d !important;
     color: #ffffff !important;
   }
   .btn-full { width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; }
@@ -3871,16 +4072,13 @@
   }
   .theme-light .collab-modal {
     border-color: color-mix(in srgb, #00a09d 26%, #c7d6e4);
-    background:
-      linear-gradient(180deg, #ffffff 0%, color-mix(in srgb, #00a09d 4%, #ffffff) 100%);
+    background: color-mix(in srgb, #00a09d 3%, #ffffff);
     box-shadow:
       0 24px 44px rgba(16, 36, 55, 0.16),
       0 0 0 1px color-mix(in srgb, #00a09d 14%, transparent);
   }
   .theme-light .collab-modal .profile-hero {
-    background:
-      radial-gradient(circle at 88% -24%, color-mix(in srgb, #00a09d 20%, transparent), transparent 58%),
-      linear-gradient(180deg, color-mix(in srgb, #00a09d 10%, #ffffff), color-mix(in srgb, #00a09d 4%, #f7fcff));
+    background: color-mix(in srgb, #00a09d 7%, #f9fcff);
     border-bottom: 1px solid color-mix(in srgb, #00a09d 28%, #c7d6e4);
   }
   .theme-light .collab-modal .profile-name { color: #0f2a3d; }
@@ -3913,7 +4111,7 @@
   }
   .theme-light .btn-collab-close:hover {
     color: #ffffff;
-    background: linear-gradient(180deg, color-mix(in srgb, #00a09d 82%, #fff), #008684);
+    background: #00a09d;
     border-color: #008684;
   }
   .link-primary-underline {
