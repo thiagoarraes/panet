@@ -60,6 +60,9 @@ export async function apiLogin(email, password) {
     lastStatus = res.status;
     lastMessage = data?.error || "Falha no login";
 
+    // Rate limit hit — surface immediately, don't retry
+    if (res.status === 429) break;
+
     if (!data?.retryable && !isRetryable(lastStatus, lastMessage)) break;
     if (attempt < LOGIN_RETRY_DELAYS_MS.length) {
       await sleep(LOGIN_RETRY_DELAYS_MS[attempt]);
