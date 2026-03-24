@@ -138,11 +138,14 @@ export function PresencialPage({ currentUserId }) {
     [agendas]
   );
 
-  const handleRespond = async (agendaId, status) => {
+  const handleRespond = async (agendaId, status, currentProfile) => {
     if (!agendaId) return;
     try {
       setSavingState({ agendaId, status });
-      await respondMutation.mutateAsync({ agendaId, status });
+      const agendaDetails = status === "confirmado"
+        ? proximasAgendas.find((a) => String(a.id) === String(agendaId))
+        : null;
+      await respondMutation.mutateAsync({ agendaId, status, currentProfile, agendaDetails });
     } finally {
       setSavingState({ agendaId: "", status: "" });
     }

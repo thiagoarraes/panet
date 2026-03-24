@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
+import { supabase, isSupabaseEnabled, SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -267,11 +267,37 @@ export function useDeletePresencialAgenda() {
 // useRespondPresencial — optimistic update
 // ---------------------------------------------------------------------------
 
+async function addEventToCalendar({ supabaseUrl, agendaDetails }) {
+  try {
+    const session = await supabase.auth.getSession();
+    const token = session?.data?.session?.access_token;
+    if (!token) return;
+
+    await fetch(`${supabaseUrl}/functions/v1/add-calendar-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        titulo: agendaDetails.titulo,
+        dataIso: agendaDetails.dataIso,
+        horaIso: agendaDetails.horaIso || "",
+        local: agendaDetails.local || "",
+        observacao: agendaDetails.observacao || "",
+      }),
+    });
+  } catch {
+    // silencioso — não bloqueia a confirmação de presença
+  }
+}
+
 export function useRespondPresencial(userId) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ agendaId, status, currentProfile }) => {
+    mutationFn: async ({ agendaId, status, currentProfile, agendaDetails }) => {
       const effectiveUserId = currentProfile?.id || userId;
       if (!effectiveUserId || !agendaId) return;
 
@@ -299,6 +325,10 @@ export function useRespondPresencial(userId) {
           }
         );
         if (error) throw new Error(error.message);
+
+        if (status === "confirmado" && agendaDetails) {
+          await addEventToCalendar({ supabaseUrl: SUPABASE_URL, agendaDetails });
+        }
       }
     },
 

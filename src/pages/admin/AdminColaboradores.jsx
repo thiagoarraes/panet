@@ -76,7 +76,7 @@ const escapePostgrestLike = (value) =>
 
 const readCachedAdminColaboradores = (queryKey) => {
   try {
-    const raw = localStorage.getItem(ADMIN_COLABS_CACHE_KEY);
+    const raw = sessionStorage.getItem(ADMIN_COLABS_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
@@ -95,7 +95,7 @@ const readCachedAdminColaboradores = (queryKey) => {
 const writeCachedAdminColaboradores = (queryKey, rows, total) => {
   try {
     if (!queryKey || !Array.isArray(rows)) return;
-    const raw = localStorage.getItem(ADMIN_COLABS_CACHE_KEY);
+    const raw = sessionStorage.getItem(ADMIN_COLABS_CACHE_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
     const next = parsed && typeof parsed === "object" ? parsed : {};
     next[queryKey] = {
@@ -103,7 +103,7 @@ const writeCachedAdminColaboradores = (queryKey, rows, total) => {
       total: Number(total || 0),
       at: Date.now(),
     };
-    localStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(next));
+    sessionStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(next));
   } catch (_err) {
     // ignore cache failures
   }
@@ -111,7 +111,7 @@ const writeCachedAdminColaboradores = (queryKey, rows, total) => {
 
 const clearCachedAdminColaboradores = () => {
   try {
-    localStorage.removeItem(ADMIN_COLABS_CACHE_KEY);
+    sessionStorage.removeItem(ADMIN_COLABS_CACHE_KEY);
   } catch (_err) {
     // ignore cache failures
   }

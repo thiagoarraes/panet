@@ -312,7 +312,7 @@ const clearStoredSupabaseSession = () => {
 
 const readCachedProfile = () => {
   try {
-    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    const raw = sessionStorage.getItem(PROFILE_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : null;
@@ -324,10 +324,10 @@ const readCachedProfile = () => {
 const writeCachedProfile = (profile) => {
   try {
     if (!profile) {
-      localStorage.removeItem(PROFILE_CACHE_KEY);
+      sessionStorage.removeItem(PROFILE_CACHE_KEY);
       return;
     }
-    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+    sessionStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
   } catch (_err) {
     // ignore cache failures
   }

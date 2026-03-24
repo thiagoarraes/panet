@@ -78,6 +78,9 @@ const DASHBOARD_SNAPSHOT_FULL_LIMITS = {
   colaboradoresLimit: 500,
 };
 
+const BIRTHDAY_BANNER_START_HOUR = 7;
+const BIRTHDAY_BANNER_END_HOUR = 23;
+
 export function DashboardPage({
   onOpenPost,
   onOpenAniversarios,
@@ -322,6 +325,11 @@ export function DashboardPage({
   const shouldShowEnqueteHiddenResultNotice = Boolean(
     activeEnquete && !activeEnquete.isClosed && activeEnquete.hasVoted && !activeEnquete.showPartial
   );
+  const currentHour = new Date().getHours();
+  const shouldShowBirthdayBanner =
+    Boolean(today) &&
+    currentHour >= BIRTHDAY_BANNER_START_HOUR &&
+    currentHour < BIRTHDAY_BANNER_END_HOUR;
   const birthdayFirstName = String(today?.colaborador?.nome || "").split(" ")[0] || "";
 
   return (
@@ -337,7 +345,7 @@ export function DashboardPage({
           </div>
         </div>
       )}
-      {today && (
+      {shouldShowBirthdayBanner && (
         <div className="birthday-hero">
           <div className="birthday-hero-icon-wrap" aria-hidden="true">
             <Cake size={26} />
