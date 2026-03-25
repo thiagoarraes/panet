@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Heart, MessageCircle, Send, Cake, CalendarDays, Clock, Plane, MessageSquare, SendHorizonal, Pencil, Trash2 } from "lucide-react";
+import { Heart, MessageCircle, Send, Pencil, Trash2 } from "lucide-react";
 import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
 import { Badge } from "../components/Badge";
-import { SkeletonAnivItem, SkeletonFolgaEntry } from "../components/Skeleton";
+import { AniversariosAside } from "../components/aside/AniversariosAside";
+import { PanOffAside } from "../components/aside/PanOffAside";
+import { PanzapAside } from "../components/aside/PanzapAside";
 import { usePostagemDetalhe } from "../hooks/queries/usePostagemDetalhe";
 import { usePostagensSlugIndex } from "../hooks/queries/usePostagensSlugIndex";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
@@ -14,7 +16,7 @@ import { useAusencias } from "../hooks/queries/useAusencias";
 import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
 import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
-import { getAusenciaMeta, getFeriasStatusByDate, getPeriodoFolgaLabel, parseBrDate } from "../lib/panoff.js";
+import { getFeriasStatusByDate, parseBrDate } from "../lib/panoff.js";
 import { toPostSlug } from "../lib/postRouting.js";
 
 const getDateBoxParts = (iso) => {
@@ -376,186 +378,28 @@ export function PostDetalhePage({
         </div>
 
         <div className="dash-aside">
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <Cake size={14} /> Próximos aniversariantes
-              </span>
-            </div>
-            <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximos.length === 0 && aniversariosQuery.isLoading
-                ? Array.from({ length: 4 }, (_, i) => <SkeletonAnivItem key={i} />)
-                : proximos.map((a) => (
-                <div key={a.colaborador.id} className="aniv-item">
-                  <div className="aniv-date">
-                    <div className="aniv-day">{a.data.split("/")[0]}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)" }}>/ {a.data.split("/")[1]}</div>
-                  </div>
-                  <Avatar col={a.colaborador} size={36} />
-                  <div className="aniv-info">
-                    <div className="aniv-name">{a.colaborador.nome.split(" ")[0]}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{formatDiasRestantes(a.diasRestantes)}</div>
-                  </div>
-                </div>
-              ))}
-              <button className="btn-aniversarios-ver-todos" onClick={onOpenAniversarios}>
-                Ver todos
-              </button>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <Plane size={14} /> PanOff
-              </span>
-            </div>
-            <div className="card-body" style={{ padding: "8px 16px" }}>
-              {proximasFolgas.length === 0 && ausentesAgora.length === 0 && (feriasQuery.isLoading || ausenciasQuery.isLoading) && (
-                <div style={{ marginTop: 10, marginBottom: 12 }}>
-                  {Array.from({ length: 3 }, (_, i) => <SkeletonFolgaEntry key={i} />)}
-                </div>
-              )}
-              {ausentesAgora.length > 0 && (
-                <div style={{ marginTop: 10, marginBottom: 8 }}>
-                  {ausentesAgora.map((item) => {
-                    const ausenciaMeta = getAusenciaMeta(item);
-                    return (
-                      <div key={`ausente-${item.id}`} className="folga-entry is-ausencia">
-                        <div className="folga-avatar-wrap">
-                          <Avatar col={item.colaborador} size={32} />
-                        </div>
-                        <div className="folga-content">
-                          <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
-                          <div className="folga-status">
-                            <span
-                              className="status-chip"
-                              style={{ background: "rgba(255,160,50,0.15)", color: "#FFA032", border: "1px solid rgba(255,160,50,0.3)", whiteSpace: "nowrap", flexShrink: 0 }}
-                            >
-                              Ausente
-                            </span>
-                          </div>
-                          <div className="folga-meta">
-                            {ausenciaMeta.dateLabel ? (
-                              <span className="folga-meta-chip">
-                                <CalendarDays size={12} />
-                                {ausenciaMeta.dateLabel}
-                              </span>
-                            ) : null}
-                            {ausenciaMeta.timeLabel ? (
-                              <span className="folga-meta-chip is-time">
-                                <Clock size={12} />
-                                {ausenciaMeta.timeLabel}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ marginTop: ausentesAgora.length === 0 ? 10 : 0, marginBottom: 12 }}>
-                {proximasFolgas.map((item) => {
-                  const badge = item.tipo === "ferias" ? (
-                    <span
-                      className={`status-chip ${item._effectiveStatus === "em_andamento" ? "status-andamento" : "status-marcado"}`}
-                      style={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                    >
-                      {item._effectiveStatus === "em_andamento" ? "De férias" : "Agendado"}
-                    </span>
-                  ) : (
-                    <span
-                      className="status-chip"
-                      style={{ background: "rgba(232,75,122,0.15)", color: "#E84B7A", whiteSpace: "nowrap", flexShrink: 0 }}
-                    >
-                      Day Off
-                    </span>
-                  );
-                  return (
-                    <div
-                      key={`${item.tipo}-${item.id}`}
-                      className={`folga-entry ${item.tipo === "dayoff" ? "is-dayoff" : "is-ferias"}`}
-                    >
-                      <div className="folga-avatar-wrap">
-                        <Avatar col={item.colaborador} size={32} />
-                      </div>
-                      <div className="folga-content">
-                        <div className="folga-user">{item.colaborador.nome.split(" ")[0]}</div>
-                        <div className="folga-status">{badge}</div>
-                        <div className="folga-meta">
-                          <span className="folga-meta-chip">
-                            <CalendarDays size={12} /> {getPeriodoFolgaLabel(item)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <button className="btn-aniversarios-ver-todos" onClick={onOpenFolgas}>
-                  Ver todos
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                <MessageSquare size={14} /> PanZap
-              </span>
-            </div>
-            <div className="card-body" style={{ padding: "12px 12px 10px" }}>
-              <div ref={muralListRef} style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
-                {muralOrdenado.map((m) => {
-                  const isMine = String(m.colaborador?.id) === String(currentUserId);
-                  return (
-                    <div key={m.id} style={{ display: "flex", gap: 8, alignItems: "flex-end", justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                      {!isMine && <Avatar col={m.colaborador} size={28} />}
-                      <div
-                        style={{
-                          maxWidth: "82%",
-                          background: isMine ? "color-mix(in srgb, var(--accent) 22%, var(--surface))" : "var(--surface2)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 12,
-                          padding: "7px 10px",
-                        }}
-                      >
-                        <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 3 }}>
-                          {!isMine ? `${m.colaborador.nome.split(" ")[0]} · ` : ""}
-                          {m.hora}
-                        </div>
-                        <div style={{ fontSize: 12, lineHeight: 1.45 }}>{m.texto}</div>
-                      </div>
-                      {isMine && <Avatar col={m.colaborador} size={28} />}
-                    </div>
-                  );
-                })}
-                {muralOrdenado.length === 0 && <div className="empty-state" style={{ padding: 14 }}>Sem mensagens no PanZap.</div>}
-              </div>
-              <div className="mural-input" style={{ marginTop: 10 }}>
-                <Avatar col={currentUser} size={30} />
-                <input
-                  className="input-field"
-                  placeholder="Escreva algo..."
-                  value={textoMural}
-                  onChange={(e) => setTextoMural(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleEnviarMural()}
-                  style={{ fontSize: 12, padding: "9px 11px" }}
-                />
-                <button
-                  className="btn-primary"
-                  style={{ padding: "9px 11px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-                  onClick={handleEnviarMural}
-                  disabled={enviandoMural}
-                >
-                  <SendHorizonal size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <AniversariosAside
+            proximos={proximos}
+            isLoading={aniversariosQuery.isLoading}
+            onVerTodos={onOpenAniversarios}
+            formatDiasRestantes={formatDiasRestantes}
+          />
+          <PanOffAside
+            ausentesAgora={ausentesAgora}
+            proximasFolgas={proximasFolgas}
+            isLoading={feriasQuery.isLoading || ausenciasQuery.isLoading}
+            onVerTodos={onOpenFolgas}
+          />
+          <PanzapAside
+            mensagens={muralOrdenado}
+            currentUser={currentUser}
+            currentUserId={currentUserId}
+            textoMural={textoMural}
+            setTextoMural={setTextoMural}
+            enviandoMural={enviandoMural}
+            onEnviar={handleEnviarMural}
+            muralListRef={muralListRef}
+          />
         </div>
       </div>
     </div>
