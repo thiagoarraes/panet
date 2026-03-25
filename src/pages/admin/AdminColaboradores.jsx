@@ -1,202 +1,23 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { COLABORADORES } from "../../data/mockData.js";
-import { supabase, isSupabaseEnabled, SUPABASE_ANON_KEY, SUPABASE_URL } from "../../lib/supabase.js";
-import { Avatar } from "../../components/Avatar";
-
-const parseFunctionInvokeError = async (error, fallbackMessage) => {
-  if (!error) return fallbackMessage;
-  try {
-    const context = error.context;
-    if (context && typeof context.text === "function") {
-      const raw = await context.text();
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed?.error) return String(parsed.error);
-          if (parsed?.message) return String(parsed.message);
-        } catch (_err) {
-          return raw;
-        }
-      }
-    }
-  } catch (_err) {
-    // ignore and use fallback below
-  }
-  return error?.message || fallbackMessage;
-};
-
-const isJwtSessionError = (error) => {
-  const msg = String(error?.message || "").toLowerCase();
-  return msg.includes("invalid jwt") || msg.includes("jwt expired") || msg.includes("session expired");
-};
-
-const invokeAdminFunctionHttp = async (fnName, body, accessToken, fallbackMessage) => {
-  const fnBaseUrl = String(SUPABASE_URL || "").replace(/\/$/, "");
-  if (!fnBaseUrl) throw new Error(fallbackMessage || "Supabase URL ausente.");
-  if (!SUPABASE_ANON_KEY) throw new Error(fallbackMessage || "Supabase anon key ausente.");
-  const response = await fetch(`${fnBaseUrl}/functions/v1/${fnName}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(body || {}),
-  });
-
-  const rawText = await response.text();
-  let parsed = null;
-  if (rawText) {
-    try {
-      parsed = JSON.parse(rawText);
-    } catch (_err) {
-      parsed = { message: rawText };
-    }
-  }
-
-  if (!response.ok) {
-    const message =
-      parsed?.error ||
-      parsed?.message ||
-      rawText ||
-      fallbackMessage ||
-      "Não foi possível concluir a ação.";
-    throw new Error(String(message));
-  }
-  return parsed || {};
-};
-
-const ADMIN_COLABS_CACHE_KEY = "panet.admin.colaboradores.cache.v2";
-const PAGE_SIZE = 20;
-const escapePostgrestLike = (value) =>
-  String(value || "")
-    .replace(/[,*().]/g, " ")
-    .trim();
-
-const readCachedAdminColaboradores = (queryKey) => {
-  try {
-    const raw = sessionStorage.getItem(ADMIN_COLABS_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    const entry = parsed[queryKey];
-    if (!entry || typeof entry !== "object") return null;
-    if (!Array.isArray(entry.rows)) return null;
-    return {
-      rows: entry.rows,
-      total: Number(entry.total || 0),
-    };
-  } catch (_err) {
-    return null;
-  }
-};
-
-const writeCachedAdminColaboradores = (queryKey, rows, total) => {
-  try {
-    if (!queryKey || !Array.isArray(rows)) return;
-    const raw = sessionStorage.getItem(ADMIN_COLABS_CACHE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    const next = parsed && typeof parsed === "object" ? parsed : {};
-    next[queryKey] = {
-      rows,
-      total: Number(total || 0),
-      at: Date.now(),
-    };
-    sessionStorage.setItem(ADMIN_COLABS_CACHE_KEY, JSON.stringify(next));
-  } catch (_err) {
-    // ignore cache failures
-  }
-};
-
-const clearCachedAdminColaboradores = () => {
-  try {
-    sessionStorage.removeItem(ADMIN_COLABS_CACHE_KEY);
-  } catch (_err) {
-    // ignore cache failures
-  }
-};
-
-const MODULES = [
-  { id: "postagens", label: "PanNews" },
-  { id: "colaboradores", label: "Colaboradores" },
-  { id: "ferias", label: "PanOff" },
-  { id: "presencial", label: "Confirmar presença" },
-  { id: "enquetes", label: "Enquetes" },
-  { id: "galeria", label: "Galerias" },
-  { id: "mural", label: "PanZap" },
-];
-
-const MONTH_OPTIONS = [
-  { value: "01", label: "Janeiro" },
-  { value: "02", label: "Fevereiro" },
-  { value: "03", label: "Março" },
-  { value: "04", label: "Abril" },
-  { value: "05", label: "Maio" },
-  { value: "06", label: "Junho" },
-  { value: "07", label: "Julho" },
-  { value: "08", label: "Agosto" },
-  { value: "09", label: "Setembro" },
-  { value: "10", label: "Outubro" },
-  { value: "11", label: "Novembro" },
-  { value: "12", label: "Dezembro" },
-];
-
-const getBirthdayParts = (value) => {
-  const raw = String(value || "").trim();
-  if (!raw) return { aniversarioDia: "", aniversarioMes: "" };
-
-  const normalized = raw.slice(0, 10);
-  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) {
-    return {
-      aniversarioDia: match[3],
-      aniversarioMes: match[2],
-    };
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return { aniversarioDia: "", aniversarioMes: "" };
-  return {
-    aniversarioDia: String(parsed.getDate()).padStart(2, "0"),
-    aniversarioMes: String(parsed.getMonth() + 1).padStart(2, "0"),
-  };
-};
-
-const toBirthdayIso = (dia, mes) => {
-  if (!dia || !mes) return null;
-  const year = new Date().getFullYear();
-  return `${year}-${mes}-${dia}`;
-};
-
-const mapProfileToRow = (profile, currentUserId) => {
-  const iniciais = profile.nome
-    ?.split(" ")
-    .filter(Boolean)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return {
-    id: profile.id,
-    nome: profile.nome,
-    cargo: profile.cargo,
-    aniversario: profile.aniversario || "",
-    email: profile.email,
-    telefone: profile.telefone || "",
-    fotoUrl: profile.foto_url || "",
-    cor: profile.cor_avatar || "#11E7E7",
-    foto: iniciais || "U",
-    perfil: profile.perfil || "colaborador",
-    adminModulos: profile.admin_modulos ?? null,
-    isMe: profile.id === currentUserId,
-    redes: {
-      instagram: profile.instagram || "",
-      linkedin: profile.linkedin || "",
-      github: profile.github || "",
-    },
-  };
-};
+import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
+import {
+  parseFunctionInvokeError,
+  isJwtSessionError,
+  invokeAdminFunctionHttp,
+  PAGE_SIZE,
+  escapePostgrestLike,
+  readCachedAdminColaboradores,
+  writeCachedAdminColaboradores,
+  clearCachedAdminColaboradores,
+  getBirthdayParts,
+  toBirthdayIso,
+  mapProfileToRow,
+} from "../../lib/adminColabUtils.js";
+import { ColabTable } from "./AdminColaboradores/ColabTable.jsx";
+import { ColabModal } from "./AdminColaboradores/ColabModal.jsx";
+import { SenhaModal } from "./AdminColaboradores/SenhaModal.jsx";
+import { ConfirmarExcluirModal } from "./AdminColaboradores/ConfirmarExcluirModal.jsx";
 
 export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
@@ -214,44 +35,36 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(() => (isSupabaseEnabled ? (Array.isArray(initialColaboradores) ? initialColaboradores.length : 0) : COLABORADORES.length));
+  const [totalItems, setTotalItems] = useState(() =>
+    isSupabaseEnabled
+      ? Array.isArray(initialColaboradores) ? initialColaboradores.length : 0
+      : COLABORADORES.length
+  );
   const refreshTimerRef = useRef(null);
   const totalPages = Math.max(1, Math.ceil((totalItems || 0) / PAGE_SIZE));
 
   const getValidAccessToken = useCallback(async () => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
     const nowSec = Math.floor(Date.now() / 1000);
     const expiresAt = Number(session?.expires_at || 0);
-    const hasFreshSession = Boolean(session?.access_token) && expiresAt > nowSec + 30;
-    if (hasFreshSession) return session.access_token;
-
+    if (Boolean(session?.access_token) && expiresAt > nowSec + 30) return session.access_token;
     const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError || !refreshed?.session?.access_token) {
-      throw new Error("Sessão expirada. Faça login novamente.");
-    }
+    if (refreshError || !refreshed?.session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
     return refreshed.session.access_token;
   }, []);
 
   const invokeAdminFunction = async (fnName, body, fallbackMessage) => {
-    const run = async (accessToken) => {
-      return await invokeAdminFunctionHttp(fnName, body, accessToken, fallbackMessage);
-    };
-
+    const run = (accessToken) => invokeAdminFunctionHttp(fnName, body, accessToken, fallbackMessage);
     try {
-      const accessToken = await getValidAccessToken();
-      return await run(accessToken);
+      return await run(await getValidAccessToken());
     } catch (error) {
       const parsedMessage = await parseFunctionInvokeError(error, fallbackMessage);
       if (!isJwtSessionError({ message: parsedMessage }) && !isJwtSessionError(error)) {
         throw new Error(parsedMessage || fallbackMessage);
       }
       try {
-        const accessToken = await getValidAccessToken();
-        return await run(accessToken);
+        return await run(await getValidAccessToken());
       } catch (finalErr) {
         const finalMessage = await parseFunctionInvokeError(finalErr, fallbackMessage);
         throw new Error(finalMessage || fallbackMessage);
@@ -260,36 +73,24 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   };
 
   const invokeDeleteCollaborator = useCallback(async (userId, email) => {
-    const call = async (accessToken) => {
-      return await invokeAdminFunctionHttp(
-        "delete-collaborator",
-        { user_id: userId, email },
-        accessToken,
-        "Não foi possível excluir o colaborador."
-      );
-    };
-
+    const call = (accessToken) =>
+      invokeAdminFunctionHttp("delete-collaborator", { user_id: userId, email }, accessToken, "Não foi possível excluir o colaborador.");
     try {
-      const accessToken = await getValidAccessToken();
-      return await call(accessToken);
+      return await call(await getValidAccessToken());
     } catch (err) {
-      const msg = String(err?.message || "");
-      if (!isJwtSessionError({ message: msg })) throw err;
+      if (!isJwtSessionError({ message: String(err?.message || "") })) throw err;
       try {
-        const accessToken = await getValidAccessToken();
-        return await call(accessToken);
+        return await call(await getValidAccessToken());
       } catch (finalErr) {
-        const finalMessage = String(finalErr?.message || "");
-        throw new Error(finalMessage || "Não foi possível excluir o colaborador.");
+        throw new Error(String(finalErr?.message || "") || "Não foi possível excluir o colaborador.");
       }
     }
   }, [getValidAccessToken]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const normalized = String(searchInput || "").trim();
       setCurrentPage(1);
-      setSearchTerm(normalized);
+      setSearchTerm(String(searchInput || "").trim());
     }, 250);
     return () => clearTimeout(timer);
   }, [searchInput]);
@@ -323,16 +124,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         .select("id,nome,cargo,aniversario,email,telefone,cor_avatar,foto_url,perfil,admin_modulos")
         .order("nome", { ascending: true })
         .range(from, to);
-
-      let countQuery = supabase
-        .from("colaboradores")
-        .select("id", { count: "exact", head: true });
+      let countQuery = supabase.from("colaboradores").select("id", { count: "exact", head: true });
 
       if (normalizedSearch) {
         const safeSearch = escapePostgrestLike(normalizedSearch);
-        const searchExpression = `nome.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`;
-        rowsQuery = rowsQuery.or(searchExpression);
-        countQuery = countQuery.or(searchExpression);
+        const expr = `nome.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`;
+        rowsQuery = rowsQuery.or(expr);
+        countQuery = countQuery.or(expr);
       }
 
       const [{ data, error }, { count, error: countError }] = await Promise.all([rowsQuery, countQuery]);
@@ -340,7 +138,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
       const rows = data || [];
       const fallbackTotal = Number(cachedPayload?.total || 0) || from + rows.length;
-      const resolvedTotal = (!countError && Number.isFinite(count)) ? Number(count) : fallbackTotal;
+      const resolvedTotal = !countError && Number.isFinite(count) ? Number(count) : fallbackTotal;
       setTotalItems(Math.max(rows.length, resolvedTotal));
       setLista(rows.map((row) => mapProfileToRow(row, currentUserId)));
       writeCachedAdminColaboradores(queryKey, rows, resolvedTotal);
@@ -370,7 +168,6 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         }, 250);
       })
       .subscribe();
-
     return () => {
       if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
       channel.unsubscribe();
@@ -378,28 +175,14 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   }, [carregarColaboradores]);
 
   const abrirNovo = () => {
-    setForm({
-      nome: "",
-      cargo: "Colaborador",
-      aniversario: "",
-      aniversarioDia: "",
-      aniversarioMes: "",
-      email: "",
-      perfil: "colaborador",
-      adminModulos: null,
-    });
+    setForm({ nome: "", cargo: "Colaborador", aniversario: "", aniversarioDia: "", aniversarioMes: "", email: "", perfil: "colaborador", adminModulos: null });
     setErrorMsg("");
     setModal("novo");
   };
 
   const abrirEditar = (col) => {
     const birthday = getBirthdayParts(col.aniversario);
-    setForm({
-      ...col,
-      adminModulos: col.adminModulos ?? null,
-      aniversarioDia: birthday.aniversarioDia,
-      aniversarioMes: birthday.aniversarioMes,
-    });
+    setForm({ ...col, adminModulos: col.adminModulos ?? null, aniversarioDia: birthday.aniversarioDia, aniversarioMes: birthday.aniversarioMes });
     setErrorMsg("");
     setModal(col);
   };
@@ -418,30 +201,14 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       return;
     }
     const normalizedBirthday = toBirthdayIso(form.aniversarioDia, form.aniversarioMes);
+
     if (!isSupabaseEnabled) {
       const duplicatedEmail = lista.some(
         (c) => String(c?.email || "").trim().toLowerCase() === normalizedEmail && (modal === "novo" || c.id !== form.id)
       );
-      if (duplicatedEmail) {
-        setErrorMsg("Já existe um colaborador com este e-mail.");
-        return;
-      }
-    }
-
-    const iniciais = form.nome
-      .split(" ")
-      .filter(Boolean)
-      .map((p) => p[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-
-    if (!isSupabaseEnabled) {
-      const localPayload = {
-        ...form,
-        cargo: normalizedCargo,
-        aniversario: normalizedBirthday || "",
-      };
+      if (duplicatedEmail) { setErrorMsg("Já existe um colaborador com este e-mail."); return; }
+      const iniciais = form.nome.split(" ").filter(Boolean).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+      const localPayload = { ...form, cargo: normalizedCargo, aniversario: normalizedBirthday || "" };
       if (modal === "novo") setLista((p) => [...p, { ...localPayload, id: Date.now(), foto: iniciais, redes: {} }]);
       else setLista((p) => p.map((c) => (c.id === form.id ? { ...localPayload, foto: iniciais } : c)));
       setModal(null);
@@ -452,10 +219,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     setErrorMsg("");
     try {
       const { data: emailConflict, error: emailConflictError } = await supabase
-        .from("colaboradores")
-        .select("id")
-        .eq("email", normalizedEmail)
-        .maybeSingle();
+        .from("colaboradores").select("id").eq("email", normalizedEmail).maybeSingle();
       if (emailConflictError) throw emailConflictError;
       if (emailConflict && (modal === "novo" || emailConflict.id !== form.id)) {
         throw new Error("Já existe um colaborador com este e-mail.");
@@ -463,32 +227,20 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
       if (modal === "novo") {
         const payload = {
-          nome: form.nome,
-          cargo: normalizedCargo,
-          aniversario: normalizedBirthday,
-          email: normalizedEmail,
-          perfil: form.perfil === "admin" ? "admin" : "colaborador",
+          nome: form.nome, cargo: normalizedCargo, aniversario: normalizedBirthday,
+          email: normalizedEmail, perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
         const data = await invokeAdminFunction("create-collaborator", payload, "Não foi possível criar o colaborador.");
-        // Se super admin definiu módulos específicos para o novo admin, aplica agora
         if (isSuperAdmin && form.perfil === "admin" && data?.user_id && form.adminModulos !== null) {
           await supabase.from("colaboradores").update({ admin_modulos: form.adminModulos }).eq("id", data.user_id);
         }
-        setSenhaGerada({
-          email: data?.email || form.email,
-          senha: data?.temporary_password || "",
-          tipo: "alteracao",
-        });
+        setSenhaGerada({ email: data?.email || form.email, senha: data?.temporary_password || "", tipo: "alteracao" });
         setSenhaCopiada(false);
       } else {
         const updatePayload = {
-          nome: form.nome,
-          cargo: normalizedCargo,
-          aniversario: normalizedBirthday,
-          email: normalizedEmail,
-          perfil: form.perfil === "admin" ? "admin" : "colaborador",
+          nome: form.nome, cargo: normalizedCargo, aniversario: normalizedBirthday,
+          email: normalizedEmail, perfil: form.perfil === "admin" ? "admin" : "colaborador",
         };
-        // Apenas super admin pode alterar módulos; ao rebaixar para colaborador, limpa os módulos
         if (isSuperAdmin) {
           updatePayload.admin_modulos = form.perfil === "admin" ? (form.adminModulos ?? null) : null;
         }
@@ -512,7 +264,6 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       setConfirmarExcluir(null);
       return;
     }
-
     const previousLista = lista;
     const previousTotal = totalItems;
     setConfirmarExcluir(null);
@@ -525,9 +276,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       await invokeDeleteCollaborator(colaborador.id, colaborador.email);
       clearCachedAdminColaboradores();
       await onDeleteColaborador?.(colaborador.id);
-      if (previousLista.length === 1 && currentPage > 1) {
-        setCurrentPage((p) => Math.max(1, p - 1));
-      }
+      if (previousLista.length === 1 && currentPage > 1) setCurrentPage((p) => Math.max(1, p - 1));
       carregarColaboradores({ force: true, silent: true }).catch(() => {});
     } catch (err) {
       setLista(previousLista);
@@ -541,19 +290,12 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
   const alterarSenha = async (colaborador) => {
     if (!isSupabaseEnabled) return;
-
     setLoading(true);
     setErrorMsg("");
     try {
       const data = await invokeAdminFunction("reset-password", { user_id: colaborador.id }, "Não foi possível alterar a senha.");
-
-      setSenhaGerada({
-        email: data?.email || colaborador.email,
-        senha: data?.temporary_password || "",
-        tipo: "alteracao",
-      });
+      setSenhaGerada({ email: data?.email || colaborador.email, senha: data?.temporary_password || "", tipo: "alteracao" });
       setSenhaCopiada(false);
-
       clearCachedAdminColaboradores();
       await carregarColaboradores({ force: true });
     } catch (err) {
@@ -588,7 +330,10 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
   return (
     <div>
-      <div className="admin-toolbar" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}>
+      <div
+        className="admin-toolbar"
+        style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
           <input
             className="search-input"
@@ -622,363 +367,46 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         </div>
       )}
 
-      <div className="card">
-        <div className="admin-table-wrap">
-          <table className="admin-users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                {["Colaborador", "Cargo", "E-mail", "Nível", "Ações"].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "10px 16px",
-                      textAlign: "left",
-                      fontSize: 11,
-                      color: "var(--muted)",
-                      fontWeight: 600,
-                      letterSpacing: "0.5px",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((col) => (
-                <tr
-                  key={col.id}
-                  style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-                >
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Avatar col={col} size={32} />
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{col.nome}</div>
-                        {col.isMe && <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>VOCÊ</span>}
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.cargo}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {col.perfil === "admin" ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span
-                          className="status-chip"
-                          style={{
-                            background: "color-mix(in srgb, var(--accent) 18%, transparent)",
-                            color: "var(--accent)",
-                            border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
-                          }}
-                        >
-                          Administrador
-                        </span>
-                        {col.adminModulos !== null && (
-                          <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                            {col.adminModulos.length === 0
-                              ? "Sem módulos"
-                              : col.adminModulos.length === MODULES.length
-                              ? "Acesso total"
-                              : `${col.adminModulos.length} módulo(s)`}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="status-chip status-marcado">Colaborador</span>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
-                        className="btn-ghost"
-                        style={{ padding: "4px 10px", fontSize: 12 }}
-                        onClick={() => alterarSenha(col)}
-                        disabled={loading}
-                      >
-                        Alterar senha
-                      </button>
-                      <button
-                        className="admin-action-icon"
-                        type="button"
-                        onClick={() => abrirEditar(col)}
-                        aria-label={`Editar ${col.nome}`}
-                        title="Editar"
-                      >
-                        <Pencil />
-                      </button>
-                      {!col.isMe && (
-                        <button
-                          className="admin-action-icon is-danger"
-                          type="button"
-                          onClick={() => setConfirmarExcluir(col)}
-                          aria-label={`Excluir ${col.nome}`}
-                          title="Excluir"
-                        >
-                          <Trash2 />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && lista.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ padding: "18px 16px", color: "var(--muted)", fontSize: 13 }}>
-                    Nenhum colaborador encontrado para o filtro atual.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
-            ‹
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
-              onClick={() => setCurrentPage(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-            ›
-          </button>
-        </div>
-      )}
+      <ColabTable
+        lista={lista}
+        loading={loading}
+        totalPages={totalPages}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        onAlterarSenha={alterarSenha}
+        onAbrirEditar={abrirEditar}
+        onConfirmarExcluir={setConfirmarExcluir}
+      />
 
       {modal !== null && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
-          <div className="modal" style={{ maxWidth: 640, width: "min(640px, calc(100vw - 40px))", margin: "0 auto" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-                {modal === "novo" ? "Novo colaborador" : "Editar colaborador"}
-              </div>
-              <button className="modal-close" onClick={() => setModal(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label className="form-label">NOME COMPLETO *</label>
-                <input
-                  className="form-input"
-                  value={form.nome || ""}
-                  onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
-                  placeholder="Ex: Ana Paula Ferreira"
-                />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">E-MAIL CORPORATIVO *</label>
-                  <input
-                    className="form-input"
-                    value={form.email || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="nome@agenciapan.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">PERFIL</label>
-                  <select
-                    className="form-input"
-                    value={form.perfil || "colaborador"}
-                    onChange={(e) => setForm((p) => ({ ...p, perfil: e.target.value }))}
-                  >
-                    <option value="colaborador">Colaborador</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">CARGO *</label>
-                  <input
-                    className="form-input"
-                    value={form.cargo || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, cargo: e.target.value }))}
-                    placeholder="Ex: Designer, Redator, Desenvolvedor"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">ANIVERSÁRIO (DIA E MÊS)</label>
-                  <div className="grid-2 perfil-aniversario-grid">
-                    <select
-                      className="form-input"
-                      value={form.aniversarioDia || ""}
-                      onChange={(e) => setForm((p) => ({ ...p, aniversarioDia: e.target.value }))}
-                    >
-                      <option value="">Dia</option>
-                      {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")).map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      className="form-input"
-                      value={form.aniversarioMes || ""}
-                      onChange={(e) => setForm((p) => ({ ...p, aniversarioMes: e.target.value }))}
-                    >
-                      <option value="">Mês</option>
-                      {MONTH_OPTIONS.map((month) => (
-                        <option key={month.value} value={month.value}>
-                          {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                    Essa data alimenta a página de aniversários da Panet.
-                  </div>
-                </div>
-              </div>
-
-              {modal === "novo" && (
-                <div className="form-group">
-                  <label className="form-label">SENHA TEMPORÁRIA</label>
-                  <input className="form-input" type="text" value="Gerada automaticamente ao cadastrar" readOnly />
-                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-                    O colaborador será obrigado a trocar no primeiro acesso.
-                  </div>
-                </div>
-              )}
-
-              {isSuperAdmin && form.perfil === "admin" && (
-                <div className="form-group" style={{ marginTop: 8 }}>
-                  <label className="form-label">ACESSO AOS MÓDULOS</label>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 6, padding: "12px 14px", background: "var(--surface2)", borderRadius: 8, border: "1px solid var(--border)" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
-                      <input
-                        type="checkbox"
-                        checked={form.adminModulos === null}
-                        onChange={(e) =>
-                          setForm((p) => ({
-                            ...p,
-                            adminModulos: e.target.checked ? null : MODULES.map((m) => m.id),
-                          }))
-                        }
-                      />
-                      <span style={{ fontWeight: 600 }}>Acesso total</span>
-                      <span style={{ color: "var(--muted)", fontSize: 11 }}>(todos os módulos)</span>
-                    </label>
-                    <div style={{ height: 1, background: "var(--border)" }} />
-                    {MODULES.map((m) => {
-                      const isChecked = form.adminModulos === null || (form.adminModulos || []).includes(m.id);
-                      return (
-                        <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, paddingLeft: 4 }}>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              const current = form.adminModulos === null ? MODULES.map((x) => x.id) : [...(form.adminModulos || [])];
-                              const next = e.target.checked ? [...current, m.id] : current.filter((id) => id !== m.id);
-                              const allSelected = MODULES.every((x) => next.includes(x.id));
-                              setForm((p) => ({ ...p, adminModulos: allSelected ? null : next }));
-                            }}
-                          />
-                          {m.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-                <button className="btn-ghost" onClick={() => setModal(null)}>
-                  Cancelar
-                </button>
-                <button className="btn-primary" onClick={salvar} disabled={loading}>
-                  {modal === "novo" ? "Cadastrar" : "Salvar"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ColabModal
+          modal={modal}
+          form={form}
+          setForm={setForm}
+          errorMsg={errorMsg}
+          loading={loading}
+          isSuperAdmin={isSuperAdmin}
+          onClose={() => setModal(null)}
+          onSalvar={salvar}
+        />
       )}
 
       {senhaGerada && (
-        <div
-          className="modal-overlay"
-          style={{ alignItems: "center", justifyItems: "center" }}
-          onClick={() => {
-            setSenhaGerada(null);
-            setSenhaCopiada(false);
-          }}
-        >
-          <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Senha temporária gerada</div>
-              <button className="modal-close" onClick={() => { setSenhaGerada(null); setSenhaCopiada(false); }}>×</button>
-            </div>
-            <div className="modal-body">
-              <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
-                Informe esta senha temporária ao colaborador. No próximo login, ele será obrigado a trocar para uma senha permanente.
-              </div>
-              <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: 12 }}>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>{senhaGerada.email}</div>
-                <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 18 }}>{senhaGerada.senha}</div>
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-                <button className="btn-ghost" onClick={copiarSenha}>
-                  {senhaCopiada ? "Copiado!" : "Copiar senha"}
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={() => {
-                    setSenhaGerada(null);
-                    setSenhaCopiada(false);
-                  }}
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SenhaModal
+          senhaGerada={senhaGerada}
+          senhaCopiada={senhaCopiada}
+          onCopiar={copiarSenha}
+          onClose={() => { setSenhaGerada(null); setSenhaCopiada(false); }}
+        />
       )}
 
       {confirmarExcluir && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setConfirmarExcluir(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
-              <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}><AlertTriangle size={36} /></div>
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Excluir colaborador?</div>
-              <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>
-                <strong>{confirmarExcluir.nome}</strong> será removido(a) da Panet.
-              </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => excluir(confirmarExcluir)}
-                  style={{
-                    background: "var(--danger)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 20px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                  disabled={loading}
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ConfirmarExcluirModal
+          colaborador={confirmarExcluir}
+          loading={loading}
+          onClose={() => setConfirmarExcluir(null)}
+          onConfirm={() => excluir(confirmarExcluir)}
+        />
       )}
     </div>
   );
