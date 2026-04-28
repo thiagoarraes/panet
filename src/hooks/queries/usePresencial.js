@@ -85,11 +85,16 @@ export function usePresencial(userId) {
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return PRESENCIAL_INIT;
 
+      // Auto-close any event whose date has already passed.
+      await supabase.rpc("auto_close_past_presencial_agendas").catch(() => {});
+
       const { data: agendasRows, error: agendasError } = await supabase
         .from("presencial_agendas")
         .select(
           "id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at"
         )
+        // Only show events that are still open (past events are auto-closed above).
+        .eq("status", "aberto")
         .order("data_presencial", { ascending: true })
         .order("created_at", { ascending: false });
 

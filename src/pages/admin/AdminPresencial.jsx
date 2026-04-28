@@ -73,6 +73,7 @@ export function AdminPresencial({ currentUserId }) {
   const [audienceSearch, setAudienceSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [drawState, setDrawState] = useState({ agendaId: "", status: "idle", message: "" });
+  const [filtroStatus, setFiltroStatus] = useState("ativos");
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -82,13 +83,16 @@ export function AdminPresencial({ currentUserId }) {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
+  // Reset page when switching between Ativos / Passados
+  useEffect(() => { setCurrentPage(1); }, [filtroStatus]);
+
   useEffect(() => {
     if (drawState.status !== "success" && drawState.status !== "error") return undefined;
     const timer = window.setTimeout(() => setDrawState((current) => (current.status === "success" || current.status === "error" ? { agendaId: "", status: "idle", message: "" } : current)), 6000);
     return () => window.clearTimeout(timer);
   }, [drawState]);
 
-  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
+  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus });
   const { data: colaboradoresData = [], isLoading: isLoadingColaboradores } = useColaboradores(currentUserId, { summaryOnly: true, enabled: modal !== null });
   const createAgenda = useCreatePresencialAgenda();
   const updateAgenda = useUpdatePresencialAgenda();
@@ -220,9 +224,30 @@ export function AdminPresencial({ currentUserId }) {
 
   return (
     <div>
-      <div className="admin-toolbar" style={{ marginBottom: 16 }}>
-        <div><div className="section-title" style={{ fontSize: 17 }}>Eventos</div><div className="section-sub">Crie eventos da Pan e defina se eles aparecem para todo o time ou para um grupo selecionado.</div></div>
-        <div style={{ display: "flex", gap: 10 }}><input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por titulo, local ou observacao" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} /><button className="btn-primary" onClick={openNew}>+ Novo evento</button></div>
+      <div className="admin-toolbar" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="section-title" style={{ fontSize: 17 }}>Eventos</div>
+          <div className="section-sub">Crie eventos da Pan e defina se eles aparecem para todo o time ou para um grupo selecionado.</div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por titulo, local ou observacao" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+          <button className="btn-primary" onClick={openNew}>+ Novo evento</button>
+        </div>
+      </div>
+
+      <div className="filter-tabs" style={{ marginBottom: 16 }}>
+        {[
+          { id: "ativos",   label: "Ativos" },
+          { id: "passados", label: "Passados" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            className={`filter-tab ${filtroStatus === tab.id ? "active" : ""}`}
+            onClick={() => setFiltroStatus(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -290,7 +315,15 @@ export function AdminPresencial({ currentUserId }) {
             </div>
           );
         })}
-        {rows.length === 0 && <div className="empty-state">{isLoading ? "Carregando..." : "Nenhum evento encontrado."}</div>}
+        {rows.length === 0 && (
+          <div className="empty-state">
+            {isLoading
+              ? "Carregando..."
+              : filtroStatus === "passados"
+                ? "Nenhum evento passado encontrado."
+                : "Nenhum evento ativo no momento."}
+          </div>
+        )}
       </div>
 
       {totalItems > PAGE_SIZE && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}><div style={{ fontSize: 12, color: "var(--muted)" }}>Pagina {uiPage} de {totalPages} · {totalItems} item(ns)</div><div style={{ display: "flex", gap: 8 }}><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={uiPage <= 1}>Anterior</button><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={uiPage >= totalPages}>Proxima</button></div></div>}

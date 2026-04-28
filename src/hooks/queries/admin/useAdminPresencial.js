@@ -60,27 +60,44 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = [], colaboradoresSelecio
 // useAdminPresencial
 // ---------------------------------------------------------------------------
 
-export function useAdminPresencial({ page = 1, pageSize = 20, search = "" } = {}) {
+export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtro = "ativos" } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   const term = String(search || "").trim();
+  const safeFiltro = filtro === "passados" ? "passados" : "ativos";
 
   return useQuery({
-    queryKey: ["admin", "presencial", { page: safePage, pageSize: safePageSize, search: term }],
+    queryKey: ["admin", "presencial", { page: safePage, pageSize: safePageSize, search: term, filtro: safeFiltro }],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return { rows: [], count: 0 };
 
+      // Auto-close any event whose date has already passed before fetching.
+      await supabase.rpc("auto_close_past_presencial_agendas").catch(() => {});
+
       const from = (safePage - 1) * safePageSize;
       const to = from + safePageSize - 1;
+
+      // Passados: encerrados ou cancelados, do mais recente para o mais antigo.
+      // Ativos: abertos, do mais próximo para o mais distante.
+      const ascending = safeFiltro === "ativos";
 
       let rowsQuery = supabase
         .from("presencial_agendas")
         .select(
           "id,titulo,data_presencial,hora_presencial,amigo_secreto_ativo,amigo_secreto_regras,amigo_secreto_sorteado_at,local,maps_url,observacao,vagas,status,created_at"
         )
-        .order("data_presencial", { ascending: true })
+        .order("data_presencial", { ascending })
         .range(from, to);
       let countQuery = supabase.from("presencial_agendas").select("id", { count: "exact", head: true });
+
+      // Status filter
+      if (safeFiltro === "ativos") {
+        rowsQuery = rowsQuery.eq("status", "aberto");
+        countQuery = countQuery.eq("status", "aberto");
+      } else {
+        rowsQuery = rowsQuery.in("status", ["encerrado", "cancelado"]);
+        countQuery = countQuery.in("status", ["encerrado", "cancelado"]);
+      }
 
       if (term) {
         const escaped = escapePostgrestOrTerm(term);
