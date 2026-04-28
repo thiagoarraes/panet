@@ -71,14 +71,19 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return { rows: [], count: 0 };
 
-      // Auto-close any event whose date has already passed before fetching.
+      // Auto-close any event whose date has already passed (best-effort; errors ignored).
       await supabase.rpc("auto_close_past_presencial_agendas").catch(() => {});
 
       const from = (safePage - 1) * safePageSize;
       const to = from + safePageSize - 1;
 
-      // Passados: encerrados ou cancelados, do mais recente para o mais antigo.
-      // Ativos: abertos, do mais próximo para o mais distante.
+      // Use today's ISO date so the filter is date-driven, not just status-driven.
+      // This guarantees past events appear in "passados" even if auto_close hasn't
+      // updated their status yet (e.g. first load of the day).
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+      // Passados: date < today OR already closed/cancelled — most recent first.
+      // Ativos:   date >= today AND not cancelled — soonest first.
       const ascending = safeFiltro === "ativos";
 
       let rowsQuery = supabase
@@ -90,13 +95,15 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
         .range(from, to);
       let countQuery = supabase.from("presencial_agendas").select("id", { count: "exact", head: true });
 
-      // Status filter
       if (safeFiltro === "ativos") {
-        rowsQuery = rowsQuery.eq("status", "aberto");
-        countQuery = countQuery.eq("status", "aberto");
+        // Future + today, excluding cancelled
+        rowsQuery = rowsQuery.gte("data_presencial", today).neq("status", "cancelado");
+        countQuery = countQuery.gte("data_presencial", today).neq("status", "cancelado");
       } else {
-        rowsQuery = rowsQuery.in("status", ["encerrado", "cancelado"]);
-        countQuery = countQuery.in("status", ["encerrado", "cancelado"]);
+        // Past by date OR already closed/cancelled (covers manually-closed future events too)
+        const pastFilter = `data_presencial.lt.${today},status.in.(encerrado,cancelado)`;
+        rowsQuery = rowsQuery.or(pastFilter);
+        countQuery = countQuery.or(pastFilter);
       }
 
       if (term) {
