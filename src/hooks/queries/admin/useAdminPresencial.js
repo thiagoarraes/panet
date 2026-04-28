@@ -60,7 +60,7 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = [], colaboradoresSelecio
 // useAdminPresencial
 // ---------------------------------------------------------------------------
 
-export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtro = "ativos" } = {}) {
+export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtro = "ativos", userId = null } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   const term = String(search || "").trim();
@@ -176,6 +176,7 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
       return { rows: mappedRows, count: safeCount };
     },
     staleTime: 30 * 1000,
-    enabled: isSupabaseEnabled,
+    // Só executa quando o usuário está autenticado para evitar cache vazio por timing de auth.
+    enabled: isSupabaseEnabled && Boolean(userId),
   });
 }
