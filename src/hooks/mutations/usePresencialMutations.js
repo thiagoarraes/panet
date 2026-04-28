@@ -145,10 +145,15 @@ const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
   return normalizedIds;
 };
 
-const invalidatePresencial = (queryClient) => {
-  queryClient.invalidateQueries({ queryKey: ["presencial"] });
-  queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] });
-};
+// Retorna um Promise para que TanStack Query v5 aguarde o refetch
+// completar antes de considerar a mutation como "settled".
+// Sem o return, onSettled retorna undefined e o modal fecha antes
+// do refetch terminar, causando flash de dado antigo (ou estado vazio).
+const invalidatePresencial = (queryClient) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["presencial"] }),
+    queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] }),
+  ]);
 
 // ---------------------------------------------------------------------------
 // useCreatePresencialAgenda
