@@ -21,7 +21,7 @@ const ALL_ABAS = [
   { id: "postagens", label: "PanNews", icon: FileText },
   { id: "colaboradores", label: "Colaboradores", icon: Users },
   { id: "ferias", label: "PanOff", icon: Plane },
-  { id: "presencial", label: "Confirmar presença", icon: CalendarDays },
+  { id: "presencial", label: "Eventos", icon: CalendarDays },
   { id: "enquetes", label: "Enquetes", icon: BarChart3 },
   { id: "galeria", label: "Galerias", icon: Images },
   { id: "mural", label: "PanZap", icon: MessageSquare },

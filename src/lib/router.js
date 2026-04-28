@@ -7,7 +7,7 @@ export const NAV_ITEMS = [
   { id: "colaboradores", label: "Colaboradores",     icon: Users },
   { id: "aniversarios", label: "Aniversários",       icon: Cake },
   { id: "ferias",      label: "PanOff",              icon: Plane },
-  { id: "presencial",  label: "Confirmar presença",  icon: CalendarDays },
+  { id: "presencial",  label: "Eventos",             icon: CalendarDays },
   { id: "galeria",     label: "Galerias",            icon: Images },
 ];
 
@@ -17,7 +17,7 @@ export const PAGE_PATHS = {
   colaboradores: "/colaboradores",
   aniversarios:  "/aniversarios",
   ferias:     "/folgas",
-  presencial: "/confirmar-presenca",
+  presencial: "/eventos",
   galeria:    "/galerias",
   perfil:     "/perfil",
   admin:      "/admin",
@@ -27,7 +27,7 @@ export const ADMIN_TAB_PATHS = {
   colaboradores: "/admin/colaboradores",
   postagens:     "/admin/pannews",
   ferias:        "/admin/folgas",
-  presencial:    "/admin/confirmar-presenca",
+  presencial:    "/admin/eventos",
   galeria:       "/admin/galeria",
   mural:         "/admin/mural",
   enquetes:      "/admin/enquetes",
@@ -52,6 +52,7 @@ export const resolveRoute = (pathname) => {
       return { pagina: "aniversarios", adminAba: "colaboradores", known: true };
     case "/folgas":
       return { pagina: "ferias", adminAba: "colaboradores", known: true };
+    case "/eventos":
     case "/confirmar-presenca":
       return { pagina: "presencial", adminAba: "colaboradores", known: true };
     case "/galerias":
@@ -68,6 +69,7 @@ export const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "postagens", known: true };
     case "/admin/folgas":
       return { pagina: "admin", adminAba: "ferias", known: true };
+    case "/admin/eventos":
     case "/admin/confirmar-presenca":
       return { pagina: "admin", adminAba: "presencial", known: true };
     case "/admin/galeria":

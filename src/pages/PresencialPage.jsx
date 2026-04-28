@@ -214,8 +214,8 @@ export function PresencialPage({ currentUserId }) {
       {presencialQuery.isError && (
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="card-body">
-            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar presença</div>
-            <div className="section-sub">{presencialQuery.error?.message || "Não foi possível carregar os eventos presenciais."}</div>
+            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar eventos</div>
+            <div className="section-sub">{presencialQuery.error?.message || "Não foi possível carregar os eventos da Pan."}</div>
           </div>
         </div>
       )}
@@ -223,10 +223,10 @@ export function PresencialPage({ currentUserId }) {
       <div className="section-header">
         <div>
           <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <CalendarDays size={22} /> Confirmar presença
+            <CalendarDays size={22} /> Eventos Pan
           </div>
           <div className="section-sub" style={{ maxWidth: 720 }}>
-            Um espaço para acompanhar os eventos da Pan e centralizar as confirmações de presença do time em um só lugar.
+            Confira os eventos da Agência Pan, confirme sua presença e fique por dentro de tudo que acontece no time.
           </div>
         </div>
       </div>
@@ -237,8 +237,8 @@ export function PresencialPage({ currentUserId }) {
             <Info size={16} /> Como funciona
           </div>
           <div className="presencial-hero-text">
-            Cada evento reúne as confirmações do time em uma lista organizada, dando mais visibilidade para planejamento,
-            logística e participação.
+            Cada evento da Pan aparece aqui com data, local e lista de confirmados — tudo em um só lugar para facilitar
+            o planejamento e a participação do time.
           </div>
         </div>
         <div className="presencial-hero-points">
@@ -269,7 +269,7 @@ export function PresencialPage({ currentUserId }) {
         {presencialQuery.isLoading && proximasAgendas.length === 0 && (
           <div className="card">
             <div className="card-body">
-              <div className="empty-state">Carregando eventos presenciais...</div>
+              <div className="empty-state">Carregando eventos...</div>
             </div>
           </div>
         )}

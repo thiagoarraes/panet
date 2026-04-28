@@ -221,7 +221,7 @@ export function AdminPresencial({ currentUserId }) {
   return (
     <div>
       <div className="admin-toolbar" style={{ marginBottom: 16 }}>
-        <div><div className="section-title" style={{ fontSize: 17 }}>Confirmar presenca</div><div className="section-sub">Crie eventos e defina se eles aparecem para todo o time ou para um grupo selecionado.</div></div>
+        <div><div className="section-title" style={{ fontSize: 17 }}>Eventos</div><div className="section-sub">Crie eventos da Pan e defina se eles aparecem para todo o time ou para um grupo selecionado.</div></div>
         <div style={{ display: "flex", gap: 10 }}><input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por titulo, local ou observacao" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} /><button className="btn-primary" onClick={openNew}>+ Novo evento</button></div>
       </div>
 
@@ -256,7 +256,7 @@ export function AdminPresencial({ currentUserId }) {
                       <div className="admin-presencial-audience-text">Visivel para {agenda.selectedColaboradorIds?.length || 0} colaborador(es) selecionado(s). Todos os admins continuam vendo este evento.</div>
                       {(agenda.colaboradoresSelecionados || []).length > 0 && <div className="admin-presencial-audience-preview">{(agenda.colaboradoresSelecionados || []).slice(0, 4).map((colaborador) => <div key={colaborador.id} className="admin-presencial-audience-preview-item"><Avatar col={colaborador} size={28} /><span>{colaborador.nome}</span></div>)}{(agenda.colaboradoresSelecionados || []).length > 4 && <div className="admin-presencial-audience-more">+{(agenda.colaboradoresSelecionados || []).length - 4}</div>}</div>}
                     </div>
-                  ) : <div className="admin-presencial-note" style={{ marginTop: 10 }}>Evento visivel para todo o time em /confirmar-presenca.</div>}
+                  ) : <div className="admin-presencial-note" style={{ marginTop: 10 }}>Evento visivel para todo o time em /eventos.</div>}
                   {agenda.observacao && <div className="admin-presencial-note">{agenda.observacao}</div>}
                   {agenda.amigoSecretoAtivo && agenda.amigoSecretoRegras && <div className="admin-presencial-note" style={{ marginTop: 8 }}><strong>Regras do amigo secreto:</strong> {agenda.amigoSecretoRegras}</div>}
                   {agenda.amigoSecretoAtivo && agenda.amigoSecretoSorteadoAt && <div className="admin-presencial-draw-info"><strong>Sorteio concluido com {participantesSorteio} participante(s):</strong> {formatDateTimeLabel(agenda.amigoSecretoSorteadoAt)}. Novas inscricoes no amigo secreto estao bloqueadas.</div>}
@@ -308,7 +308,7 @@ export function AdminPresencial({ currentUserId }) {
             {selectedColaboradores.length > 0 && <div className="admin-presencial-audience-preview is-modal">{selectedColaboradores.map((colaborador) => <div key={colaborador.id} className="admin-presencial-audience-preview-item"><Avatar col={colaborador} size={28} /><span>{colaborador.nome}</span></div>)}</div>}
             <div className="admin-presencial-audience-grid">{isLoadingColaboradores ? <div className="admin-presencial-audience-empty">Carregando colaboradores...</div> : filteredColaboradores.length === 0 ? <div className="admin-presencial-audience-empty">Nenhum colaborador encontrado.</div> : filteredColaboradores.map((colaborador) => { const isSelected = selectedSet.has(String(colaborador.id)); return <button key={colaborador.id} type="button" className={`admin-presencial-audience-card ${isSelected ? "is-selected" : ""}`} onClick={() => toggleAudienceColaborador(colaborador.id)} disabled={audienceLocked}><div className="admin-presencial-audience-card-head"><Avatar col={colaborador} size={34} /><div className="admin-presencial-audience-card-copy"><div className="admin-presencial-audience-card-name">{colaborador.nome}</div><div className="admin-presencial-audience-card-role">{colaborador.cargo || "Colaborador"}</div></div></div><span className={`admin-presencial-audience-card-state ${isSelected ? "is-selected" : ""}`}>{isSelected ? "Selecionado" : "Selecionar"}</span></button>; })}</div>
             {audienceLocked && <div className="admin-presencial-audience-lock">O publico deste evento foi travado porque o sorteio do amigo secreto ja foi iniciado.</div>}
-          </> : <div className="admin-presencial-audience-public">Este evento vai aparecer para todo o time em /confirmar-presenca.</div>}
+          </> : <div className="admin-presencial-audience-public">Este evento vai aparecer para todo o time em /eventos.</div>}
         </div></div>
         <div className="form-group"><label className="form-label" style={{ display: "flex", alignItems: "center", gap: 10 }}><input type="checkbox" checked={Boolean(form.amigoSecretoAtivo)} disabled={Boolean(form.amigoSecretoSorteadoAt)} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoAtivo: e.target.checked }))} /> Ativar amigo secreto neste evento</label></div>
         {form.amigoSecretoAtivo && <div className="form-group"><label className="form-label">REGRAS DO SORTEIO</label><textarea className="form-input" rows="4" value={form.amigoSecretoRegras || ""} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoRegras: e.target.value }))} /></div>}

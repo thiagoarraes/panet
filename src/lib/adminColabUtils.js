@@ -110,7 +110,7 @@ export const MODULES = [
   { id: "postagens", label: "PanNews" },
   { id: "colaboradores", label: "Colaboradores" },
   { id: "ferias", label: "PanOff" },
-  { id: "presencial", label: "Confirmar presença" },
+  { id: "presencial", label: "Eventos" },
   { id: "enquetes", label: "Enquetes" },
   { id: "galeria", label: "Galerias" },
   { id: "mural", label: "PanZap" },

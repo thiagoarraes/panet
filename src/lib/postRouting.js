@@ -6,6 +6,7 @@ export const RESERVED_SINGLE_SEGMENT_PATHS = new Set([
   "colaboradores",
   "aniversarios",
   "folgas",
+  "eventos",
   "confirmar-presenca",
   "galerias",
   "galeria",
