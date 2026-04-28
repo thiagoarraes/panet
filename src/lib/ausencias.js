@@ -46,8 +46,12 @@ export const isAusenciaSingleFullDayWindow = (item) => {
 
 export const getAusenciaEffectiveEnd = (item) => {
   if (!item?.diaTodo) {
-    // Ausência por horário: usa fim direto (null = sem previsão, exibe sempre)
-    return toDate(item?.fim) ?? null;
+    // Ausência por horário: usa fim direto se disponível
+    const fim = toDate(item?.fim);
+    if (fim) return fim;
+    // Sem previsão de retorno: expira ao final do dia de início
+    const inicio = toDate(item?.inicio);
+    return inicio ? endOfLocalDay(inicio) : null;
   }
 
   // diaTodo = true: ausência de dia inteiro

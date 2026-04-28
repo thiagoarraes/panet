@@ -172,6 +172,7 @@ export const mapProfileToRow = (profile, currentUserId) => {
     foto: iniciais || "U",
     perfil: profile.perfil || "colaborador",
     adminModulos: profile.admin_modulos ?? null,
+    ativo: profile.ativo ?? true,
     isMe: profile.id === currentUserId,
     redes: {
       instagram: profile.instagram || "",

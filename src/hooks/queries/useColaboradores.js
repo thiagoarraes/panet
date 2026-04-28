@@ -45,6 +45,7 @@ export function useColaboradores(userId, options = {}) {
       const { data, error } = await supabase
         .from("colaboradores")
         .select(selectFields)
+        .eq("ativo", true)
         .order("nome", { ascending: true });
       if (error) throw error;
       return (data || []).map((row) => ({

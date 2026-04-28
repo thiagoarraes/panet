@@ -18,6 +18,8 @@ import { ColabTable } from "./AdminColaboradores/ColabTable.jsx";
 import { ColabModal } from "./AdminColaboradores/ColabModal.jsx";
 import { SenhaModal } from "./AdminColaboradores/SenhaModal.jsx";
 import { ConfirmarExcluirModal } from "./AdminColaboradores/ConfirmarExcluirModal.jsx";
+import { ColabHistoricoModal } from "./AdminColaboradores/ColabHistoricoModal.jsx";
+import { ConfirmarDesativarModal } from "./AdminColaboradores/ConfirmarDesativarModal.jsx";
 
 export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
@@ -28,6 +30,9 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
+  const [confirmarDesativar, setConfirmarDesativar] = useState(null); // { col, action: "desativar"|"reativar" }
+  const [historicoColab, setHistoricoColab] = useState(null);
+  const [ativoFiltro, setAtivoFiltro] = useState("ativo"); // "ativo" | "ex_panner" | "todos"
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [senhaGerada, setSenhaGerada] = useState(null);
@@ -87,6 +92,24 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     }
   }, [getValidAccessToken]);
 
+  const invokeDesativarColaborador = useCallback(async (userId, action) => {
+    const fallback = action === "reactivate"
+      ? "Não foi possível reativar o colaborador."
+      : "Não foi possível desativar o colaborador.";
+    const call = (accessToken) =>
+      invokeAdminFunctionHttp("deactivate-collaborator", { user_id: userId, action }, accessToken, fallback);
+    try {
+      return await call(await getValidAccessToken());
+    } catch (err) {
+      if (!isJwtSessionError({ message: String(err?.message || "") })) throw err;
+      try {
+        return await call(await getValidAccessToken());
+      } catch (finalErr) {
+        throw new Error(String(finalErr?.message || "") || fallback);
+      }
+    }
+  }, [getValidAccessToken]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setCurrentPage(1);
@@ -94,6 +117,12 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     }, 250);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Reset to page 1 and clear cache when the ativo filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+    clearCachedAdminColaboradores();
+  }, [ativoFiltro]);
 
   useEffect(() => {
     if (!isSupabaseEnabled) return;
@@ -106,7 +135,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     if (!isSupabaseEnabled) return;
     const { silent = false, force = false } = options;
     const normalizedSearch = String(searchTerm || "").trim();
-    const queryKey = `${currentPage}|${normalizedSearch.toLowerCase()}`;
+    const queryKey = `${currentPage}|${normalizedSearch.toLowerCase()}|${ativoFiltro}`;
     const cachedPayload = !force ? readCachedAdminColaboradores(queryKey) : null;
     const showBlockingLoading = !silent && (!cachedPayload || cachedPayload.rows.length === 0);
     if (showBlockingLoading) setLoading(true);
@@ -121,10 +150,20 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       const to = from + PAGE_SIZE - 1;
       let rowsQuery = supabase
         .from("colaboradores")
-        .select("id,nome,cargo,aniversario,email,telefone,cor_avatar,foto_url,perfil,admin_modulos")
+        .select("id,nome,cargo,aniversario,email,telefone,cor_avatar,foto_url,perfil,admin_modulos,ativo")
         .order("nome", { ascending: true })
         .range(from, to);
       let countQuery = supabase.from("colaboradores").select("id", { count: "exact", head: true });
+
+      // ── Filtro ativo ────────────────────────────────────────────────────────
+      if (ativoFiltro === "ativo") {
+        rowsQuery = rowsQuery.eq("ativo", true);
+        countQuery = countQuery.eq("ativo", true);
+      } else if (ativoFiltro === "ex_panner") {
+        rowsQuery = rowsQuery.eq("ativo", false);
+        countQuery = countQuery.eq("ativo", false);
+      }
+      // "todos" → sem filtro
 
       if (normalizedSearch) {
         const safeSearch = escapePostgrestLike(normalizedSearch);
@@ -151,7 +190,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     } finally {
       setLoading(false);
     }
-  }, [currentPage, currentUserId, searchTerm]);
+  }, [currentPage, currentUserId, searchTerm, ativoFiltro]);
 
   useEffect(() => {
     carregarColaboradores({ silent: true });
@@ -305,6 +344,28 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     }
   };
 
+  const desativarOuReativar = async ({ col, action }) => {
+    if (!isSupabaseEnabled) return;
+    setConfirmarDesativar(null);
+    const previousLista = lista;
+    const previousTotal = totalItems;
+    // Optimistic update: toggle ativo in the list
+    setLista((p) => p.map((c) => c.id === col.id ? { ...c, ativo: action === "reativar" } : c));
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      await invokeDesativarColaborador(col.id, action === "reativar" ? "reactivate" : "deactivate");
+      clearCachedAdminColaboradores();
+      carregarColaboradores({ force: true, silent: true }).catch(() => {});
+    } catch (err) {
+      setLista(previousLista);
+      setTotalItems(previousTotal);
+      setErrorMsg(err?.message || "Não foi possível alterar o status do colaborador.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copiarSenha = async () => {
     if (!senhaGerada?.senha) return;
     try {
@@ -328,11 +389,18 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     }
   };
 
+  const FILTRO_TABS = [
+    { value: "ativo",     label: "Ativos" },
+    { value: "ex_panner", label: "Ex Panners" },
+    { value: "todos",     label: "Todos" },
+  ];
+
   return (
     <div>
+      {/* ── Toolbar ──────────────────────────────────────────────────────────── */}
       <div
         className="admin-toolbar"
-        style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, alignItems: "center" }}
+        style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, alignItems: "center" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
           <input
@@ -343,12 +411,42 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
             placeholder="Buscar por nome ou e-mail"
           />
           <div style={{ fontSize: 12, color: "var(--muted)" }}>
-            {loading ? "Sincronizando com Supabase..." : `${totalItems} colaborador(es)`}
+            {loading ? "Sincronizando…" : `${totalItems} colaborador(es)`}
           </div>
         </div>
         <button className="btn-primary" onClick={abrirNovo} disabled={loading}>
           + Novo colaborador
         </button>
+      </div>
+
+      {/* ── Filtro Ativo / Ex Panner ──────────────────────────────────────────── */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {FILTRO_TABS.map(({ value, label }) => {
+          const active = ativoFiltro === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setAtivoFiltro(value)}
+              style={{
+                padding: "5px 14px",
+                borderRadius: 20,
+                border: active
+                  ? "1px solid color-mix(in srgb, var(--accent) 60%, transparent)"
+                  : "1px solid var(--border)",
+                background: active
+                  ? "color-mix(in srgb, var(--accent) 14%, transparent)"
+                  : "transparent",
+                color: active ? "var(--accent)" : "var(--muted)",
+                fontSize: 12,
+                fontWeight: active ? 700 : 500,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {errorMsg && (
@@ -376,6 +474,9 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         onAlterarSenha={alterarSenha}
         onAbrirEditar={abrirEditar}
         onConfirmarExcluir={setConfirmarExcluir}
+        onVerHistorico={setHistoricoColab}
+        onDesativar={(col) => setConfirmarDesativar({ col, action: "desativar" })}
+        onReativar={(col) => setConfirmarDesativar({ col, action: "reativar" })}
       />
 
       {modal !== null && (
@@ -406,6 +507,23 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
           loading={loading}
           onClose={() => setConfirmarExcluir(null)}
           onConfirm={() => excluir(confirmarExcluir)}
+        />
+      )}
+
+      {confirmarDesativar && (
+        <ConfirmarDesativarModal
+          colaborador={confirmarDesativar.col}
+          action={confirmarDesativar.action}
+          loading={loading}
+          onClose={() => setConfirmarDesativar(null)}
+          onConfirm={() => desativarOuReativar(confirmarDesativar)}
+        />
+      )}
+
+      {historicoColab && (
+        <ColabHistoricoModal
+          colaborador={historicoColab}
+          onClose={() => setHistoricoColab(null)}
         />
       )}
     </div>

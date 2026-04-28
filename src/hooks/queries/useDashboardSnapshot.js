@@ -138,7 +138,8 @@ const isMissingExtendedSnapshotFunction = (error) => {
   );
 };
 
-export function useDashboardSnapshot(userId, options = {}) {
+// ─── Exportado para prefetch no login (AuthContext) ───────────────────────────
+export function getDashboardSnapshotQueryOptions(userId, options = {}) {
   const safePostsLimit = Number.isFinite(Number(options?.postsLimit))
     ? Math.max(1, Math.min(100, Number(options.postsLimit)))
     : 20;
@@ -154,9 +155,8 @@ export function useDashboardSnapshot(userId, options = {}) {
   const safeColaboradoresLimit = Number.isFinite(Number(options?.colaboradoresLimit))
     ? Math.max(1, Math.min(1000, Number(options.colaboradoresLimit)))
     : 500;
-  const queryEnabled = options?.enabled ?? true;
 
-  return useQuery({
+  return {
     queryKey: [
       "dashboard-snapshot",
       userId,
@@ -168,7 +168,6 @@ export function useDashboardSnapshot(userId, options = {}) {
         colaboradoresLimit: safeColaboradoresLimit,
       },
     ],
-    enabled: queryEnabled && Boolean(userId) && isSupabaseEnabled,
     staleTime: 45 * 1000,
     queryFn: async () => {
       let { data, error } = await supabase.rpc("get_dashboard_snapshot", {
@@ -190,11 +189,7 @@ export function useDashboardSnapshot(userId, options = {}) {
 
       let payload = data;
       if (typeof payload === "string") {
-        try {
-          payload = JSON.parse(payload);
-        } catch (_err) {
-          payload = {};
-        }
+        try { payload = JSON.parse(payload); } catch (_err) { payload = {}; }
       }
       if (!payload || typeof payload !== "object") payload = {};
 
@@ -228,5 +223,12 @@ export function useDashboardSnapshot(userId, options = {}) {
         colaboradores,
       };
     },
+  };
+}
+
+export function useDashboardSnapshot(userId, options = {}) {
+  return useQuery({
+    ...getDashboardSnapshotQueryOptions(userId, options),
+    enabled: (options?.enabled ?? true) && Boolean(userId) && isSupabaseEnabled,
   });
 }

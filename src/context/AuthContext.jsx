@@ -24,6 +24,7 @@ import {
   toAvatar,
 } from "../lib/authUtils.js";
 import { PAGE_PATHS, ADMIN_TAB_PATHS, resolveRoute } from "../lib/router.js";
+import { getDashboardSnapshotQueryOptions } from "../hooks/queries/useDashboardSnapshot.js";
 
 const THEME_KEY = "panet.theme";
 const mockMe = COLABORADORES.find((c) => c.isMe);
@@ -138,6 +139,12 @@ export function AuthProvider({ children }) {
       writeCachedProfile(resolvedProfile);
       setAdminServerConfirmed(resolvedProfile.perfil === "admin");
       setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
+
+      // Prefetch do snapshot enquanto o app ainda está navegando para o dashboard
+      if (!resolvedProfile.primeiro_acesso && isSupabaseEnabled) {
+        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId)).catch(() => {});
+      }
+
       const loadedAt = Date.now();
       initialDataLoadRef.current = { userId, at: loadedAt };
       globalProfileLoadState.userId = userId;
@@ -181,6 +188,13 @@ export function AuthProvider({ children }) {
         setAdminServerConfirmed(cachedProfile.perfil === "admin");
         setTela(cachedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
         if (!USE_SECURE_COOKIES) setAuthLoading(false);
+
+        // Prefetch antecipado — sessão em cache, dispara antes de validar com o servidor
+        if (!cachedProfile.primeiro_acesso && isSupabaseEnabled) {
+          queryClient.prefetchQuery(
+            getDashboardSnapshotQueryOptions(String(cachedProfile.id || ""))
+          ).catch(() => {});
+        }
       }
       try {
         let session = null;

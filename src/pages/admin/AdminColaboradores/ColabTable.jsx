@@ -1,11 +1,12 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, Trash2, UserMinus, UserCheck } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { MODULES } from "../../../lib/adminColabUtils.js";
 
 export function ColabTable({
   lista, loading,
   totalPages, currentPage, setCurrentPage,
-  onAlterarSenha, onAbrirEditar, onConfirmarExcluir,
+  onAlterarSenha, onAbrirEditar, onConfirmarExcluir, onVerHistorico,
+  onDesativar, onReativar,
 }) {
   return (
     <>
@@ -33,85 +34,165 @@ export function ColabTable({
               </tr>
             </thead>
             <tbody>
-              {lista.map((col) => (
-                <tr
-                  key={col.id}
-                  style={{ borderBottom: "1px solid var(--border)", transition: "background 0.15s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-                >
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Avatar col={col} size={32} />
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 500 }}>{col.nome}</div>
-                        {col.isMe && <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>VOCÊ</span>}
+              {lista.map((col) => {
+                const isExPanner = col.ativo === false;
+                return (
+                  <tr
+                    key={col.id}
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      transition: "background 0.15s",
+                      opacity: isExPanner ? 0.65 : 1,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "")}
+                  >
+                    {/* Colaborador */}
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Avatar col={col} size={32} />
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 14, fontWeight: 500 }}>{col.nome}</span>
+                            {isExPanner && (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  letterSpacing: "0.5px",
+                                  padding: "2px 7px",
+                                  borderRadius: 20,
+                                  background: "rgba(245,158,11,0.12)",
+                                  color: "#f59e0b",
+                                  border: "1px solid rgba(245,158,11,0.3)",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                Ex Panner
+                              </span>
+                            )}
+                          </div>
+                          {col.isMe && <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700 }}>VOCÊ</span>}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.cargo}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {col.perfil === "admin" ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span
-                          className="status-chip"
-                          style={{
-                            background: "color-mix(in srgb, var(--accent) 18%, transparent)",
-                            color: "var(--accent)",
-                            border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
-                          }}
-                        >
-                          Administrador
-                        </span>
-                        {col.adminModulos !== null && (
-                          <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                            {col.adminModulos.length === 0
-                              ? "Sem módulos"
-                              : col.adminModulos.length === MODULES.length
-                              ? "Acesso total"
-                              : `${col.adminModulos.length} módulo(s)`}
+                    </td>
+
+                    {/* Cargo */}
+                    <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.cargo}</td>
+
+                    {/* E-mail */}
+                    <td style={{ padding: "12px 16px", fontSize: 13, color: "var(--muted)" }}>{col.email}</td>
+
+                    {/* Nível */}
+                    <td style={{ padding: "12px 16px" }}>
+                      {col.perfil === "admin" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span
+                            className="status-chip"
+                            style={{
+                              background: "color-mix(in srgb, var(--accent) 18%, transparent)",
+                              color: "var(--accent)",
+                              border: "1px solid color-mix(in srgb, var(--accent) 36%, transparent)",
+                            }}
+                          >
+                            Administrador
                           </span>
+                          {col.adminModulos !== null && (
+                            <span style={{ fontSize: 10, color: "var(--muted)" }}>
+                              {col.adminModulos.length === 0
+                                ? "Sem módulos"
+                                : col.adminModulos.length === MODULES.length
+                                ? "Acesso total"
+                                : `${col.adminModulos.length} módulo(s)`}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="status-chip status-marcado">Colaborador</span>
+                      )}
+                    </td>
+
+                    {/* Ações */}
+                    <td style={{ padding: "12px 16px" }}>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {/* Alterar senha — só para ativos */}
+                        {!isExPanner && (
+                          <button
+                            className="btn-ghost"
+                            style={{ padding: "4px 10px", fontSize: 12 }}
+                            onClick={() => onAlterarSenha(col)}
+                            disabled={loading}
+                          >
+                            Alterar senha
+                          </button>
+                        )}
+
+                        {/* Histórico PanOff */}
+                        <button
+                          className="admin-action-icon"
+                          type="button"
+                          onClick={() => onVerHistorico(col)}
+                          aria-label={`Histórico PanOff de ${col.nome}`}
+                          title="Histórico PanOff"
+                        >
+                          <History />
+                        </button>
+
+                        {/* Editar */}
+                        <button
+                          className="admin-action-icon"
+                          type="button"
+                          onClick={() => onAbrirEditar(col)}
+                          aria-label={`Editar ${col.nome}`}
+                          title="Editar"
+                        >
+                          <Pencil />
+                        </button>
+
+                        {/* Desativar / Reativar — não aplicar a si mesmo */}
+                        {!col.isMe && (
+                          isExPanner ? (
+                            <button
+                              className="admin-action-icon"
+                              type="button"
+                              onClick={() => onReativar?.(col)}
+                              aria-label={`Reativar ${col.nome}`}
+                              title="Reativar acesso"
+                              style={{ color: "var(--accent)" }}
+                            >
+                              <UserCheck />
+                            </button>
+                          ) : (
+                            <button
+                              className="admin-action-icon"
+                              type="button"
+                              onClick={() => onDesativar?.(col)}
+                              aria-label={`Tornar ${col.nome} Ex Panner`}
+                              title="Tornar Ex Panner"
+                              style={{ color: "#f59e0b" }}
+                            >
+                              <UserMinus />
+                            </button>
+                          )
+                        )}
+
+                        {/* Excluir permanentemente */}
+                        {!col.isMe && (
+                          <button
+                            className="admin-action-icon is-danger"
+                            type="button"
+                            onClick={() => onConfirmarExcluir(col)}
+                            aria-label={`Excluir permanentemente ${col.nome}`}
+                            title="Excluir permanentemente"
+                          >
+                            <Trash2 />
+                          </button>
                         )}
                       </div>
-                    ) : (
-                      <span className="status-chip status-marcado">Colaborador</span>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
-                        className="btn-ghost"
-                        style={{ padding: "4px 10px", fontSize: 12 }}
-                        onClick={() => onAlterarSenha(col)}
-                        disabled={loading}
-                      >
-                        Alterar senha
-                      </button>
-                      <button
-                        className="admin-action-icon"
-                        type="button"
-                        onClick={() => onAbrirEditar(col)}
-                        aria-label={`Editar ${col.nome}`}
-                        title="Editar"
-                      >
-                        <Pencil />
-                      </button>
-                      {!col.isMe && (
-                        <button
-                          className="admin-action-icon is-danger"
-                          type="button"
-                          onClick={() => onConfirmarExcluir(col)}
-                          aria-label={`Excluir ${col.nome}`}
-                          title="Excluir"
-                        >
-                          <Trash2 />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
               {!loading && lista.length === 0 && (
                 <tr>
                   <td colSpan={5} style={{ padding: "18px 16px", color: "var(--muted)", fontSize: 13 }}>

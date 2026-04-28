@@ -53,29 +53,64 @@ const getUnknownColaboradorFallback = (id) => ({
 // useAdminFerias
 // ---------------------------------------------------------------------------
 
-export function useAdminFerias({ page = 1, pageSize = 20, search = "", tipo = "ferias" } = {}) {
-  const safePage = Math.max(1, Number(page) || 1);
+export function useAdminFerias({
+  page = 1,
+  pageSize = 20,
+  search = "",
+  tipo = "ferias",
+  statusFilter = "ativo",  // "ativo" | "passado" | "todos"
+  mes = "",                // "YYYY-MM" ou ""
+  colaboradorId = "",      // UUID ou ""
+} = {}) {
+  const safePage    = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
-  const term = String(search || "").trim();
-  const safeTipo = tipo === "dayoff" ? "dayoff" : "ferias";
+  const term        = String(search || "").trim();
+  const safeTipo    = tipo === "dayoff" ? "dayoff" : "ferias";
+  const todayIso    = new Date().toISOString().split("T")[0];
 
   return useQuery({
-    queryKey: ["admin", "ferias", { page: safePage, pageSize: safePageSize, search: term, tipo: safeTipo }],
+    queryKey: [
+      "admin", "ferias",
+      { page: safePage, pageSize: safePageSize, search: term, tipo: safeTipo, statusFilter, mes, colaboradorId },
+    ],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return { rows: [], count: 0 };
 
       const from = (safePage - 1) * safePageSize;
-      const to = from + safePageSize - 1;
+      const to   = from + safePageSize - 1;
 
-      let rowsQuery = supabase
-        .from("ferias")
-        .select("id,inicio,fim,status,tipo,motivo_real,colaborador_id")
-        .eq("tipo", safeTipo)
-        .order("inicio", { ascending: true });
+      // Ordem: ativos → mais próximo primeiro; passados/todos → mais recente primeiro
+      const ascending = statusFilter === "ativo";
 
-      let countQuery = supabase.from("ferias").select("id", { count: "exact", head: true }).eq("tipo", safeTipo);
+      let rowsQ  = supabase.from("ferias").select("id,inicio,fim,status,tipo,motivo_real,colaborador_id").eq("tipo", safeTipo).order("inicio", { ascending });
+      let countQ = supabase.from("ferias").select("id", { count: "exact", head: true }).eq("tipo", safeTipo);
 
-      if (term) {
+      // ── Filtro de status (data) ──────────────────────────────────────────
+      if (statusFilter === "ativo") {
+        rowsQ  = rowsQ.gte("fim", todayIso);
+        countQ = countQ.gte("fim", todayIso);
+      } else if (statusFilter === "passado") {
+        rowsQ  = rowsQ.lt("fim", todayIso);
+        countQ = countQ.lt("fim", todayIso);
+      }
+
+      // ── Filtro de mês ────────────────────────────────────────────────────
+      if (mes) {
+        const [yr, mo] = mes.split("-").map(Number);
+        const firstDay = `${yr}-${String(mo).padStart(2, "0")}-01`;
+        const lastDay  = new Date(yr, mo, 0).toISOString().split("T")[0];
+        rowsQ  = rowsQ.gte("inicio", firstDay).lte("inicio", lastDay);
+        countQ = countQ.gte("inicio", firstDay).lte("inicio", lastDay);
+      }
+
+      // ── Filtro de colaborador ────────────────────────────────────────────
+      if (colaboradorId) {
+        rowsQ  = rowsQ.eq("colaborador_id", colaboradorId);
+        countQ = countQ.eq("colaborador_id", colaboradorId);
+      }
+
+      // ── Busca textual (só quando colaboradorId não está fixo) ────────────
+      if (term && !colaboradorId) {
         const escaped = escapeIlikeTerm(term);
         const { data: cols, error: colsError } = await supabase
           .from("colaboradores")
@@ -88,24 +123,22 @@ export function useAdminFerias({ page = 1, pageSize = 20, search = "", tipo = "f
           if (safeTipo === "dayoff") {
             const serializedIds = ids.map((id) => `"${id}"`).join(",");
             const expression = `colaborador_id.in.(${serializedIds}),motivo_real.ilike.%${escaped}%`;
-            rowsQuery = rowsQuery.or(expression);
-            countQuery = countQuery.or(expression);
+            rowsQ  = rowsQ.or(expression);
+            countQ = countQ.or(expression);
           } else {
-            rowsQuery = rowsQuery.in("colaborador_id", ids);
-            countQuery = countQuery.in("colaborador_id", ids);
+            rowsQ  = rowsQ.in("colaborador_id", ids);
+            countQ = countQ.in("colaborador_id", ids);
           }
+        } else if (safeTipo === "dayoff") {
+          rowsQ  = rowsQ.ilike("motivo_real", `%${escaped}%`);
+          countQ = countQ.ilike("motivo_real", `%${escaped}%`);
         } else {
-          if (safeTipo === "dayoff") {
-            rowsQuery = rowsQuery.ilike("motivo_real", `%${escaped}%`);
-            countQuery = countQuery.ilike("motivo_real", `%${escaped}%`);
-          } else {
-            rowsQuery = rowsQuery.ilike("status", `%${escaped}%`);
-            countQuery = countQuery.ilike("status", `%${escaped}%`);
-          }
+          rowsQ  = rowsQ.ilike("status", `%${escaped}%`);
+          countQ = countQ.ilike("status", `%${escaped}%`);
         }
       }
 
-      const [{ data, error }, { count }] = await Promise.all([rowsQuery.range(from, to), countQuery]);
+      const [{ data, error }, { count }] = await Promise.all([rowsQ.range(from, to), countQ]);
       if (error) throw new Error(error.message);
 
       const missingIds = Array.from(new Set((data || []).map((row) => String(row.colaborador_id || "")).filter(Boolean)));
