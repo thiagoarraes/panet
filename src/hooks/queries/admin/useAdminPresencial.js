@@ -77,10 +77,10 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
       const from = (safePage - 1) * safePageSize;
       const to = from + safePageSize - 1;
 
-      // Use today's ISO date so the filter is date-driven, not just status-driven.
-      // This guarantees past events appear in "passados" even if auto_close hasn't
-      // updated their status yet (e.g. first load of the day).
-      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      // Usa data LOCAL (não UTC) para evitar que eventos de hoje sumam do filtro
+      // "ativos" após as 21h no Brasil (quando UTC já virou para o dia seguinte).
+      const _now = new Date();
+      const today = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
       // Passados: date < today OR already closed/cancelled — most recent first.
       // Ativos:   date >= today AND not cancelled — soonest first.

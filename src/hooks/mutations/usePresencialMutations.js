@@ -145,15 +145,13 @@ const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
   return normalizedIds;
 };
 
-// Retorna um Promise para que TanStack Query v5 aguarde o refetch
-// completar antes de considerar a mutation como "settled".
-// Sem o return, onSettled retorna undefined e o modal fecha antes
-// do refetch terminar, causando flash de dado antigo (ou estado vazio).
-const invalidatePresencial = (queryClient) =>
-  Promise.all([
-    queryClient.invalidateQueries({ queryKey: ["presencial"] }),
-    queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] }),
-  ]);
+// Fire-and-forget: não retorna Promise para não bloquear mutateAsync.
+// A atualização imediata do cache (setQueriesData) garante que o dado
+// aparece na tela antes mesmo do refetch completar.
+const invalidatePresencial = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: ["presencial"] });
+  queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] });
+};
 
 // ---------------------------------------------------------------------------
 // useCreatePresencialAgenda
@@ -203,6 +201,13 @@ export function useCreatePresencialAgenda() {
         selectedColaboradorIds: normalized.selectedColaboradorIds,
       };
     },
+    onSuccess: (newItem) => {
+      // Atualiza o cache imediatamente para o evento aparecer sem esperar refetch
+      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
+        if (!old || !Array.isArray(old?.rows)) return old;
+        return { ...old, rows: [newItem, ...old.rows], count: (old.count || 0) + 1 };
+      });
+    },
     onSettled: () => invalidatePresencial(queryClient),
   });
 }
@@ -247,7 +252,13 @@ export function useUpdatePresencialAgenda() {
         selectedColaboradorIds: normalized.selectedColaboradorIds,
       };
     },
-    onSuccess: () => invalidatePresencial(queryClient),
+    onSuccess: (updatedItem) => {
+      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
+        if (!old || !Array.isArray(old?.rows)) return old;
+        return { ...old, rows: old.rows.map((r) => String(r.id) === String(updatedItem?.id) ? updatedItem : r) };
+      });
+    },
+    onSettled: () => invalidatePresencial(queryClient),
   });
 }
 
@@ -264,7 +275,13 @@ export function useDeletePresencialAgenda() {
       const { error } = await supabase.from("presencial_agendas").delete().eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => invalidatePresencial(queryClient),
+    onSuccess: (_data, id) => {
+      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
+        if (!old || !Array.isArray(old?.rows)) return old;
+        return { ...old, rows: old.rows.filter((r) => String(r.id) !== String(id)), count: Math.max(0, (old.count || 0) - 1) };
+      });
+    },
+    onSettled: () => invalidatePresencial(queryClient),
   });
 }
 
