@@ -146,11 +146,12 @@ const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
 };
 
 // Fire-and-forget: não retorna Promise para não bloquear mutateAsync.
-// A atualização imediata do cache (setQueriesData) garante que o dado
-// aparece na tela antes mesmo do refetch completar.
+// Usa refetchQueries (não invalidateQueries) para a query admin porque
+// refetchQueries chama query.fetch() diretamente, sem depender do
+// mecanismo de notificação de observers — mais confiável em mutações.
 const invalidatePresencial = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["presencial"] });
-  queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] });
+  queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
 };
 
 // ---------------------------------------------------------------------------

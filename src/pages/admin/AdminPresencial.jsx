@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Clock3, Gift, LockKeyhole, MapPin, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
@@ -94,6 +95,7 @@ export function AdminPresencial({ currentUserId }) {
 
   const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus, userId: currentUserId });
   const { data: colaboradoresData = [], isLoading: isLoadingColaboradores } = useColaboradores(currentUserId, { summaryOnly: true, enabled: modal !== null });
+  const queryClient = useQueryClient();
   const createAgenda = useCreatePresencialAgenda();
   const updateAgenda = useUpdatePresencialAgenda();
   const deleteAgenda = useDeletePresencialAgenda();
@@ -193,6 +195,8 @@ export function AdminPresencial({ currentUserId }) {
       if (modal === "novo") await createAgenda.mutateAsync(payload);
       else await updateAgenda.mutateAsync({ id: form.id, payload });
       closeAgendaModal();
+      // Garante refetch direto caso o onSettled da mutation não seja suficiente.
+      queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
     } catch (error) {
       setFormError(error?.message || "Nao foi possivel salvar o evento agora.");
     } finally {
@@ -206,6 +210,7 @@ export function AdminPresencial({ currentUserId }) {
       setRemovingId(confirmarExcluir.id);
       await deleteAgenda.mutateAsync(confirmarExcluir.id);
       setConfirmarExcluir(null);
+      queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
     } finally {
       setRemovingId("");
     }
