@@ -146,12 +146,10 @@ const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
 };
 
 // Fire-and-forget: não retorna Promise para não bloquear mutateAsync.
-// Usa refetchQueries (não invalidateQueries) para a query admin porque
-// refetchQueries chama query.fetch() diretamente, sem depender do
-// mecanismo de notificação de observers — mais confiável em mutações.
+// Apenas invalida a query do usuário; a query admin é refetchada diretamente
+// via refetch() no componente AdminPresencial, que tem acesso à instância exata.
 const invalidatePresencial = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["presencial"] });
-  queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
 };
 
 // ---------------------------------------------------------------------------
@@ -202,13 +200,6 @@ export function useCreatePresencialAgenda() {
         selectedColaboradorIds: normalized.selectedColaboradorIds,
       };
     },
-    onSuccess: (newItem) => {
-      // Atualiza o cache imediatamente para o evento aparecer sem esperar refetch
-      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
-        if (!old || !Array.isArray(old?.rows)) return old;
-        return { ...old, rows: [newItem, ...old.rows], count: (old.count || 0) + 1 };
-      });
-    },
     onSettled: () => invalidatePresencial(queryClient),
   });
 }
@@ -253,12 +244,6 @@ export function useUpdatePresencialAgenda() {
         selectedColaboradorIds: normalized.selectedColaboradorIds,
       };
     },
-    onSuccess: (updatedItem) => {
-      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
-        if (!old || !Array.isArray(old?.rows)) return old;
-        return { ...old, rows: old.rows.map((r) => String(r.id) === String(updatedItem?.id) ? updatedItem : r) };
-      });
-    },
     onSettled: () => invalidatePresencial(queryClient),
   });
 }
@@ -275,12 +260,6 @@ export function useDeletePresencialAgenda() {
       if (!isSupabaseEnabled || !supabase) return;
       const { error } = await supabase.from("presencial_agendas").delete().eq("id", id);
       if (error) throw new Error(error.message);
-    },
-    onSuccess: (_data, id) => {
-      queryClient.setQueriesData({ queryKey: ["admin", "presencial"] }, (old) => {
-        if (!old || !Array.isArray(old?.rows)) return old;
-        return { ...old, rows: old.rows.filter((r) => String(r.id) !== String(id)), count: Math.max(0, (old.count || 0) - 1) };
-      });
     },
     onSettled: () => invalidatePresencial(queryClient),
   });
