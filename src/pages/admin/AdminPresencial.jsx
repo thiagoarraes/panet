@@ -92,7 +92,7 @@ export function AdminPresencial({ currentUserId }) {
     return () => window.clearTimeout(timer);
   }, [drawState]);
 
-  const { data, isLoading, refetch: refetchAdminList } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus, userId: currentUserId });
+  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus, userId: currentUserId });
   const { data: colaboradoresData = [], isLoading: isLoadingColaboradores } = useColaboradores(currentUserId, { summaryOnly: true, enabled: modal !== null });
   const createAgenda = useCreatePresencialAgenda();
   const updateAgenda = useUpdatePresencialAgenda();
@@ -193,7 +193,7 @@ export function AdminPresencial({ currentUserId }) {
       if (modal === "novo") await createAgenda.mutateAsync(payload);
       else await updateAgenda.mutateAsync({ id: form.id, payload });
       closeAgendaModal();
-      refetchAdminList();
+      setFiltroStatus("ativos");
     } catch (error) {
       setFormError(error?.message || "Nao foi possivel salvar o evento agora.");
     } finally {
@@ -207,7 +207,6 @@ export function AdminPresencial({ currentUserId }) {
       setRemovingId(confirmarExcluir.id);
       await deleteAgenda.mutateAsync(confirmarExcluir.id);
       setConfirmarExcluir(null);
-      refetchAdminList();
     } finally {
       setRemovingId("");
     }

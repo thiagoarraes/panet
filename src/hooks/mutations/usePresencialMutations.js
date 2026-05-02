@@ -145,11 +145,9 @@ const syncAgendaAudience = async (agendaId, selectedColaboradorIds) => {
   return normalizedIds;
 };
 
-// Fire-and-forget: não retorna Promise para não bloquear mutateAsync.
-// Apenas invalida a query do usuário; a query admin é refetchada diretamente
-// via refetch() no componente AdminPresencial, que tem acesso à instância exata.
 const invalidatePresencial = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["presencial"] });
+  queryClient.invalidateQueries({ queryKey: ["admin", "presencial"] });
 };
 
 // ---------------------------------------------------------------------------
