@@ -271,9 +271,9 @@ async function addEventToCalendar({ supabaseUrl, agendaDetails }) {
   try {
     const session = await supabase.auth.getSession();
     const token = session?.data?.session?.access_token;
-    if (!token) return;
+    if (!token) return null;
 
-    await fetch(`${supabaseUrl}/functions/v1/add-calendar-event`, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/add-calendar-event`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -288,8 +288,32 @@ async function addEventToCalendar({ supabaseUrl, agendaDetails }) {
         observacao: agendaDetails.observacao || "",
       }),
     });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.eventId || null;
   } catch {
     // silencioso — não bloqueia a confirmação de presença
+    return null;
+  }
+}
+
+async function removeEventFromCalendar({ supabaseUrl, eventId }) {
+  try {
+    const session = await supabase.auth.getSession();
+    const token = session?.data?.session?.access_token;
+    if (!token) return;
+
+    await fetch(`${supabaseUrl}/functions/v1/remove-calendar-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ eventId }),
+    });
+  } catch {
+    // silencioso — não bloqueia a remoção de presença
   }
 }
 
@@ -304,13 +328,24 @@ export function useRespondPresencial(userId) {
       if (!isSupabaseEnabled || !supabase) return;
 
       if (!status) {
-        // Remove response
+        // Fetch calendar event ID before deleting the row
+        const { data: confirmacao } = await supabase
+          .from("presencial_confirmacoes")
+          .select("google_calendar_event_id")
+          .eq("agenda_id", agendaId)
+          .eq("colaborador_id", effectiveUserId)
+          .maybeSingle();
+
         const { error } = await supabase
           .from("presencial_confirmacoes")
           .delete()
           .eq("agenda_id", agendaId)
           .eq("colaborador_id", effectiveUserId);
         if (error) throw new Error(error.message);
+
+        if (confirmacao?.google_calendar_event_id) {
+          await removeEventFromCalendar({ supabaseUrl: SUPABASE_URL, eventId: confirmacao.google_calendar_event_id });
+        }
       } else {
         // Upsert response
         const { error } = await supabase.from("presencial_confirmacoes").upsert(
@@ -327,7 +362,14 @@ export function useRespondPresencial(userId) {
         if (error) throw new Error(error.message);
 
         if (status === "confirmado" && agendaDetails) {
-          await addEventToCalendar({ supabaseUrl: SUPABASE_URL, agendaDetails });
+          const eventId = await addEventToCalendar({ supabaseUrl: SUPABASE_URL, agendaDetails });
+          if (eventId) {
+            await supabase
+              .from("presencial_confirmacoes")
+              .update({ google_calendar_event_id: eventId })
+              .eq("agenda_id", agendaId)
+              .eq("colaborador_id", effectiveUserId);
+          }
         }
       }
     },
