@@ -344,21 +344,12 @@ export function PresencialPage({ currentUserId }) {
                   </div>
                   <div className="presencial-actions">
                     <button
-                      className={`btn-primary ${minhaResposta?.status === "confirmado" || minhaResposta?.status === "talvez" ? "is-active" : ""}`}
-                      onClick={() => handleRespond(agenda.id, "confirmado")}
-                      disabled={isSavingAgenda}
+                      className={`btn-primary ${minhaResposta ? "is-active" : ""}`}
+                      onClick={() => handleRespond(agenda.id, minhaResposta ? null : "confirmado")}
+                      disabled={isSavingAgenda || (Boolean(minhaResposta) && Boolean(agenda.amigoSecretoSorteadoAt) && estouNoSorteio)}
                     >
-                      {isSavingAgenda && savingState.status === "confirmado" ? "Salvando..." : minhaResposta ? "Presença confirmada" : "Confirmar presença"}
+                      {isSavingAgenda ? "Salvando..." : minhaResposta ? "Presença confirmada — clique para remover" : "Confirmar presença"}
                     </button>
-                    {minhaResposta && (
-                      <button
-                        className="btn-ghost"
-                        onClick={() => handleRespond(agenda.id, null)}
-                        disabled={isSavingAgenda || (Boolean(agenda.amigoSecretoSorteadoAt) && estouNoSorteio)}
-                      >
-                        Remover resposta
-                      </button>
-                    )}
                   </div>
                 </div>
 

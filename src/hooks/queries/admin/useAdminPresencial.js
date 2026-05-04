@@ -73,9 +73,6 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return { rows: [], count: 0 };
 
-      // Auto-close any event whose date has already passed (best-effort; errors ignored).
-      await supabase.rpc("auto_close_past_presencial_agendas").catch(() => {});
-
       const from = (safePage - 1) * safePageSize;
       const to = from + safePageSize - 1;
 
