@@ -168,7 +168,7 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
         colaboradoresLimit: safeColaboradoresLimit,
       },
     ],
-    staleTime: 45 * 1000,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       let { data, error } = await supabase.rpc("get_dashboard_snapshot", {
         p_posts_limit: safePostsLimit,

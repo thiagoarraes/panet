@@ -25,6 +25,7 @@ import {
 } from "../lib/authUtils.js";
 import { PAGE_PATHS, ADMIN_TAB_PATHS, resolveRoute } from "../lib/router.js";
 import { getDashboardSnapshotQueryOptions } from "../hooks/queries/useDashboardSnapshot.js";
+import { DASHBOARD_SNAPSHOT_INITIAL_LIMITS, DASHBOARD_SNAPSHOT_FULL_LIMITS } from "../lib/dashboardLimits.js";
 
 const THEME_KEY = "panet.theme";
 const mockMe = COLABORADORES.find((c) => c.isMe);
@@ -142,7 +143,14 @@ export function AuthProvider({ children }) {
 
       // Prefetch do snapshot enquanto o app ainda está navegando para o dashboard
       if (!resolvedProfile.primeiro_acesso && isSupabaseEnabled) {
-        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId)).catch(() => {});
+        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS)).catch(() => {});
+        const scheduleFullPrefetch = () =>
+          queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_FULL_LIMITS)).catch(() => {});
+        if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(scheduleFullPrefetch, { timeout: 1500 });
+        } else {
+          setTimeout(scheduleFullPrefetch, 1500);
+        }
       }
 
       const loadedAt = Date.now();

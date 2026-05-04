@@ -24,6 +24,7 @@ import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
 import { formatEnqueteDateTime } from "../lib/enquetes.js";
 import { getFeriasStatusByDate, parseBrDate } from "../lib/panoff.js";
 import { isSupabaseEnabled } from "../lib/supabase.js";
+import { DASHBOARD_SNAPSHOT_INITIAL_LIMITS, DASHBOARD_SNAPSHOT_FULL_LIMITS } from "../lib/dashboardLimits.js";
 
 const DashboardMoodBoard = lazy(() =>
   import("../components/DashboardMoodBoard").then((module) => ({
@@ -65,21 +66,6 @@ const daysUntilBirthday = (isoDate) => {
   return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 };
 
-const DASHBOARD_SNAPSHOT_INITIAL_LIMITS = {
-  postsLimit: 5,
-  muralLimit: 12,
-  feriasLimit: 12,
-  ausenciasLimit: 12,
-  colaboradoresLimit: 80,
-};
-
-const DASHBOARD_SNAPSHOT_FULL_LIMITS = {
-  postsLimit: 20,
-  muralLimit: 60,
-  feriasLimit: 120,
-  ausenciasLimit: 120,
-  colaboradoresLimit: 500,
-};
 
 const BIRTHDAY_BANNER_START_HOUR = 7;
 const BIRTHDAY_BANNER_END_HOUR = 23;
