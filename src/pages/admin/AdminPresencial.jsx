@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays, Clock3, Gift, LockKeyhole, MapPin, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
@@ -74,6 +75,7 @@ export function AdminPresencial({ currentUserId }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [drawState, setDrawState] = useState({ agendaId: "", status: "idle", message: "" });
   const [filtroStatus, setFiltroStatus] = useState("ativos");
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -92,7 +94,7 @@ export function AdminPresencial({ currentUserId }) {
     return () => window.clearTimeout(timer);
   }, [drawState]);
 
-  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus, userId: currentUserId });
+  const { data, isLoading } = useAdminPresencial({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, filtro: filtroStatus });
   const { data: colaboradoresData = [], isLoading: isLoadingColaboradores } = useColaboradores(currentUserId, { summaryOnly: true, enabled: modal !== null });
   const createAgenda = useCreatePresencialAgenda();
   const updateAgenda = useUpdatePresencialAgenda();
@@ -194,6 +196,8 @@ export function AdminPresencial({ currentUserId }) {
       else await updateAgenda.mutateAsync({ id: form.id, payload });
       closeAgendaModal();
       setFiltroStatus("ativos");
+      setCurrentPage(1);
+      queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
     } catch (error) {
       setFormError(error?.message || "Nao foi possivel salvar o evento agora.");
     } finally {
@@ -207,6 +211,7 @@ export function AdminPresencial({ currentUserId }) {
       setRemovingId(confirmarExcluir.id);
       await deleteAgenda.mutateAsync(confirmarExcluir.id);
       setConfirmarExcluir(null);
+      queryClient.refetchQueries({ queryKey: ["admin", "presencial"] });
     } finally {
       setRemovingId("");
     }

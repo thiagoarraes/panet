@@ -60,7 +60,7 @@ const mapDbPresencialAgendaToUi = (item, confirmacoes = [], colaboradoresSelecio
 // useAdminPresencial
 // ---------------------------------------------------------------------------
 
-export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtro = "ativos", userId = null } = {}) {
+export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtro = "ativos" } = {}) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
   const term = String(search || "").trim();
@@ -70,6 +70,8 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
     queryKey: ["admin", "presencial", { page: safePage, pageSize: safePageSize, search: term, filtro: safeFiltro }],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return { rows: [], count: 0 };
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return { rows: [], count: 0 };
 
       // Auto-close any event whose date has already passed (best-effort; errors ignored).
       await supabase.rpc("auto_close_past_presencial_agendas").catch(() => {});
@@ -176,7 +178,6 @@ export function useAdminPresencial({ page = 1, pageSize = 20, search = "", filtr
       return { rows: mappedRows, count: safeCount };
     },
     staleTime: 30 * 1000,
-    // Só executa quando o usuário está autenticado para evitar cache vazio por timing de auth.
-    enabled: isSupabaseEnabled && Boolean(userId),
+    enabled: isSupabaseEnabled,
   });
 }
