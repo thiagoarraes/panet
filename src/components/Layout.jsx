@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Menu, X } from "lucide-react";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import { AppShellSkeleton } from "./AppShellSkeleton.jsx";
+import { ChunkErrorBoundary } from "./ChunkErrorBoundary.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
@@ -99,7 +100,9 @@ function AppContent() {
           </button>
         </div>
         <div className="content">
-          <Suspense fallback={<PageFallback />}>{PAGINAS[pagina]}</Suspense>
+          <ChunkErrorBoundary>
+            <Suspense fallback={<PageFallback />}>{PAGINAS[pagina]}</Suspense>
+          </ChunkErrorBoundary>
         </div>
       </div>
     </>
