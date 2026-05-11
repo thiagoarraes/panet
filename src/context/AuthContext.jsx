@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useQueryClient } from "@tanstack/react-query";
 import { COLABORADORES } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled } from "../lib/supabase.js";
-import { USE_SECURE_COOKIES, apiLogout, apiGetSession, apiSyncSession } from "../lib/authApi.js";
+import { USE_SECURE_COOKIES, apiLogin, apiLogout, apiGetSession, apiSyncSession } from "../lib/authApi.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
 import { toPostSlug } from "../lib/postRouting.js";
 import {
@@ -389,16 +389,29 @@ export function AuthProvider({ children }) {
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleLogin = async (email, password) => {
     if (!isSupabaseEnabled) { setTela("primeiro_acesso"); return; }
-    const { data, error } = await signInWithPasswordRetry(email, password);
-    if (error) {
-      throw new Error(friendlyLoginError(error));
+
+    let activeSession = null;
+    if (USE_SECURE_COOKIES) {
+      let apiData;
+      try {
+        apiData = await apiLogin(email, password);
+      } catch (err) {
+        throw new Error(friendlyLoginError(err));
+      }
+      const { data: setData, error: setError } = await supabase.auth.setSession({
+        access_token: apiData.access_token,
+        refresh_token: apiData.refresh_token || "",
+      });
+      if (setError) throw new Error(friendlyLoginError(setError));
+      activeSession = setData?.session || null;
+    } else {
+      const { data, error } = await signInWithPasswordRetry(email, password);
+      if (error) throw new Error(friendlyLoginError(error));
+      activeSession = data?.session || null;
     }
-    const activeSession = data?.session || null;
-    if (USE_SECURE_COOKIES && activeSession) {
-      apiSyncSession(activeSession.access_token, activeSession.refresh_token, activeSession.expires_at);
-    }
+
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
-    setSessionUserId(String(activeSession?.user?.id || ""));
+    setSessionUserId(String(activeSession.user?.id || ""));
     await loadProfileAndRoute(activeSession);
   };
 
