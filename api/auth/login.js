@@ -140,9 +140,18 @@ export default async function handler(req, res) {
     await sleep(LOGIN_RETRY_DELAYS_MS[attempt]);
   }
 
-  const status = lastError?.status >= 400 && lastError?.status < 500 ? 401 : 503;
-  return res.status(status).json({
+  const isCredentialError = lastError?.status >= 400 && lastError?.status < 500 && !isRetryableError(lastError);
+  if (isCredentialError) {
+    // 200 para evitar log automático do browser (4xx sempre aparece no console)
+    return res.status(200).json({
+      ok: false,
+      error: lastError?.message || "Falha no login",
+      retryable: false,
+    });
+  }
+  return res.status(503).json({
+    ok: false,
     error: lastError?.message || "Falha no login",
-    retryable: isRetryableError(lastError),
+    retryable: true,
   });
 }

@@ -55,6 +55,13 @@ export async function apiLogin(email, password) {
     }
 
     const data = await res.json().catch(() => ({}));
+
+    // Proxy retorna 200 com ok:false para erros de credencial (evita log 4xx no browser)
+    if (res.ok && data?.ok === false) {
+      lastStatus = 401;
+      lastMessage = data?.error || "Falha no login";
+      break;
+    }
     if (res.ok) return data;
 
     lastStatus = res.status;
