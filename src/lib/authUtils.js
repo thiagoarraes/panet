@@ -168,10 +168,7 @@ export const friendlyLoginError = (error) => {
 export const signInWithPasswordRetry = async (email, password) => {
   let lastError = null;
   for (let attempt = 0; attempt <= LOGIN_RETRY_DELAYS_MS.length; attempt += 1) {
-    const origConsoleError = console.error;
-    console.error = () => {};
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    console.error = origConsoleError;
     if (!error) return { data, error: null };
     lastError = error;
     if (!isRetryableLoginError(error) || attempt === LOGIN_RETRY_DELAYS_MS.length) break;
