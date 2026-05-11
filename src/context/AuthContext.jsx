@@ -16,7 +16,7 @@ import {
   withTimeout,
   isTransientAuthTimeout,
   signInWithPasswordRetry,
-  isRetryableLoginError,
+  friendlyLoginError,
   hasStoredSupabaseSession,
   clearStoredSupabaseSession,
   readCachedProfile,
@@ -391,10 +391,7 @@ export function AuthProvider({ children }) {
     if (!isSupabaseEnabled) { setTela("primeiro_acesso"); return; }
     const { data, error } = await signInWithPasswordRetry(email, password);
     if (error) {
-      const msg = isRetryableLoginError(error)
-        ? "O serviço de autenticação está instável no momento. Tente novamente em alguns segundos."
-        : error.message || "Não foi possível fazer login.";
-      throw new Error(msg);
+      throw new Error(friendlyLoginError(error));
     }
     const activeSession = data?.session || null;
     if (USE_SECURE_COOKIES && activeSession) {
