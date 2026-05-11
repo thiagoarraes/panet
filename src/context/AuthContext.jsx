@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { COLABORADORES } from "../data/mockData.js";
-import { supabase, isSupabaseEnabled } from "../lib/supabase.js";
+import { supabase, isSupabaseEnabled, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase.js";
 import { USE_SECURE_COOKIES, apiLogin, apiLogout, apiGetSession, apiSyncSession } from "../lib/authApi.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
 import { toPostSlug } from "../lib/postRouting.js";
@@ -29,6 +29,31 @@ import { DASHBOARD_SNAPSHOT_INITIAL_LIMITS, DASHBOARD_SNAPSHOT_FULL_LIMITS } fro
 
 const THEME_KEY = "panet.theme";
 const mockMe = COLABORADORES.find((c) => c.isMe);
+
+async function fetchProfileDirect(userId, accessToken) {
+  const baseUrl = String(SUPABASE_URL || "").replace(/\/$/, "");
+  if (!baseUrl || !SUPABASE_ANON_KEY) return null;
+  const url = `${baseUrl}/rest/v1/colaboradores?id=eq.${encodeURIComponent(userId)}&select=*&limit=1`;
+  const response = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Falha ao carregar perfil (${response.status})`);
+  }
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+}
+
+function profilesMaterialDiffer(a, b) {
+  if (!a || !b) return true;
+  const keys = ["nome", "cargo", "perfil", "primeiro_acesso", "foto_url", "telefone", "instagram", "linkedin", "aniversario", "cor_avatar"];
+  return keys.some((k) => (a[k] ?? null) !== (b[k] ?? null));
+}
 
 const AuthContext = createContext(null);
 
@@ -387,10 +412,61 @@ export function AuthProvider({ children }) {
   }, [mobileNavOpen]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
+  const hydrateLoginInBackground = useCallback(async (tokens, userId, cachedProfile) => {
+    try {
+      const { error: setError } = await supabase.auth.setSession(tokens);
+      if (setError) {
+        console.warn("[auth] setSession em background falhou:", setError.message || setError);
+        return;
+      }
+      let fresh = null;
+      try {
+        fresh = await fetchProfileDirect(userId, tokens.access_token);
+      } catch (err) {
+        console.warn("[auth] refresh do perfil em background falhou:", err?.message || err);
+        return;
+      }
+      if (!fresh) {
+        console.warn("[auth] perfil sumiu server-side — desconectando");
+        clearStoredSupabaseSession();
+        writeCachedProfile(null);
+        setCurrentProfile(null);
+        setSessionUserId(null);
+        setAdminServerConfirmed(false);
+        setTela("login");
+        if (USE_SECURE_COOKIES) apiLogout();
+        return;
+      }
+      if (profilesMaterialDiffer(cachedProfile, fresh)) {
+        setCurrentProfile(fresh);
+        writeCachedProfile(fresh);
+        setAdminServerConfirmed(fresh.perfil === "admin");
+        if (fresh.primeiro_acesso && !cachedProfile.primeiro_acesso) {
+          setTela("primeiro_acesso");
+        }
+      }
+      const loadedAt = Date.now();
+      initialDataLoadRef.current = { userId, at: loadedAt };
+      globalProfileLoadState.userId = userId;
+      globalProfileLoadState.loadedAt = loadedAt;
+      if (!fresh.primeiro_acesso && isSupabaseEnabled) {
+        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS)).catch(() => {});
+        const scheduleFullPrefetch = () =>
+          queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_FULL_LIMITS)).catch(() => {});
+        if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(scheduleFullPrefetch, { timeout: 1500 });
+        } else {
+          setTimeout(scheduleFullPrefetch, 1500);
+        }
+      }
+    } catch (err) {
+      console.warn("[auth] hidratação em background falhou:", err?.message || err);
+    }
+  }, [queryClient]);
+
   const handleLogin = async (email, password) => {
     if (!isSupabaseEnabled) { setTela("primeiro_acesso"); return; }
 
-    let activeSession = null;
     if (USE_SECURE_COOKIES) {
       let apiData;
       try {
@@ -398,18 +474,56 @@ export function AuthProvider({ children }) {
       } catch (err) {
         throw new Error(friendlyLoginError(err));
       }
-      const { data: setData, error: setError } = await supabase.auth.setSession({
+      const userId = String(apiData?.user?.id || "");
+      if (!userId) throw new Error("Sessão não iniciada. Tente novamente.");
+      const tokens = {
         access_token: apiData.access_token,
         refresh_token: apiData.refresh_token || "",
-      });
-      if (setError) throw new Error(friendlyLoginError(setError));
-      activeSession = setData?.session || null;
-    } else {
-      const { data, error } = await signInWithPasswordRetry(email, password);
-      if (error) throw new Error(friendlyLoginError(error));
-      activeSession = data?.session || null;
+      };
+
+      const cached = readCachedProfile();
+      if (cached && String(cached.id) === userId && !cached.primeiro_acesso) {
+        // Caminho rápido — render imediato com cache, hidratação em background
+        currentProfileIdRef.current = userId;
+        setSessionUserId(userId);
+        setCurrentProfile(cached);
+        setAdminServerConfirmed(cached.perfil === "admin");
+        setTela("app");
+        hydrateLoginInBackground(tokens, userId, cached);
+        return;
+      }
+
+      // Caminho lento — paraleliza setSession + fetch direto do perfil
+      const [setRes, profileResult] = await Promise.allSettled([
+        supabase.auth.setSession(tokens),
+        fetchProfileDirect(userId, tokens.access_token),
+      ]);
+      if (setRes.status === "rejected") throw new Error(friendlyLoginError(setRes.reason));
+      if (setRes.value?.error) throw new Error(friendlyLoginError(setRes.value.error));
+      if (profileResult.status === "rejected") throw new Error(profileResult.reason?.message || "Não foi possível carregar o perfil do colaborador.");
+      const profile = profileResult.value;
+      if (!profile) throw new Error("Seu usuário não está vinculado na tabela de colaboradores.");
+
+      currentProfileIdRef.current = userId;
+      setSessionUserId(userId);
+      setCurrentProfile(profile);
+      writeCachedProfile(profile);
+      setAdminServerConfirmed(profile.perfil === "admin");
+      setTela(profile.primeiro_acesso ? "primeiro_acesso" : "app");
+      const loadedAt = Date.now();
+      initialDataLoadRef.current = { userId, at: loadedAt };
+      globalProfileLoadState.userId = userId;
+      globalProfileLoadState.loadedAt = loadedAt;
+      if (!profile.primeiro_acesso && isSupabaseEnabled) {
+        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS)).catch(() => {});
+      }
+      return;
     }
 
+    // Dev: fluxo original sequencial
+    const { data, error } = await signInWithPasswordRetry(email, password);
+    if (error) throw new Error(friendlyLoginError(error));
+    const activeSession = data?.session || null;
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
     setSessionUserId(String(activeSession.user?.id || ""));
     await loadProfileAndRoute(activeSession);
