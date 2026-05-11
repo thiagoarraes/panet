@@ -147,6 +147,24 @@ export const isRetryableLoginError = (error) => {
   );
 };
 
+export const friendlyLoginError = (error) => {
+  if (isRetryableLoginError(error)) {
+    return "O serviço de autenticação está instável. Tente novamente em alguns segundos.";
+  }
+  const msg = String(error?.message || "").toLowerCase();
+  const status = Number(error?.status || 0);
+  if (
+    status === 400 ||
+    msg.includes("invalid login credentials") ||
+    msg.includes("invalid email or password") ||
+    msg.includes("email not confirmed") ||
+    msg.includes("wrong password")
+  ) {
+    return "E-mail ou senha incorretos. Verifique os dados e tente novamente.";
+  }
+  return error?.message || "Não foi possível fazer login.";
+};
+
 export const signInWithPasswordRetry = async (email, password) => {
   let lastError = null;
   for (let attempt = 0; attempt <= LOGIN_RETRY_DELAYS_MS.length; attempt += 1) {
