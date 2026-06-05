@@ -32,7 +32,7 @@ export function AdminPostagens({ currentUserId }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pendingDeleteIds, setPendingDeleteIds] = useState(new Set());
-  const CATS = ["Notícia", "Comunicado", "Evento"];
+  const CATS = ["Notícia", "Comunicado", "Evento", "Reconhecimento"];
   const PAGE_SIZE = 20;
 
   // Debounce search
@@ -221,6 +221,7 @@ export function AdminPostagens({ currentUserId }) {
             onSalvar={salvar}
             saving={saving}
             categorias={CATS}
+            currentUserId={currentUserId}
           />
         </Suspense>
       )}

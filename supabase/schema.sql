@@ -13,7 +13,7 @@ create extension if not exists pg_cron;
 create type perfil_acesso as enum ('colaborador', 'admin');
 
 -- ── Enum: categoria de postagem ───────────────────────────────────────────────
-create type categoria_post as enum ('Notícia', 'Comunicado', 'Evento');
+create type categoria_post as enum ('Notícia', 'Comunicado', 'Evento', 'Reconhecimento');
 
 -- ── Enum: status de férias ────────────────────────────────────────────────────
 create type status_ferias as enum ('marcado', 'em_andamento');

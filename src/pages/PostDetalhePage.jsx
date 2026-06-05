@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Heart, MessageCircle, Send, Pencil, Trash2 } from "lucide-react";
-import DOMPurify from "dompurify";
 import { Avatar } from "../components/Avatar";
+import { RichContent } from "../components/RichContent";
 import { Badge } from "../components/Badge";
 import { AniversariosAside } from "../components/aside/AniversariosAside";
 import { PanOffAside } from "../components/aside/PanOffAside";
@@ -296,7 +296,7 @@ export function PostDetalhePage({
                   </div>
                 </div>
 
-                <div className="rich-content" style={{ marginTop: 20, marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.descricao || "") }} />
+                <RichContent html={post.descricao} colaboradores={colaboradores} style={{ marginTop: 20, marginBottom: 20 }} />
 
                 <div style={{ display: "flex", gap: 12, padding: "12px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
                   <button className={`post-action ${post.userCurtiu ? "liked" : ""}`} onClick={() => handleToggleCurtida(post.id)}>

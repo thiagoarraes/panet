@@ -4,7 +4,7 @@ import { POSTAGENS_INIT } from "../../data/mockData.js";
 import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
-const POST_CATEGORIES = new Set(["Notícia", "Comunicado", "Evento"]);
+const POST_CATEGORIES = new Set(["Notícia", "Comunicado", "Evento", "Reconhecimento"]);
 const escapeIlikeTerm = (value) => String(value || "").replace(/[\\%_]/g, (char) => `\\${char}`);
 
 const mapDbPostSummaryToUi = (post, likesRows, commentsCount, currentUserId, signedUrlMap) => {

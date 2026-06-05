@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import { PostImageUploadCrop } from "../../components/PostImageUploadCrop";
 import { RichTextEditor } from "../../components/RichTextEditor";
+import { useColaboradores } from "../../hooks/queries/useColaboradores";
 
 const parseIsoToDate = (isoDate) => {
   if (!isoDate) return null;
@@ -20,7 +21,8 @@ const formatDateForStore = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, saving, categorias }) {
+export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, saving, categorias, currentUserId }) {
+  const { data: colaboradores = [] } = useColaboradores(currentUserId, { summaryOnly: true });
   if (modal === null) return null;
 
   return (
@@ -77,6 +79,7 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
               value={form.descricao || ""}
               onChange={(html) => setForm((p) => ({ ...p, descricao: html }))}
               placeholder="Descreva o conteúdo da postagem..."
+              colaboradores={colaboradores}
             />
           </div>
           <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

@@ -3736,6 +3736,160 @@
     width: 0;
     left: 100%;
   }
+
+  /* ── Menções (@colaborador) ─────────────────────────────────────────────── */
+  .mention {
+    color: var(--accent);
+    font-weight: 600;
+    cursor: default;
+    white-space: nowrap;
+  }
+  .rte-editor .ProseMirror .mention { cursor: text; }
+
+  /* GIFs / imagens inline no conteúdo */
+  .rich-content img,
+  .rte-editor .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin: 6px 0;
+  }
+  .rte-editor .ProseMirror img.ProseMirror-selectednode {
+    outline: 2px solid var(--accent);
+  }
+
+  /* Popup de autocomplete de menção (anexado ao body) */
+  .mention-popup {
+    position: absolute;
+    z-index: 1300;
+  }
+  .mention-list {
+    min-width: 220px;
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    padding: 6px;
+  }
+  .mention-list-empty {
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .mention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 8px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s ease;
+  }
+  .mention-item.is-active,
+  .mention-item:hover {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .mention-item-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .mention-item-nome {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mention-item-cargo {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Tooltip da menção no post renderizado (com animação de entrada/saída) */
+  .mention-tooltip {
+    position: absolute;
+    z-index: 1300;
+    transform: translate(-50%, calc(-100% - 10px));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    min-width: 200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .mention-tooltip.is-open {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 16px));
+  }
+  .mention-tooltip-info { display: flex; flex-direction: column; min-width: 0; }
+  .mention-tooltip-nome {
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .mention-tooltip-cargo { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Popover de emojis (renderizado em portal no body, posição fixed) */
+  .rte-emoji-popover {
+    position: fixed;
+    z-index: 1400;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    border-radius: 10px;
+  }
+  .rte-emoji-popover .epr-emoji-category-label { text-transform: none; }
+
+  /* Popover de inserção de GIF por URL (portal no body) */
+  .rte-gif-popover {
+    position: fixed;
+    z-index: 1400;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    padding: 12px;
+  }
+  .rte-gif-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .rte-gif-input { width: 100%; }
+  .rte-gif-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .rte-emoji-loading {
+    padding: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
   .panet-datepicker-popper { z-index: 1200 !important; }
   .datepicker-input { cursor: pointer; }
   .panet-datepicker {

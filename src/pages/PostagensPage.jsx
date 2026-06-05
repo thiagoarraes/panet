@@ -9,7 +9,7 @@ export function PostagensPage({ onOpen, currentUserId }) {
   const [filtro, setFiltro] = useState("Todos");
   const [buscaInput, setBuscaInput] = useState("");
   const [busca, setBusca] = useState("");
-  const cats = ["Todos", "Notícia", "Comunicado", "Evento"];
+  const cats = ["Todos", "Notícia", "Comunicado", "Evento", "Reconhecimento"];
   const categoriaSelecionada = filtro === "Todos" ? "" : filtro;
 
   useEffect(() => {
