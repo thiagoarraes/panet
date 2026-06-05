@@ -93,10 +93,15 @@ export const resolveSignedMediaUrl = (bucket, rawValue, signedUrlMap, fallback =
 export const resolvePublicMediaUrl = (bucket, rawValue, fallback = "") => {
   const ref = toMediaRef(bucket, rawValue);
   if (ref.kind === "storage") {
+    // Buckets públicos (ex.: avatares) são servidos direto pela CDN do Supabase.
+    // Evita o proxy same-origin do Vercel, que adiciona latência e é um ponto de
+    // falha intermitente (avatares em branco) no primeiro carregamento.
     const encodedPath = encodeStoragePath(ref.path);
-    return preferAppHostedStorageUrl(`/storage/v1/object/public/${bucket}/${encodedPath}`) || fallback;
+    return ensureAbsoluteUrl(`/storage/v1/object/public/${bucket}/${encodedPath}`) || fallback;
   }
-  if (ref.kind === "direct") return preferAppHostedStorageUrl(ref.original) || fallback;
+  if (ref.kind === "direct") {
+    return (isAbsoluteWebUrl(ref.original) ? ref.original : ensureAbsoluteUrl(ref.original)) || fallback;
+  }
   return fallback;
 };
 
