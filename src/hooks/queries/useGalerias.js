@@ -64,7 +64,8 @@ export function useGalerias(userId) {
           "id,titulo,mes_ano,capa_url,created_at,galeria_fotos(id,evento_id,foto_url,legenda,ordem,created_at)"
         )
         .order("created_at", { ascending: false })
-        .order("ordem", { foreignTable: "galeria_fotos", ascending: true });
+        .order("ordem", { foreignTable: "galeria_fotos", ascending: true })
+        .limit(100);
 
       if (!eventosError) {
         const signedUrlMap = await createSignedUrlMap("galeria", [
@@ -83,7 +84,8 @@ export function useGalerias(userId) {
       const { data: eventosOnly, error: eventosOnlyError } = await supabase
         .from("galeria_eventos")
         .select("id,titulo,mes_ano,capa_url,created_at")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
       if (eventosOnlyError) throw eventosOnlyError;
 
       let fotosRows = [];

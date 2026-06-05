@@ -96,7 +96,8 @@ export function usePresencial(userId) {
         .gte("data_presencial", today)
         .neq("status", "cancelado")
         .order("data_presencial", { ascending: true })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (agendasError) throw agendasError;
 

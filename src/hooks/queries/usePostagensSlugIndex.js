@@ -19,7 +19,8 @@ export function usePostagensSlugIndex(userId) {
         .from("postagens")
         .select("id,titulo,data_post,created_at")
         .order("data_post", { ascending: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(500);
 
       if (error) throw new Error(error.message);
       return data || [];

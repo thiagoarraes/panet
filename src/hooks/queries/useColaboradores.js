@@ -46,7 +46,8 @@ export function useColaboradores(userId, options = {}) {
         .from("colaboradores")
         .select(selectFields)
         .eq("ativo", true)
-        .order("nome", { ascending: true });
+        .order("nome", { ascending: true })
+        .limit(1000);
       if (error) throw error;
       return (data || []).map((row) => ({
         ...toAvatar(row),

@@ -19,8 +19,9 @@ export function useEnqueteAtiva(currentUserId, options = {}) {
   const query = useQuery({
     queryKey: ["enquete-ativa", currentUserId],
     enabled: queryEnabled && Boolean(currentUserId) && isSupabaseEnabled,
-    staleTime: 20 * 1000,
-    refetchInterval: 30 * 1000,
+    // Realtime (postgres_changes abaixo) já mantém os dados atualizados;
+    // o polling por refetchInterval era redundante e gerava carga extra.
+    staleTime: 60 * 1000,
     queryFn: async () => {
       const nowIso = new Date().toISOString();
       const { data: enqueteAtivaRaw, error: enqueteError } = await supabase

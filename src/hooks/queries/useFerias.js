@@ -60,7 +60,8 @@ export function useFerias(userId, options = {}) {
         .select(
           `id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(${colaboradorFields})`
         )
-        .order("inicio", { ascending: true });
+        .order("inicio", { ascending: true })
+        .limit(500);
       if (error) throw error;
       const mapped = (data || []).map(mapDbFeriasToUi);
       return {
