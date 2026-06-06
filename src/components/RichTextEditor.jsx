@@ -252,6 +252,7 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
                   onEmojiClick={insertEmoji}
                   lazyLoadEmojis
                   theme={emojiTheme}
+                  emojiStyle="native"
                   width={EMOJI_W}
                   height={EMOJI_H}
                   searchPlaceHolder="Pesquisar"

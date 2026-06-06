@@ -5,7 +5,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://zzrmkncyulptvokgugih.supabase.co; connect-src 'self' https://zzrmkncyulptvokgugih.supabase.co wss://zzrmkncyulptvokgugih.supabase.co; frame-src 'none'; object-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'self';"
+          "value": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://zzrmkncyulptvokgugih.supabase.co https://picsum.photos https://fastly.picsum.photos; connect-src 'self' https://zzrmkncyulptvokgugih.supabase.co wss://zzrmkncyulptvokgugih.supabase.co; frame-src 'none'; object-src 'none'; manifest-src 'self'; base-uri 'self'; form-action 'self';"
         },
         {
           "key": "X-Frame-Options",
