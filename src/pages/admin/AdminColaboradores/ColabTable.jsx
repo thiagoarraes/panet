@@ -1,6 +1,6 @@
-import { History, Pencil, Trash2, UserMinus, UserCheck } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { MODULES } from "../../../lib/adminColabUtils.js";
+import { ColabActionsMenu } from "./ColabActionsMenu.jsx";
 
 export function ColabTable({
   lista, loading,
@@ -114,80 +114,17 @@ export function ColabTable({
 
                     {/* Ações */}
                     <td style={{ padding: "12px 16px" }}>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {/* Alterar senha — só para ativos */}
-                        {!isExPanner && (
-                          <button
-                            className="btn-ghost"
-                            style={{ padding: "4px 10px", fontSize: 12 }}
-                            onClick={() => onAlterarSenha(col)}
-                            disabled={loading}
-                          >
-                            Alterar senha
-                          </button>
-                        )}
-
-                        {/* Histórico PanOff */}
-                        <button
-                          className="admin-action-icon"
-                          type="button"
-                          onClick={() => onVerHistorico(col)}
-                          aria-label={`Histórico PanOff de ${col.nome}`}
-                          title="Histórico PanOff"
-                        >
-                          <History />
-                        </button>
-
-                        {/* Editar */}
-                        <button
-                          className="admin-action-icon"
-                          type="button"
-                          onClick={() => onAbrirEditar(col)}
-                          aria-label={`Editar ${col.nome}`}
-                          title="Editar"
-                        >
-                          <Pencil />
-                        </button>
-
-                        {/* Desativar / Reativar — não aplicar a si mesmo */}
-                        {!col.isMe && (
-                          isExPanner ? (
-                            <button
-                              className="admin-action-icon"
-                              type="button"
-                              onClick={() => onReativar?.(col)}
-                              aria-label={`Reativar ${col.nome}`}
-                              title="Reativar acesso"
-                              style={{ color: "var(--accent)" }}
-                            >
-                              <UserCheck />
-                            </button>
-                          ) : (
-                            <button
-                              className="admin-action-icon"
-                              type="button"
-                              onClick={() => onDesativar?.(col)}
-                              aria-label={`Tornar ${col.nome} Ex Panner`}
-                              title="Tornar Ex Panner"
-                              style={{ color: "#f59e0b" }}
-                            >
-                              <UserMinus />
-                            </button>
-                          )
-                        )}
-
-                        {/* Excluir permanentemente */}
-                        {!col.isMe && (
-                          <button
-                            className="admin-action-icon is-danger"
-                            type="button"
-                            onClick={() => onConfirmarExcluir(col)}
-                            aria-label={`Excluir permanentemente ${col.nome}`}
-                            title="Excluir permanentemente"
-                          >
-                            <Trash2 />
-                          </button>
-                        )}
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <ColabActionsMenu
+                          col={col}
+                          loading={loading}
+                          onAlterarSenha={onAlterarSenha}
+                          onAbrirEditar={onAbrirEditar}
+                          onConfirmarExcluir={onConfirmarExcluir}
+                          onVerHistorico={onVerHistorico}
+                          onDesativar={onDesativar}
+                          onReativar={onReativar}
+                        />
                       </div>
                     </td>
                   </tr>

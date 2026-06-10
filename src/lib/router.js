@@ -1,4 +1,4 @@
-import { Home, FileText, Users, Cake, Plane, Images, CalendarDays } from "lucide-react";
+import { Home, FileText, Users, Cake, Plane, Images, CalendarDays, Gamepad2 } from "lucide-react";
 import { extractPostSlugFromPathname } from "./postRouting.js";
 
 export const NAV_ITEMS = [
@@ -9,6 +9,7 @@ export const NAV_ITEMS = [
   { id: "ferias",      label: "PanOff",              icon: Plane },
   { id: "presencial",  label: "Eventos",             icon: CalendarDays },
   { id: "galeria",     label: "Galerias",            icon: Images },
+  { id: "jogos",       label: "Jogos",               icon: Gamepad2 },
 ];
 
 export const PAGE_PATHS = {
@@ -19,6 +20,7 @@ export const PAGE_PATHS = {
   ferias:     "/folgas",
   presencial: "/eventos",
   galeria:    "/galerias",
+  jogos:      "/jogos",
   perfil:     "/perfil",
   admin:      "/admin",
 };
@@ -58,6 +60,8 @@ export const resolveRoute = (pathname) => {
     case "/galerias":
     case "/galeria":
       return { pagina: "galeria", adminAba: "colaboradores", known: true };
+    case "/jogos":
+      return { pagina: "jogos", adminAba: "colaboradores", known: true };
     case "/perfil":
       return { pagina: "perfil", adminAba: "colaboradores", known: true };
     case "/admin":
