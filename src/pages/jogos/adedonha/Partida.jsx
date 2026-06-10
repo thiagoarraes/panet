@@ -68,7 +68,7 @@ export function Partida({ sala, rodada, respostas, jogadores, meuJogador, mut })
           <div className="card-body" style={{ padding: 18 }}>
             <div className="ade-categorias">
               {categorias.map((cat) => (
-                <div key={cat} className="ade-cat">
+                <div key={cat} className={`ade-cat ${(valores[cat] || "").trim() ? "filled" : ""}`}>
                   <label htmlFor={`cat-${cat}`}>{cat}</label>
                   <input
                     id={`cat-${cat}`}

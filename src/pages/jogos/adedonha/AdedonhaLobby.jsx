@@ -40,8 +40,10 @@ export function AdedonhaLobby({ currentUser, onCriar, onEntrar, onVoltar }) {
           {isLoading ? (
             <div className="section-sub">Carregando salas...</div>
           ) : salas.length === 0 ? (
-            <div className="empty-state" style={{ textAlign: "center", padding: 24 }}>
-              Nenhuma sala aberta. Crie a primeira!
+            <div className="ade-empty">
+              <span className="ade-empty-emoji" aria-hidden="true">🎲</span>
+              <strong>Nenhuma sala aberta</strong>
+              <span>Crie a primeira e chame a galera!</span>
             </div>
           ) : (
             salas.map((sala) => (

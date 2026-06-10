@@ -1,19 +1,45 @@
-/* Adedonha (StopotS-like) — usa os tokens do global.css (--accent, --surface...). */
+/* ════════════════════════════════════════════════════════════════════════
+   Adedonha — "Candy Arcade"
+   Party-game vibrante sobre o dark navy da Panet. Display font Fredoka,
+   paleta candy cíclica, botões 3D squishy, teclas de letra, listras animadas.
+   Usa os tokens do global.css (--accent, --surface...) + camada --ade-*.
+   ════════════════════════════════════════════════════════════════════════ */
 
+.jogos-hub,
+.ade-wrap,
+.ade-overlay,
+.ade-modal-backdrop {
+  --ade-display: "Fredoka", "Sora", sans-serif;
+  --ade-pink: #ff5fa2;
+  --ade-yellow: #ffc83d;
+  --ade-purple: #8b5cf6;
+  --ade-orange: #ff8a3d;
+  --ade-cyan: #22d3ee;
+  --ade-lime: #a3e635;
+  --ade-red: #ff4d6d;
+}
+
+/* Títulos do jogo ganham a display font. */
+.ade-wrap .section-title {
+  font-family: var(--ade-display);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ── Hub de jogos ─────────────────────────────────────────────────────── */
 .jogos-hub {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
-/* ── Card premium ─────────────────────────────────────────────────────── */
 .jogo-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   text-align: left;
   border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
-  border-radius: 22px;
+  border-radius: 24px;
   padding: 24px;
   cursor: pointer;
   display: flex;
@@ -22,6 +48,7 @@
   color: var(--text);
   background:
     radial-gradient(130% 120% at 100% 0%, color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 55%),
+    radial-gradient(90% 90% at 0% 100%, color-mix(in srgb, var(--ade-purple) 14%, transparent) 0%, transparent 50%),
     linear-gradient(160deg, var(--surface2) 0%, var(--surface) 70%);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.28),
@@ -29,7 +56,6 @@
   transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
 }
 .jogo-card::after {
-  /* halo de borda no hover */
   content: "";
   position: absolute;
   inset: -1px;
@@ -44,7 +70,7 @@
   pointer-events: none;
 }
 .jogo-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-6px) rotate(-0.4deg);
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   box-shadow:
     0 22px 48px rgba(0, 0, 0, 0.4),
@@ -55,7 +81,6 @@
 .jogo-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .jogo-card.disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* brilho que cruza no hover */
 .jogo-card-shine {
   position: absolute;
   top: 0;
@@ -70,23 +95,30 @@
 }
 .jogo-card:hover .jogo-card-shine { left: 130%; }
 
-/* letras decorativas ao fundo */
+/* Letras decorativas dançantes ao fundo */
 .jogo-card-letras {
   position: absolute;
   top: -10px;
   right: 8px;
   display: flex;
   gap: 4px;
-  font-weight: 900;
+  font-family: var(--ade-display);
+  font-weight: 700;
   font-size: 92px;
   line-height: 1;
-  letter-spacing: -6px;
+  letter-spacing: -4px;
   color: color-mix(in srgb, var(--accent) 12%, transparent);
   pointer-events: none;
   z-index: 0;
 }
-.jogo-card-letras span { transform: translateY(calc(var(--i) * 6px)); }
-.jogo-card:hover .jogo-card-letras { color: color-mix(in srgb, var(--accent) 18%, transparent); }
+.jogo-card-letras span {
+  transform: translateY(calc(var(--i) * 6px)) rotate(calc(var(--i) * 3deg - 4deg));
+  transition: transform 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.jogo-card:hover .jogo-card-letras { color: color-mix(in srgb, var(--accent) 20%, transparent); }
+.jogo-card:hover .jogo-card-letras span {
+  transform: translateY(calc(var(--i) * -4px)) rotate(calc(var(--i) * -3deg + 4deg));
+}
 
 .jogo-card-top {
   position: relative;
@@ -95,39 +127,32 @@
   align-items: center;
   gap: 12px;
 }
+/* Ícone = tecla 3D */
 .jogo-card-icon {
   width: 58px;
   height: 58px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
+  font-family: var(--ade-display);
   font-size: 30px;
-  font-weight: 900;
+  font-weight: 700;
   color: #fff;
-  background: linear-gradient(140deg, var(--accent), var(--accent2));
+  background: linear-gradient(160deg, var(--accent), var(--accent2));
   box-shadow:
-    0 8px 20px color-mix(in srgb, var(--accent) 45%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.25s;
+    0 5px 0 color-mix(in srgb, var(--accent2) 60%, #000),
+    0 10px 20px color-mix(in srgb, var(--accent) 40%, transparent),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
-.jogo-card:hover .jogo-card-icon { transform: rotate(-6deg) scale(1.05); }
-.jogo-card-tag {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  padding: 4px 10px;
-  border-radius: 999px;
-}
+.jogo-card:hover .jogo-card-icon { transform: rotate(-8deg) scale(1.08); }
 .jogo-card h3 {
   position: relative;
   z-index: 1;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
+  font-family: var(--ade-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 .jogo-card p {
   position: relative;
@@ -147,31 +172,19 @@
   gap: 10px;
   flex-wrap: wrap;
 }
-.jogo-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.jogo-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  border: 1px solid var(--border);
-  padding: 4px 9px;
-  border-radius: 999px;
-}
 .jogo-card-play {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 800;
-  font-size: 14px;
+  font-family: var(--ade-display);
+  font-weight: 600;
+  font-size: 15px;
   color: var(--accent);
   transition: gap 0.2s;
 }
-.jogo-card:hover .jogo-card-play { gap: 10px; }
+.jogo-card:hover .jogo-card-play { gap: 12px; }
 
-/* ─── Layout geral da adedonha ─────────────────────────────────────────── */
+/* ── Layout geral ─────────────────────────────────────────────────────── */
 .ade-wrap { display: flex; flex-direction: column; gap: 16px; }
 .ade-topbar {
   display: flex;
@@ -180,59 +193,121 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+
+/* Tecla da letra da rodada — estilo tecla de teclado gigante */
 .ade-badge-letra {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 18px;
   display: grid;
   place-items: center;
-  font-size: 34px;
-  font-weight: 800;
+  font-family: var(--ade-display);
+  font-size: 38px;
+  font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 35%, transparent);
+  background: linear-gradient(160deg, var(--accent), var(--accent2));
+  box-shadow:
+    0 6px 0 color-mix(in srgb, var(--accent2) 55%, #000),
+    0 14px 24px color-mix(in srgb, var(--accent) 35%, transparent),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  animation: ade-key-drop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+@keyframes ade-key-drop {
+  0% { transform: translateY(-18px) scale(0.7); opacity: 0; }
+  60% { transform: translateY(3px) scale(1.06); opacity: 1; }
+  100% { transform: translateY(0) scale(1); }
 }
 .ade-rodada-info { color: var(--muted); font-size: 13px; }
 
-/* Layout StopotS: jogadores na coluna esquerda, jogo na direita. */
+/* Jogadores na esquerda, jogo na direita (StopotS) */
 .ade-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
 @media (max-width: 900px) { .ade-grid { grid-template-columns: 1fr; } }
 
-/* Timer */
+/* ── Timer — listras candy animadas ───────────────────────────────────── */
 .ade-timer {
-  height: 10px;
+  height: 14px;
   border-radius: 999px;
   background: var(--surface2);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 .ade-timer-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--success));
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      -55deg,
+      rgba(255, 255, 255, 0.22) 0 10px,
+      transparent 10px 20px
+    ),
+    linear-gradient(90deg, var(--accent), var(--ade-cyan));
+  background-size: 28px 100%, 100% 100%;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: ade-stripes 0.9s linear infinite;
   transition: width 1s linear;
 }
-.ade-timer-fill.danger { background: linear-gradient(90deg, var(--danger), #ff9a3c); }
-
-/* Categorias (preenchimento) */
-.ade-categorias { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-.ade-cat {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
+@keyframes ade-stripes { to { background-position: 28px 0, 0 0; } }
+.ade-timer-fill.danger {
+  background:
+    repeating-linear-gradient(
+      -55deg,
+      rgba(255, 255, 255, 0.22) 0 10px,
+      transparent 10px 20px
+    ),
+    linear-gradient(90deg, var(--ade-red), var(--ade-orange));
+  background-size: 28px 100%, 100% 100%;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ade-red) 55%, transparent);
+  animation: ade-stripes 0.45s linear infinite, ade-timer-panic 0.5s ease-in-out infinite;
 }
-.ade-cat label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+@keyframes ade-timer-panic { 50% { filter: brightness(1.25); } }
+
+/* ── Categorias (preenchimento) — cards candy cíclicos ────────────────── */
+.ade-categorias { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.ade-cat {
+  --cat-c: var(--accent);
+  background: var(--surface2);
+  border: 2px solid color-mix(in srgb, var(--cat-c) 30%, var(--border));
+  border-radius: 16px;
+  padding: 12px;
+  transition: transform 0.18s cubic-bezier(0.2, 1.4, 0.4, 1), border-color 0.18s, box-shadow 0.18s;
+}
+.ade-categorias .ade-cat:nth-child(6n + 1) { --cat-c: var(--ade-cyan); }
+.ade-categorias .ade-cat:nth-child(6n + 2) { --cat-c: var(--ade-pink); }
+.ade-categorias .ade-cat:nth-child(6n + 3) { --cat-c: var(--ade-yellow); }
+.ade-categorias .ade-cat:nth-child(6n + 4) { --cat-c: var(--ade-purple); }
+.ade-categorias .ade-cat:nth-child(6n + 5) { --cat-c: var(--ade-orange); }
+.ade-categorias .ade-cat:nth-child(6n + 6) { --cat-c: var(--ade-lime); }
+.ade-cat:focus-within {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--cat-c);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--cat-c) 30%, transparent);
+}
+.ade-cat.filled { border-color: color-mix(in srgb, var(--cat-c) 70%, var(--border)); }
+.ade-cat.filled label::after { content: " ✓"; color: var(--success); }
+.ade-cat label {
+  display: block;
+  font-family: var(--ade-display);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--cat-c);
+  margin-bottom: 6px;
+}
 .ade-cat input {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 9px 11px;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: border-color 0.15s;
 }
-.ade-cat input:focus { outline: none; border-color: var(--accent); }
+.ade-cat input:focus { outline: none; border-color: var(--cat-c); }
 
-/* Lista de jogadores */
+/* ── Painel de jogadores ──────────────────────────────────────────────── */
 .ade-players { display: flex; flex-direction: column; gap: 8px; }
 .ade-player {
   display: flex;
@@ -240,67 +315,155 @@
   gap: 10px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 8px 10px;
+  transition: transform 0.15s, border-color 0.15s;
 }
-.ade-player.me { border-color: var(--accent); }
+.ade-player:hover { transform: translateX(3px); }
+.ade-player.me {
+  border-color: color-mix(in srgb, var(--accent) 65%, var(--border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    var(--surface2);
+}
 .ade-player-nome { font-weight: 600; font-size: 14px; }
-.ade-player-pts { margin-left: auto; font-weight: 800; color: var(--accent); }
+.ade-player-pts {
+  margin-left: auto;
+  font-family: var(--ade-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a1400;
+  background: linear-gradient(180deg, var(--ade-yellow), #f0a818);
+  border-radius: 999px;
+  padding: 2px 10px;
+  box-shadow: 0 2px 0 #b97f0e;
+}
 .ade-player-host { font-size: 11px; color: var(--muted); }
 
-/* Validacao */
+/* ── Validação ────────────────────────────────────────────────────────── */
 .ade-valida-cat { margin-bottom: 18px; }
-.ade-valida-cat h4 { font-size: 14px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.5px; }
 .ade-valida-titulo {
-  font-size: 26px !important;
-  font-weight: 800;
+  font-family: var(--ade-display);
+  font-size: 30px !important;
+  font-weight: 600;
   color: var(--accent) !important;
   text-align: center;
-  margin-bottom: 16px !important;
+  margin-bottom: 18px !important;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: ade-key-drop 0.4s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 .ade-resp-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--surface2);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  animation: ade-row-in 0.3s cubic-bezier(0.2, 1.2, 0.4, 1) backwards;
 }
-.ade-resp-texto { font-weight: 600; }
+.ade-resp-row:nth-child(1) { animation-delay: 0.02s; }
+.ade-resp-row:nth-child(2) { animation-delay: 0.06s; }
+.ade-resp-row:nth-child(3) { animation-delay: 0.1s; }
+.ade-resp-row:nth-child(4) { animation-delay: 0.14s; }
+.ade-resp-row:nth-child(5) { animation-delay: 0.18s; }
+.ade-resp-row:nth-child(6) { animation-delay: 0.22s; }
+@keyframes ade-row-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ade-resp-texto { font-weight: 600; font-size: 15px; }
 .ade-resp-vazia { color: var(--muted); font-style: italic; }
-.ade-vote-btns { margin-left: auto; display: flex; gap: 6px; }
+.ade-vote-btns { margin-left: auto; display: flex; gap: 8px; }
+/* Botões de voto squishy */
 .ade-vote-btn {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 10px;
+  padding: 7px 13px;
+  font-family: var(--ade-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   cursor: pointer;
+  transition: transform 0.1s, filter 0.15s, box-shadow 0.1s;
 }
-.ade-vote-btn.valido.active { background: var(--success); color: #06210d; border-color: var(--success); }
-.ade-vote-btn.invalido.active { background: var(--danger); color: #2a0808; border-color: var(--danger); }
+.ade-vote-btn.valido {
+  color: #06210d;
+  background: linear-gradient(180deg, #6ee07c, #3cb94f);
+  box-shadow: 0 3px 0 #1f7a2e;
+}
+.ade-vote-btn.invalido {
+  color: #fff;
+  background: linear-gradient(180deg, #ff6b85, #e0314f);
+  box-shadow: 0 3px 0 #a31229;
+}
+.ade-vote-btn:hover { filter: brightness(1.08); }
+.ade-vote-btn:active { transform: translateY(3px); box-shadow: 0 0 0 transparent; }
+.ade-vote-btn.valido.active {
+  background: var(--success);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 50%, transparent), 0 3px 0 #1f7a2e;
+  transform: scale(1.06);
+}
+.ade-vote-btn.invalido.active {
+  background: var(--ade-red);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ade-red) 50%, transparent), 0 3px 0 #a31229;
+  transform: scale(1.06);
+}
 
-/* Ranking */
+/* ── Ranking ──────────────────────────────────────────────────────────── */
 .ade-rank-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: var(--surface2);
   border: 1px solid var(--border);
   margin-bottom: 8px;
+  animation: ade-row-in 0.35s cubic-bezier(0.2, 1.2, 0.4, 1) backwards;
 }
-.ade-rank-pos { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--surface); }
-.ade-rank-row:nth-child(1) .ade-rank-pos { background: #f5c518; color: #1a1400; }
-.ade-rank-row:nth-child(2) .ade-rank-pos { background: #c0c7d0; color: #11161c; }
-.ade-rank-row:nth-child(3) .ade-rank-pos { background: #cd7f32; color: #1d0e00; }
-.ade-rank-delta { color: var(--success); font-weight: 700; font-size: 13px; }
+.ade-rank-row:nth-child(1) { animation-delay: 0.05s; }
+.ade-rank-row:nth-child(2) { animation-delay: 0.12s; }
+.ade-rank-row:nth-child(3) { animation-delay: 0.19s; }
+.ade-rank-row:nth-child(4) { animation-delay: 0.26s; }
+.ade-rank-row:nth-child(5) { animation-delay: 0.33s; }
+.ade-rank-pos {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--ade-display);
+  font-weight: 700;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+/* Pódio */
+.ade-rank-row:nth-child(1) {
+  border-color: color-mix(in srgb, #f5c518 45%, var(--border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, #f5c518 12%, transparent), transparent 55%),
+    var(--surface2);
+}
+.ade-rank-row:nth-child(1) .ade-rank-pos { background: linear-gradient(160deg, #ffe16b, #f5c518); color: #1a1400; box-shadow: 0 3px 0 #b9930e, 0 0 16px rgba(245, 197, 24, 0.35); }
+.ade-rank-row:nth-child(2) .ade-rank-pos { background: linear-gradient(160deg, #e8edf2, #c0c7d0); color: #11161c; box-shadow: 0 3px 0 #8d959f; }
+.ade-rank-row:nth-child(3) .ade-rank-pos { background: linear-gradient(160deg, #e09a52, #cd7f32); color: #1d0e00; box-shadow: 0 3px 0 #93571e; }
+.ade-rank-delta {
+  font-family: var(--ade-display);
+  color: #06210d;
+  font-weight: 700;
+  font-size: 12.5px;
+  background: linear-gradient(180deg, #6ee07c, #3cb94f);
+  border-radius: 999px;
+  padding: 2px 9px;
+  box-shadow: 0 2px 0 #1f7a2e;
+  animation: ade-pronto-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
 .ade-rank-pronto {
   display: inline-flex;
   align-items: center;
@@ -313,20 +476,34 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Config */
+/* ── Config da sala ───────────────────────────────────────────────────── */
 .ade-config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-.ade-field label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.ade-field label {
+  display: block;
+  font-family: var(--ade-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
 .ade-field select, .ade-field input {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 9px 11px;
   color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ade-field select:focus, .ade-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .ade-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* Linha "adicionar categoria": input + botão de mesma altura. */
 .ade-add-row { display: flex; gap: 8px; }
 .ade-add-row input { flex: 1; height: 42px; }
 .ade-add-btn {
@@ -337,78 +514,163 @@
   padding: 0 18px;
   white-space: nowrap;
   border: none;
-  border-radius: 8px;
-  font-weight: 700;
+  border-radius: 12px;
+  font-family: var(--ade-display);
+  font-weight: 600;
   font-size: 14px;
   color: #fff;
   cursor: pointer;
   background: linear-gradient(180deg, var(--accent), var(--accent2));
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 32%, transparent);
-  transition: filter 0.15s, transform 0.08s, box-shadow 0.15s;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--accent2) 55%, #000);
+  transition: filter 0.15s, transform 0.08s, box-shadow 0.08s;
 }
-.ade-add-btn:hover:not(:disabled) { filter: brightness(1.08); }
-.ade-add-btn:active:not(:disabled) { transform: translateY(1px); }
+.ade-add-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.ade-add-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
 .ade-add-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+/* Chips de categoria coloridos */
 .ade-chip {
+  --chip-c: var(--accent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--chip-c) 14%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--chip-c) 40%, var(--border));
+  color: var(--text);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-size: 13px;
+  font-weight: 600;
+  transition: transform 0.15s;
 }
-.ade-chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; }
-.ade-letras { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+.ade-chip:hover { transform: translateY(-2px); }
+.ade-chips .ade-chip:nth-child(6n + 1) { --chip-c: var(--ade-cyan); }
+.ade-chips .ade-chip:nth-child(6n + 2) { --chip-c: var(--ade-pink); }
+.ade-chips .ade-chip:nth-child(6n + 3) { --chip-c: var(--ade-yellow); }
+.ade-chips .ade-chip:nth-child(6n + 4) { --chip-c: var(--ade-purple); }
+.ade-chips .ade-chip:nth-child(6n + 5) { --chip-c: var(--ade-orange); }
+.ade-chips .ade-chip:nth-child(6n + 6) { --chip-c: var(--ade-lime); }
+.ade-chip button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: color 0.15s, transform 0.15s;
+}
+.ade-chip button:hover { color: var(--ade-red); transform: scale(1.25); }
+
+/* Seletor de letras — mini-teclado */
+.ade-letras { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 7px; }
 .ade-letra {
-  height: 38px;
-  border-radius: 8px;
+  height: 42px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text);
-  font-weight: 700;
+  color: var(--muted);
+  font-family: var(--ade-display);
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--border) 80%, #000);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.15s, color 0.15s;
 }
-.ade-letra.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.ade-letra:hover { transform: translateY(-2px); box-shadow: 0 5px 0 color-mix(in srgb, var(--border) 80%, #000); }
+.ade-letra:active { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 80%, #000); }
+.ade-letra.on {
+  background: linear-gradient(160deg, var(--accent), var(--accent2));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--accent2) 55%, #000), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
 
-/* Modal */
+/* ── Modal de entrada ─────────────────────────────────────────────────── */
 .ade-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  position: fixed; inset: 0; background: rgba(8, 12, 26, 0.6);
+  backdrop-filter: blur(4px);
   display: grid; place-items: center; z-index: 1000; padding: 16px;
 }
 .ade-modal {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 20px;
+  padding: 24px;
   width: 100%;
   max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: ade-modal-in 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
+@keyframes ade-modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ade-modal h3 { font-family: var(--ade-display); font-weight: 600; }
 .ade-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.ade-toggle input { width: 18px; height: 18px; }
+.ade-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 
+/* ── Lobby: lista de salas ────────────────────────────────────────────── */
 .ade-sala-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--surface2);
   margin-bottom: 10px;
+  transition: transform 0.18s cubic-bezier(0.2, 1.2, 0.4, 1), border-color 0.18s, box-shadow 0.18s;
+}
+.ade-sala-item:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
 }
 .ade-sala-item .meta { color: var(--muted); font-size: 13px; }
 .ade-sala-item .badge {
-  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  font-family: var(--ade-display);
+  font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent);
+  letter-spacing: 0.4px;
 }
-.ade-sala-item .badge.jogando { background: color-mix(in srgb, var(--success) 22%, transparent); color: var(--success); }
+.ade-sala-item .badge.jogando {
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
+  animation: ade-badge-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ade-badge-pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 12%, transparent); } }
 
-/* ── Avatar stack (lobby) ─────────────────────────────────────────────── */
+/* Empty state do lobby */
+.ade-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 36px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.ade-empty strong {
+  font-family: var(--ade-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ade-empty-emoji {
+  font-size: 44px;
+  margin-bottom: 6px;
+  animation: ade-dice-bounce 2.2s ease-in-out infinite;
+}
+@keyframes ade-dice-bounce {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-8px) rotate(8deg); }
+}
+
+/* ── Avatar stack ─────────────────────────────────────────────────────── */
 .ade-stack { display: inline-flex; align-items: center; padding-left: 8px; }
 .ade-stack-item {
   position: relative;
@@ -419,7 +681,7 @@
   cursor: default;
 }
 .ade-stack-item:hover {
-  transform: translateY(-5px) scale(1.12);
+  transform: translateY(-5px) scale(1.12) rotate(4deg);
   z-index: 5;
   box-shadow: 0 0 0 2px var(--accent), 0 8px 16px rgba(0, 0, 0, 0.35);
 }
@@ -461,25 +723,26 @@
 }
 .ade-stack-item:hover .ade-stack-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ─── Botão STOP grande (estilo StopotS) ─────────────────────────────── */
+/* ── Botão STOP ───────────────────────────────────────────────────────── */
 .ade-stop-bar {
   position: sticky;
   bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 20px;
 }
 .ade-stop-btn {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: 1px;
+  font-family: var(--ade-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
   color: #fff;
-  padding: 16px 56px;
+  padding: 16px 58px;
   border: none;
   border-radius: 999px;
   cursor: pointer;
@@ -490,8 +753,15 @@
     inset 0 2px 0 rgba(255, 255, 255, 0.45);
   transition: transform 0.08s, box-shadow 0.15s, filter 0.15s;
 }
-.ade-stop-btn:hover:not(:disabled) { filter: brightness(1.06); }
+/* Pronto pra apertar: chama atenção com balanço sutil */
+.ade-stop-btn:not(:disabled) { animation: ade-stop-idle 2.4s ease-in-out infinite; }
+@keyframes ade-stop-idle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+.ade-stop-btn:hover:not(:disabled) { filter: brightness(1.07); animation-play-state: paused; }
 .ade-stop-btn:active:not(:disabled) {
+  animation: none;
   transform: translateY(8px);
   box-shadow: 0 2px 0 #a81818, 0 6px 12px rgba(224, 46, 46, 0.4), inset 0 2px 0 rgba(255,255,255,0.45);
 }
@@ -502,14 +772,14 @@
   opacity: 0.85;
 }
 .ade-stop-btn .ade-stop-ring {
-  width: 30px; height: 30px; border-radius: 50%;
+  width: 32px; height: 32px; border-radius: 50%;
   display: grid; place-items: center;
-  background: #fff; color: #e02e2e; font-size: 18px;
+  background: #fff; color: #e02e2e; font-size: 19px; font-weight: 800;
 }
 .ade-stop-hint { font-size: 12px; color: var(--muted); }
-.ade-stop-progress { font-weight: 800; color: var(--accent); }
+.ade-stop-progress { font-family: var(--ade-display); font-weight: 700; color: var(--accent); }
 
-/* ─── Overlay de animações (sorteio / stop) ──────────────────────────── */
+/* ── Overlays (sorteio / stop) ────────────────────────────────────────── */
 .ade-overlay {
   position: fixed;
   inset: 0;
@@ -548,64 +818,159 @@
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background: linear-gradient(160deg, #8b91ff, #5a62e0);
   box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 70%, transparent);
-  animation: ade-pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1);
-  transition: transform 0.3s cubic-bezier(0.2, 1.6, 0.4, 1), box-shadow 0.3s;
+  animation: ade-pop 0.4s cubic-bezier(0.2, 1.4, 0.4, 1), ade-hex-wobble 0.5s ease-in-out 0.4s infinite;
 }
-/* Ao travar: cresce e ganha glow forte para a letra ficar nítida. */
+/* Balança enquanto sorteia (suspense) */
+@keyframes ade-hex-wobble {
+  0%, 100% { transform: rotate(-2deg) scale(0.99); }
+  50% { transform: rotate(2deg) scale(1.01); }
+}
 .ade-hex.travado {
-  transform: scale(1.12);
+  animation: ade-lock 0.55s cubic-bezier(0.2, 1.7, 0.3, 1) forwards;
   box-shadow: 0 0 90px color-mix(in srgb, var(--accent) 95%, transparent);
-  animation: ade-lock 0.45s cubic-bezier(0.2, 1.6, 0.3, 1);
 }
+/* Punch com squash & stretch + flash */
 @keyframes ade-lock {
-  0% { transform: scale(0.85); }
-  60% { transform: scale(1.22); }
-  100% { transform: scale(1.12); }
+  0% { transform: scale(0.8) rotate(-4deg); filter: brightness(1); }
+  35% { transform: scale(1.3, 1.14) rotate(2deg); filter: brightness(1.9); }
+  60% { transform: scale(1.04, 1.2) rotate(-1deg); filter: brightness(1.25); }
+  100% { transform: scale(1.14) rotate(0deg); filter: brightness(1); }
 }
-/* Raios desaceleram e estabilizam após travar. */
-.ade-sorteio.travado .ade-rays { animation: ade-spin 26s linear infinite; opacity: 0.85; }
+.ade-sorteio.travado .ade-rays { animation: ade-spin 26s linear infinite, ade-rays-flash 0.6s ease-out; opacity: 0.85; }
+@keyframes ade-rays-flash {
+  0% { filter: brightness(2.4); transform: scale(1.12); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
 .ade-hex-inner {
   width: 84%; height: 84%;
   display: grid; place-items: center;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   background: linear-gradient(160deg, #2b2f66, #1c1f44);
+  overflow: hidden;
 }
 .ade-hex-letra {
+  font-family: var(--ade-display);
   font-size: 96px;
-  font-weight: 900;
+  font-weight: 700;
+  line-height: 1;
   color: #fff;
   text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 90%, transparent);
+  /* Compensação métrica: baseline da Fredoka (ascent 125/descent 30 por em)
+     deixa o glifo ~0.03em abaixo do centro geométrico do box. */
+  transform: translateY(-0.03em);
 }
-.ade-hex-letra.cycling { color: color-mix(in srgb, var(--accent) 85%, #fff); animation: ade-flicker 0.08s linear infinite; }
+/* Slot machine: cada letra entra rolando de cima com motion blur fake */
+.ade-hex-letra.cycling {
+  color: color-mix(in srgb, var(--accent) 85%, #fff);
+  animation: ade-slot-tick 0.09s ease-out;
+}
+@keyframes ade-slot-tick {
+  0% { transform: translateY(-70%) scaleY(1.5); opacity: 0.2; filter: blur(3px); }
+  100% { transform: translateY(-0.03em) scaleY(1); opacity: 1; filter: blur(0); }
+}
 .ade-hex-letra.lock {
   font-size: 128px;
   color: #fff;
   text-shadow: 0 0 36px color-mix(in srgb, var(--accent) 100%, transparent), 0 4px 0 rgba(0,0,0,0.2);
+  animation: ade-letra-lock 0.5s cubic-bezier(0.2, 1.7, 0.3, 1);
 }
-@keyframes ade-flicker { 50% { opacity: 0.55; } }
+@keyframes ade-letra-lock {
+  0% { transform: translateY(-0.03em) scale(2.4); opacity: 0; filter: blur(6px); }
+  55% { transform: translateY(-0.03em) scale(0.92); opacity: 1; filter: blur(0); }
+  100% { transform: translateY(-0.03em) scale(1); }
+}
 @keyframes ade-pop { 0% { transform: scale(0.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* ── Shockwave: anel que expande no impacto ──────────────────────────── */
+.ade-shockwave {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 4px solid color-mix(in srgb, var(--accent) 85%, #fff);
+  z-index: 0;
+  pointer-events: none;
+  animation: ade-shockwave 0.7s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+}
+.ade-shockwave.vermelho { border-color: #ff7a93; }
+@keyframes ade-shockwave {
+  0% { transform: scale(0.6); opacity: 1; border-width: 6px; }
+  100% { transform: scale(2.6); opacity: 0; border-width: 1px; }
+}
+
+/* ── Confete radial ──────────────────────────────────────────────────── */
+.ade-burst {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 2;
+}
+.ade-burst span {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--c);
+  opacity: 0;
+  transform: rotate(var(--a)) translateY(0) scale(1);
+  animation: ade-confetti var(--t) cubic-bezier(0.1, 0.7, 0.3, 1) 0.06s forwards;
+}
+.ade-burst span:nth-child(odd) { border-radius: 50%; width: 9px; height: 9px; }
+@keyframes ade-confetti {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(-20px) scale(1.2) rotate(0deg); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(0.5) rotate(220deg); }
+}
 .ade-sorteio-label {
   position: absolute;
   bottom: -4px;
+  font-family: var(--ade-display);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #fff;
 }
 .ade-sorteio-label strong { color: var(--accent); font-size: 26px; }
 
-/* STOP overlay */
-.ade-stop-anim { display: grid; place-items: center; gap: 18px; animation: ade-pop 0.3s ease; }
+/* STOP overlay — placa de PARE com slam + screen shake */
+.ade-overlay-shake { animation: ade-fade-in 0.15s ease, ade-screen-shake 0.45s linear 0.18s; }
+@keyframes ade-screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-7px, 4px); }
+  30% { transform: translate(6px, -5px); }
+  45% { transform: translate(-5px, -3px); }
+  60% { transform: translate(4px, 4px); }
+  75% { transform: translate(-3px, 2px); }
+  90% { transform: translate(2px, -2px); }
+}
+.ade-stop-anim { display: grid; place-items: center; gap: 20px; }
+.ade-stop-scene { position: relative; display: grid; place-items: center; width: 320px; height: 300px; }
 .ade-stop-face {
-  width: 200px; height: 220px;
+  /* Octógono: placa de PARE de verdade */
+  width: 215px; height: 215px;
   display: grid; place-items: center;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  background: linear-gradient(160deg, #ff5573, #d61f4a);
-  box-shadow: 0 0 70px rgba(214, 31, 74, 0.7);
-  animation: ade-shake 0.5s ease-in-out 2;
-  font-size: 64px; font-weight: 900; color: #fff;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  background:
+    linear-gradient(160deg, #ff5573, #d61f4a);
+  box-shadow:
+    0 0 70px rgba(214, 31, 74, 0.7),
+    inset 0 0 0 10px rgba(255, 255, 255, 0.92),
+    inset 0 0 0 14px #d61f4a;
+  font-family: var(--ade-display);
+  font-size: 52px; font-weight: 700; color: #fff;
+  letter-spacing: 3px;
   text-shadow: 0 3px 0 rgba(0,0,0,0.25);
+  animation: ade-slam 0.45s cubic-bezier(0.3, 1.6, 0.4, 1) backwards, ade-shake 0.5s ease-in-out 0.45s 2;
+  z-index: 1;
+}
+/* Placa cai de cima com squash no impacto */
+@keyframes ade-slam {
+  0% { transform: scale(3.2) rotate(-16deg); opacity: 0; filter: blur(8px); }
+  55% { transform: scale(0.88, 0.92) rotate(3deg); opacity: 1; filter: blur(0); }
+  75% { transform: scale(1.08, 1.04) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 @keyframes ade-shake {
   0%,100% { transform: rotate(0deg); }
@@ -615,10 +980,30 @@
   80% { transform: rotate(4deg); }
 }
 .ade-stop-anim-text { text-align: center; }
-.ade-stop-anim-text .nome { font-size: 22px; font-weight: 800; color: #fff; }
+.ade-stop-anim-text .nome {
+  font-family: var(--ade-display);
+  font-size: 24px; font-weight: 600; color: #fff;
+  animation: ade-text-punch 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) 0.35s backwards;
+}
 .ade-stop-anim-text .grito {
-  font-size: 34px; font-weight: 900; letter-spacing: 1px;
-  background: linear-gradient(90deg, #ff7eb3, #ff5573);
+  font-family: var(--ade-display);
+  font-size: 40px; font-weight: 700; letter-spacing: 2px;
+  background: linear-gradient(90deg, #ff7eb3, #ff5573, #ffc83d);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: ade-pulse 0.5s ease-in-out infinite;
+  animation: ade-text-punch 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) 0.5s backwards, ade-pulse 0.6s ease-in-out 0.9s infinite;
+}
+@keyframes ade-text-punch {
+  0% { transform: scale(0.3) translateY(18px); opacity: 0; }
+  70% { transform: scale(1.12) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* Acessibilidade: respeita usuários sem animação */
+@media (prefers-reduced-motion: reduce) {
+  .ade-timer-fill,
+  .ade-stop-btn:not(:disabled),
+  .ade-sala-item .badge.jogando,
+  .ade-hex,
+  .ade-overlay-shake,
+  .ade-rays { animation: none !important; }
 }
