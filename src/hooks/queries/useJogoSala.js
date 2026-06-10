@@ -25,6 +25,8 @@ const mapJogador = (row) => {
     conectado: row.conectado,
     pontosTotal: row.pontos_total,
     prontoRodada: row.pronto_rodada || 0,
+    stopsTotal: row.stops_total || 0,
+    ultimoStopEm: row.ultimo_stop_em,
     // Avatar: identificado mostra foto/cor reais; anonimo nao expoe foto.
     nome: row.apelido,
     nomeReal: identificado ? col.nome || "" : "",

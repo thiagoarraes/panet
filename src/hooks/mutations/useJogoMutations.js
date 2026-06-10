@@ -174,16 +174,31 @@ export function useJogoMutations() {
   );
 
   // Qualquer jogador pode dar STOP (grava stop_por/stop_em na rodada).
+  // Quem realmente "trava" o STOP (primeiro a clicar) ganha +1 em stops_total,
+  // usado como desempate no ranking.
   const darStop = useCallback(
     async ({ salaId, rodadaId, jogadorId }) => {
       guard();
       if (!rodadaId) return;
-      const { error } = await supabase
+      const ts = nowIso();
+      const { data: rows, error } = await supabase
         .from("jogo_rodadas")
-        .update({ stop_por: jogadorId, stop_em: nowIso() })
+        .update({ stop_por: jogadorId, stop_em: ts })
         .eq("id", rodadaId)
-        .is("stop_em", null);
+        .is("stop_em", null)
+        .select("id");
       if (error) throw new Error(error.message);
+      if (rows?.length) {
+        const { data: jogRow } = await supabase
+          .from("jogo_jogadores")
+          .select("stops_total")
+          .eq("id", jogadorId)
+          .maybeSingle();
+        await supabase
+          .from("jogo_jogadores")
+          .update({ stops_total: (jogRow?.stops_total || 0) + 1, ultimo_stop_em: ts })
+          .eq("id", jogadorId);
+      }
       invalidarSala(salaId);
     },
     [invalidarSala]

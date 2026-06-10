@@ -7,7 +7,16 @@ import { segundosRestantes, TEMPO_RANKING_SEGUNDOS } from "../../../lib/adedonha
 export function Ranking({ sala, jogadores, pontuacoes, rodada, meuJogador, mut, finalizado, onSair }) {
   const [marcando, setMarcando] = useState(false);
   const deltaPorJogador = new Map((pontuacoes || []).map((p) => [p.jogadorId, p.pontos]));
-  const ordenados = [...jogadores].sort((a, b) => (b.pontosTotal || 0) - (a.pontosTotal || 0));
+  // Desempate: pontos > total de STOPs dados > quem deu STOP primeiro (último STOP mais antigo).
+  const ordenados = [...jogadores].sort((a, b) => {
+    const pontos = (b.pontosTotal || 0) - (a.pontosTotal || 0);
+    if (pontos !== 0) return pontos;
+    const stops = (b.stopsTotal || 0) - (a.stopsTotal || 0);
+    if (stops !== 0) return stops;
+    const aStop = a.ultimoStopEm ? new Date(a.ultimoStopEm).getTime() : Infinity;
+    const bStop = b.ultimoStopEm ? new Date(b.ultimoStopEm).getTime() : Infinity;
+    return aStop - bStop;
+  });
 
   const estaPronto = (j) => j.prontoRodada === sala.rodadaAtual;
   const prontos = jogadores.filter(estaPronto).length;

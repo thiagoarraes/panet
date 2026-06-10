@@ -124,13 +124,15 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
     }
 
     // Ranking: avança quando todos marcam "Estou pronto" ou o tempo esgota.
+    // Na última rodada, vai direto pro placar final (sem esperar "Estou pronto").
     if (sala.fase === "ranking" && data.rodada) {
+      const ultimaRodada = sala.rodadaAtual >= cfg.rodadas;
       const restante = segundosRestantes(sala.faseIniciadaEm, TEMPO_RANKING_SEGUNDOS);
       const tempoEsgotou = restante <= 0;
       const todosProntos =
         jogadores.length > 0 &&
         jogadores.every((j) => j.prontoRodada === sala.rodadaAtual);
-      if (tempoEsgotou || todosProntos) {
+      if (ultimaRodada || tempoEsgotou || todosProntos) {
         const chave = `proxima-${data.rodada.id}`;
         if (transicaoRef.current !== chave) {
           transicaoRef.current = chave;
@@ -233,7 +235,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
         rodada={data.rodada}
         respostas={data.respostas}
         pontuacoes={data.pontuacoes}
-        finalizado={sala.fase === "fim"}
+        finalizado={sala.fase === "fim" || sala.rodadaAtual >= sala.config.rodadas}
       />
     );
   }
