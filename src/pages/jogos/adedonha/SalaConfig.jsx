@@ -119,7 +119,7 @@ export function SalaConfig({ sala, jogadores, meuJogador, mut, onSair }) {
             <div className="ade-field">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label>Categorias ({config.categorias.length})</label>
-                <button className="btn-ghost" style={{ padding: "4px 8px" }} onClick={resetar}>
+                <button type="button" className="ade-reset-btn" onClick={resetar}>
                   <RotateCcw size={14} /> Padrão
                 </button>
               </div>

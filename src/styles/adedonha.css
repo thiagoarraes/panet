@@ -528,6 +528,25 @@
 .ade-add-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
 .ade-add-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
+/* Reset "Padrão" das categorias: ação sutil alinhada ao label (sem caixa). */
+.ade-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: var(--ade-display);
+  font-weight: 600;
+  font-size: 12.5px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.ade-reset-btn:hover { color: var(--accent); }
+.ade-reset-btn svg { display: block; }
+
 /* Chips de categoria coloridos */
 .ade-chip {
   --chip-c: var(--accent);
