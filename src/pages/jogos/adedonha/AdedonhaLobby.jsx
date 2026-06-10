@@ -35,7 +35,7 @@ export function AdedonhaLobby({ currentUser, onCriar, onEntrar, onVoltar }) {
         </button>
       </div>
 
-      <div className="card">
+      <div className="card ade-salas-card">
         <div className="card-body" style={{ padding: 18 }}>
           {isLoading ? (
             <div className="section-sub">Carregando salas...</div>

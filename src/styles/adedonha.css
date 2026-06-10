@@ -632,6 +632,7 @@
 .ade-toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
 
 /* ── Lobby: lista de salas ────────────────────────────────────────────── */
+.ade-salas-card { overflow: visible; }
 .ade-sala-item {
   display: flex;
   align-items: center;
