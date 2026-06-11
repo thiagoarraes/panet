@@ -100,6 +100,8 @@ export const resolvePublicMediaUrl = (bucket, rawValue, fallback = "") => {
     return ensureAbsoluteUrl(`/storage/v1/object/public/${bucket}/${encodedPath}`) || fallback;
   }
   if (ref.kind === "direct") {
+    // data:/blob: são auto-contidos — nunca prefixar com SUPABASE_URL
+    if (isClientOnlyUrl(ref.original)) return ref.original || fallback;
     return (isAbsoluteWebUrl(ref.original) ? ref.original : ensureAbsoluteUrl(ref.original)) || fallback;
   }
   return fallback;
