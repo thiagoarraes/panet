@@ -21,7 +21,7 @@ const formatDateForStore = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, saving, categorias, currentUserId }) {
+export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, saving, errorMsg, categorias, currentUserId }) {
   const { data: colaboradores = [] } = useColaboradores(currentUserId, { summaryOnly: true });
   if (modal === null) return null;
 
@@ -82,6 +82,11 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
               colaboradores={colaboradores}
             />
           </div>
+          {errorMsg && (
+            <div className="admin-presencial-form-error" style={{ marginBottom: 4 }}>
+              {errorMsg}
+            </div>
+          )}
           <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button className="btn-ghost" onClick={() => setModal(null)}>
               Cancelar

@@ -105,9 +105,12 @@ export function useCreatePost() {
           if (uploadError) throw uploadError;
           imagemUrl = storagePath;
         } catch (err) {
-          console.warn(
-            "Falha ao otimizar/upload da capa do post. Mantendo imagem original.",
+          console.error(
+            "Falha ao enviar a capa do post para o Storage:",
             err?.message || err
+          );
+          throw new Error(
+            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente."
           );
         }
       }
@@ -148,10 +151,12 @@ export function useUpdatePost() {
           if (uploadError) throw uploadError;
           imagemUrl = uploadedPostPath;
         } catch (err) {
-          uploadedPostPath = "";
-          console.warn(
-            "Falha ao otimizar/upload da capa do post. Mantendo imagem original.",
+          console.error(
+            "Falha ao enviar a capa do post para o Storage:",
             err?.message || err
+          );
+          throw new Error(
+            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente."
           );
         }
       }

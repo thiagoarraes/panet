@@ -28,6 +28,7 @@ export function AdminPostagens({ currentUserId }) {
   const [form, setForm] = useState({});
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +57,7 @@ export function AdminPostagens({ currentUserId }) {
 
   const abrirNovo = () => {
     loadAdminPostagemModal().catch(() => {});
+    setErrorMsg("");
     setForm({
       titulo: "",
       categoria: "Notícia",
@@ -70,6 +72,7 @@ export function AdminPostagens({ currentUserId }) {
 
   const abrirEditar = (post) => {
     loadAdminPostagemModal().catch(() => {});
+    setErrorMsg("");
     setForm({ ...post });
     setModal(post);
   };
@@ -78,6 +81,7 @@ export function AdminPostagens({ currentUserId }) {
     if (!form.titulo || !stripHtml(form.descricao)) return;
     try {
       setSaving(true);
+      setErrorMsg("");
       if (modal === "novo") {
         await createPost.mutateAsync({ payload: { ...form }, userId: currentUserId });
       } else {
@@ -89,6 +93,9 @@ export function AdminPostagens({ currentUserId }) {
         });
       }
       setModal(null);
+    } catch (error) {
+      console.error(error);
+      setErrorMsg(error?.message || "Não foi possível salvar a postagem.");
     } finally {
       setSaving(false);
     }
@@ -220,6 +227,7 @@ export function AdminPostagens({ currentUserId }) {
             setModal={setModal}
             onSalvar={salvar}
             saving={saving}
+            errorMsg={errorMsg}
             categorias={CATS}
             currentUserId={currentUserId}
           />
