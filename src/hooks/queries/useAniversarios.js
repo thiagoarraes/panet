@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { ANIVERSARIANTES_INIT } from "../../data/mockData.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const toAvatar = (profile) => {
   const initials = profile?.nome
@@ -59,7 +60,9 @@ export function useAniversarios(userId, options = {}) {
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return ANIVERSARIANTES_INIT;
       const currentYear = new Date().getFullYear();
-      const { data, error } = await supabase.rpc("get_aniversariantes_with_reacoes", { p_ano: currentYear });
+      const { data, error } = await timeQuery("rpc get_aniversariantes_with_reacoes", () =>
+        supabase.rpc("get_aniversariantes_with_reacoes", { p_ano: currentYear })
+      );
       if (error) throw error;
       const mapped = (data || []).map((item) => ({
         ...mapColaboradorBirthdayToUi(item),

@@ -1,19 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { POSTAGENS_INIT } from "../../data/mockData.js";
-import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
+import { resolvePublicMediaUrl } from "../../lib/storageMedia.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 const POST_CATEGORIES = new Set(["Notícia", "Comunicado", "Evento", "Reconhecimento"]);
 const escapeIlikeTerm = (value) => String(value || "").replace(/[\\%_]/g, (char) => `\\${char}`);
 
-const mapDbPostSummaryToUi = (post, likesRows, commentsCount, currentUserId, signedUrlMap) => {
+const mapDbPostSummaryToUi = (post, likesRows, commentsCount, currentUserId) => {
   const likes = (likesRows || []).map((c) => c.colaborador_id);
   return {
     id: post.id,
     titulo: post.titulo,
     descricao: post.descricao,
-    imagem: resolveSignedMediaUrl("postagens", post.imagem_url, signedUrlMap, postImg(post.id)),
+    imagem: resolvePublicMediaUrl("postagens", post.imagem_url, postImg(post.id)),
     categoria: post.categoria,
     data: post.data_post,
     curtidas: likes,
@@ -57,25 +58,23 @@ export function usePostagens(userId, options = {}) {
       if (escapedSearch) postsQuery = postsQuery.ilike("titulo", `%${escapedSearch}%`);
       if (safeLimit) postsQuery = postsQuery.limit(safeLimit);
 
-      const { data: posts, error: postsError } = await postsQuery;
+      const { data: posts, error: postsError } = await timeQuery("select postagens", () => postsQuery);
       if (postsError) throw new Error(postsError.message);
 
       const postagemIds = (posts || []).map((post) => post.id).filter(Boolean);
       if (postagemIds.length === 0) return [];
-      const signedUrlMap = await createSignedUrlMap(
-        "postagens",
-        (posts || []).map((post) => post.imagem_url)
-      );
 
       if (summaryOnly) {
-        return (posts || []).map((post) => mapDbPostSummaryToUi(post, [], 0, userId, signedUrlMap));
+        return (posts || []).map((post) => mapDbPostSummaryToUi(post, [], 0, userId));
       }
 
       const [{ data: likesRows, error: likesError }, { data: commentsRows, error: commentsError }] =
-        await Promise.all([
-          supabase.from("curtidas").select("postagem_id,colaborador_id").in("postagem_id", postagemIds),
-          supabase.from("comentarios").select("id,postagem_id").in("postagem_id", postagemIds),
-        ]);
+        await timeQuery("select curtidas+comentarios (paralelo)", () =>
+          Promise.all([
+            supabase.from("curtidas").select("postagem_id,colaborador_id").in("postagem_id", postagemIds),
+            supabase.from("comentarios").select("id,postagem_id").in("postagem_id", postagemIds),
+          ])
+        );
 
       if (likesError) throw new Error(likesError.message);
       if (commentsError) throw new Error(commentsError.message);
@@ -97,8 +96,7 @@ export function usePostagens(userId, options = {}) {
           post,
           likesByPost.get(String(post.id)) || [],
           commentsCountByPost.get(String(post.id)) || 0,
-          userId,
-          signedUrlMap
+          userId
         )
       );
     },

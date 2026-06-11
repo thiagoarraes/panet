@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { MURAL_INIT } from "../../data/mockData.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 // ---------------------------------------------------------------------------
 // Helpers (mirrors Layout.jsx)
@@ -97,13 +98,15 @@ export function useMural(userId, options = {}) {
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return MURAL_INIT;
 
-      const { data, error } = await supabase
-        .from("mural")
-        .select(
-          "id,texto,created_at,colaborador_id,colaborador:colaboradores!mural_colaborador_id_fkey(id,nome,cargo,cor_avatar,foto_url)"
-        )
-        .order("created_at", { ascending: false })
-        .limit(MURAL_FETCH_LIMIT);
+      const { data, error } = await timeQuery("select mural", () =>
+        supabase
+          .from("mural")
+          .select(
+            "id,texto,created_at,colaborador_id,colaborador:colaboradores!mural_colaborador_id_fkey(id,nome,cargo,cor_avatar,foto_url)"
+          )
+          .order("created_at", { ascending: false })
+          .limit(MURAL_FETCH_LIMIT)
+      );
       if (error) throw error;
 
       return (data || []).map((row) =>

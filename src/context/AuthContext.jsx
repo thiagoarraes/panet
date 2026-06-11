@@ -4,6 +4,7 @@ import { COLABORADORES } from "../data/mockData.js";
 import { supabase, isSupabaseEnabled, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase.js";
 import { USE_SECURE_COOKIES, apiLogin, apiLogout, apiGetSession, apiSyncSession } from "../lib/authApi.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
+import { timeQuery } from "../lib/queryTiming.js";
 import { toPostSlug } from "../lib/postRouting.js";
 import {
   AUTH_TIMEOUT_MS,
@@ -30,17 +31,23 @@ import { DASHBOARD_SNAPSHOT_INITIAL_LIMITS, DASHBOARD_SNAPSHOT_FULL_LIMITS } fro
 const THEME_KEY = "panet.theme";
 const mockMe = COLABORADORES.find((c) => c.isMe);
 
+// Colunas do perfil realmente consumidas pelo app (evita select *).
+const PROFILE_SELECT_COLUMNS =
+  "id,nome,cargo,email,telefone,cor_avatar,foto_url,instagram,linkedin,github,perfil,primeiro_acesso,aniversario,admin_modulos,ativo";
+
 async function fetchProfileDirect(userId, accessToken) {
   const baseUrl = String(SUPABASE_URL || "").replace(/\/$/, "");
   if (!baseUrl || !SUPABASE_ANON_KEY) return null;
-  const url = `${baseUrl}/rest/v1/colaboradores?id=eq.${encodeURIComponent(userId)}&select=*&limit=1`;
-  const response = await fetch(url, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
-  });
+  const url = `${baseUrl}/rest/v1/colaboradores?id=eq.${encodeURIComponent(userId)}&select=${PROFILE_SELECT_COLUMNS}&limit=1`;
+  const response = await timeQuery("auth: fetch perfil direto (REST)", () =>
+    fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    })
+  );
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new Error(text || `Falha ao carregar perfil (${response.status})`);
@@ -150,10 +157,18 @@ export function AuthProvider({ children }) {
     if (recentLoad) return;
 
     const loadPromise = (async () => {
-      const { data, error } = await withTimeout(
-        supabase.from("colaboradores").select("*").eq("id", userId).maybeSingle(),
-        AUTH_TIMEOUT_MS,
-        "profile_timeout"
+      // Snapshot do dashboard só depende do userId — dispara em paralelo com o
+      // perfil em vez de esperar a resposta. Se o usuário estiver em primeiro
+      // acesso o prefetch é desperdiçado, mas inofensivo.
+      if (isSupabaseEnabled) {
+        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS)).catch(() => {});
+      }
+      const { data, error } = await timeQuery("auth: select perfil colaborador", () =>
+        withTimeout(
+          supabase.from("colaboradores").select(PROFILE_SELECT_COLUMNS).eq("id", userId).maybeSingle(),
+          AUTH_TIMEOUT_MS,
+          "profile_timeout"
+        )
       );
       if (error) throw new Error("Não foi possível carregar o perfil do colaborador.");
       if (!data) throw new Error("Seu usuário não está vinculado na tabela de colaboradores.");
@@ -166,9 +181,8 @@ export function AuthProvider({ children }) {
       setAdminServerConfirmed(resolvedProfile.perfil === "admin");
       setTela(resolvedProfile.primeiro_acesso ? "primeiro_acesso" : "app");
 
-      // Prefetch do snapshot enquanto o app ainda está navegando para o dashboard
+      // Prefetch inicial já disparou em paralelo acima; aqui só agenda o completo.
       if (!resolvedProfile.primeiro_acesso && isSupabaseEnabled) {
-        queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_INITIAL_LIMITS)).catch(() => {});
         const scheduleFullPrefetch = () =>
           queryClient.prefetchQuery(getDashboardSnapshotQueryOptions(userId, DASHBOARD_SNAPSHOT_FULL_LIMITS)).catch(() => {});
         if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
@@ -195,7 +209,7 @@ export function AuthProvider({ children }) {
       if (globalProfileLoadState.promise === loadPromise)
         globalProfileLoadState.promise = null;
     }
-  }, []);
+  }, [queryClient]);
 
   // ─── Bootstrap auth ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -232,16 +246,22 @@ export function AuthProvider({ children }) {
       try {
         let session = null;
         if (USE_SECURE_COOKIES) {
-          const apiSession = await withTimeout(apiGetSession(), AUTH_TIMEOUT_MS, "session_timeout");
+          const apiSession = await timeQuery("auth: GET /api/auth/session", () =>
+            withTimeout(apiGetSession(), AUTH_TIMEOUT_MS, "session_timeout")
+          );
           if (apiSession?.access_token) {
-            const { data: setData, error: setError } = await supabase.auth.setSession({
-              access_token: apiSession.access_token,
-              refresh_token: apiSession.refresh_token || "",
-            });
+            const { data: setData, error: setError } = await timeQuery("auth: supabase.auth.setSession", () =>
+              supabase.auth.setSession({
+                access_token: apiSession.access_token,
+                refresh_token: apiSession.refresh_token || "",
+              })
+            );
             if (!setError) session = setData?.session || null;
           }
         } else {
-          const { data, error } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, "session_timeout");
+          const { data, error } = await timeQuery("auth: supabase.auth.getSession", () =>
+            withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, "session_timeout")
+          );
           if (error) throw error;
           session = data.session;
         }
@@ -359,7 +379,7 @@ export function AuthProvider({ children }) {
       }
       subscriptionData.subscription.unsubscribe();
     };
-  }, [loadProfileAndRoute]);
+  }, [loadProfileAndRoute, queryClient]);
 
   // ─── Route resolution ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -582,14 +602,14 @@ export function AuthProvider({ children }) {
       fnData = await invokeEdgeFunctionHttp("update-profile", updatePayload, accessToken, "Não foi possível salvar o perfil.");
     } catch (error) { fnError = error; }
     if (fnError || fnData?.error) {
-      const { data, error } = await supabase.from("colaboradores").update(updatePayload).eq("id", currentProfile.id).select("*").maybeSingle();
+      const { data, error } = await supabase.from("colaboradores").update(updatePayload).eq("id", currentProfile.id).select(PROFILE_SELECT_COLUMNS).maybeSingle();
       if (error) throw new Error(error.message || fnData?.error || fnError?.message || "Não foi possível salvar o perfil.");
       updatedProfile = data || updatedProfile;
     } else if (fnData?.profile) {
       updatedProfile = fnData.profile;
     }
     if (updatePayload.foto_url && updatedProfile?.foto_url !== updatePayload.foto_url) {
-      const { data: refreshed, error: refreshError } = await supabase.from("colaboradores").update({ foto_url: updatePayload.foto_url }).eq("id", currentProfile.id).select("*").maybeSingle();
+      const { data: refreshed, error: refreshError } = await supabase.from("colaboradores").update({ foto_url: updatePayload.foto_url }).eq("id", currentProfile.id).select(PROFILE_SELECT_COLUMNS).maybeSingle();
       if (!refreshError && refreshed) updatedProfile = refreshed;
       else updatedProfile = { ...updatedProfile, foto_url: updatePayload.foto_url };
     }

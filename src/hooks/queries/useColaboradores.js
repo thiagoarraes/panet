@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { COLABORADORES } from "../../data/mockData.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const toAvatar = (profile) => {
   const initials = profile?.nome
@@ -42,12 +43,14 @@ export function useColaboradores(userId, options = {}) {
     queryKey: ["colaboradores", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return COLABORADORES;
-      const { data, error } = await supabase
-        .from("colaboradores")
-        .select(selectFields)
-        .eq("ativo", true)
-        .order("nome", { ascending: true })
-        .limit(1000);
+      const { data, error } = await timeQuery(`select colaboradores (${summaryOnly ? "summary" : "full"})`, () =>
+        supabase
+          .from("colaboradores")
+          .select(selectFields)
+          .eq("ativo", true)
+          .order("nome", { ascending: true })
+          .limit(1000)
+      );
       if (error) throw error;
       return (data || []).map((row) => ({
         ...toAvatar(row),

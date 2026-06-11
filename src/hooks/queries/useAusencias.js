@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const toAvatar = (profile) => {
   const initials = profile?.nome
@@ -35,7 +36,9 @@ export function useAusencias(userId, options = {}) {
     queryKey: ["ausencias", userId, summaryOnly ? "summary" : "full"],
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return [];
-      const { data, error } = await supabase.rpc("get_public_ausencias");
+      const { data, error } = await timeQuery("rpc get_public_ausencias", () =>
+        supabase.rpc("get_public_ausencias")
+      );
       if (error) throw error;
       return (data || []).map((item) => ({
         id: item.id,

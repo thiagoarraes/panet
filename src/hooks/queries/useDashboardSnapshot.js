@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
-import { createSignedUrlMap, resolveSignedMediaUrl } from "../../lib/storageMedia.js";
+import { resolvePublicMediaUrl } from "../../lib/storageMedia.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const postImg = (seed) => `https://picsum.photos/seed/${seed}/800/400`;
 
@@ -53,13 +54,13 @@ const daysUntilBirthday = (isoDate) => {
   return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 };
 
-const mapDbPostSummaryToUi = (post, currentUserId, signedUrlMap) => {
+const mapDbPostSummaryToUi = (post, currentUserId) => {
   const likes = Array.isArray(post?.curtidas) ? post.curtidas.filter(Boolean) : [];
   return {
     id: post?.id,
     titulo: post?.titulo || "",
     descricao: post?.descricao || "",
-    imagem: resolveSignedMediaUrl("postagens", post?.imagem_url, signedUrlMap, postImg(post?.id || "post")),
+    imagem: resolvePublicMediaUrl("postagens", post?.imagem_url, postImg(post?.id || "post")),
     categoria: post?.categoria || "Notícia",
     data: post?.data_post || null,
     curtidas: likes,
@@ -170,13 +171,15 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
     ],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      let { data, error } = await supabase.rpc("get_dashboard_snapshot", {
-        p_posts_limit: safePostsLimit,
-        p_mural_limit: safeMuralLimit,
-        p_ferias_limit: safeFeriasLimit,
-        p_ausencias_limit: safeAusenciasLimit,
-        p_colaboradores_limit: safeColaboradoresLimit,
-      });
+      let { data, error } = await timeQuery(`rpc get_dashboard_snapshot (posts=${safePostsLimit})`, () =>
+        supabase.rpc("get_dashboard_snapshot", {
+          p_posts_limit: safePostsLimit,
+          p_mural_limit: safeMuralLimit,
+          p_ferias_limit: safeFeriasLimit,
+          p_ausencias_limit: safeAusenciasLimit,
+          p_colaboradores_limit: safeColaboradoresLimit,
+        })
+      );
       if (error && isMissingExtendedSnapshotFunction(error)) {
         const fallback = await supabase.rpc("get_dashboard_snapshot", {
           p_posts_limit: safePostsLimit,
@@ -193,12 +196,9 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
       }
       if (!payload || typeof payload !== "object") payload = {};
 
-      const signedUrlMap = await createSignedUrlMap(
-        "postagens",
-        safeArray(payload.postagens).map((post) => post?.imagem_url)
-      );
+      // Bucket "postagens" é público — URL direta de CDN, sem round-trip de assinatura.
       const postagens = safeArray(payload.postagens).map((post) =>
-        mapDbPostSummaryToUi(post, userId, signedUrlMap)
+        mapDbPostSummaryToUi(post, userId)
       );
       const mural = safeArray(payload.mural).map(mapDbMuralToUi);
       const feriasRows = safeArray(payload.ferias).map(mapDbFeriasToUi);

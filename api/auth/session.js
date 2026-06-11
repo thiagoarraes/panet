@@ -51,14 +51,11 @@ function clearAuthCookies(res) {
   ]);
 }
 
-function decodeJwtExp(token) {
+function decodeJwtPayload(token) {
   try {
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64").toString("utf-8")
-    );
-    return Number(payload.exp || 0);
+    return JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf-8")) || null;
   } catch (_) {
-    return 0;
+    return null;
   }
 }
 
@@ -79,19 +76,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ session: null });
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-  });
-
-  // Try the access token first (if present and not expiring in < 30s)
+  // Fast path: access token still valid (not expiring in < 30s).
+  // We skip the supabase.auth.getUser() network round-trip here on purpose:
+  // this endpoint only echoes back a token we ourselves stored in an httpOnly
+  // cookie, and Supabase verifies the token's signature on every actual API
+  // call the client makes with it. A tampered cookie grants nothing.
   if (accessToken) {
-    const exp = decodeJwtExp(accessToken);
+    const payload = decodeJwtPayload(accessToken);
     const nowSec = Math.floor(Date.now() / 1000);
-    if (exp > nowSec + 30) {
-      const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-      if (!userError && userData?.user) {
-        return res.status(200).json({ access_token: accessToken, refresh_token: refreshToken, user: userData.user });
-      }
+    if (payload && Number(payload.exp || 0) > nowSec + 30 && payload.sub) {
+      return res.status(200).json({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_at: Number(payload.exp || 0),
+        user: { id: payload.sub, email: payload.email || "" },
+      });
     }
   }
 
@@ -100,6 +99,10 @@ export default async function handler(req, res) {
     clearAuthCookies(res);
     return res.status(200).json({ session: null });
   }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false },
+  });
 
   const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
     refresh_token: refreshToken,

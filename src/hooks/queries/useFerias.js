@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { FERIAS_INIT, DAYOFF_INIT } from "../../data/mockData.js";
+import { timeQuery } from "../../lib/queryTiming.js";
 
 const toAvatar = (profile) => {
   const initials = profile?.nome
@@ -55,13 +56,15 @@ export function useFerias(userId, options = {}) {
       if (!isSupabaseEnabled || !supabase) {
         return { ferias: FERIAS_INIT, dayoff: DAYOFF_INIT };
       }
-      const { data, error } = await supabase
-        .from("ferias")
-        .select(
-          `id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(${colaboradorFields})`
-        )
-        .order("inicio", { ascending: true })
-        .limit(500);
+      const { data, error } = await timeQuery("select ferias", () =>
+        supabase
+          .from("ferias")
+          .select(
+            `id,inicio,fim,status,tipo,colaborador:colaboradores!ferias_colaborador_id_fkey(${colaboradorFields})`
+          )
+          .order("inicio", { ascending: true })
+          .limit(500)
+      );
       if (error) throw error;
       const mapped = (data || []).map(mapDbFeriasToUi);
       return {

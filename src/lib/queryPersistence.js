@@ -2,8 +2,10 @@ import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 
 const PERSIST_STORAGE_KEY = "panet.query-cache.v1";
-const PERSIST_MAX_AGE_MS = 5 * 60 * 1000;
-const PERSIST_BUSTER = "panet-query-cache-2026-03-22";
+// 24h: primeiro load do dia renderiza instantâneo com dados persistidos;
+// staleTime de cada query continua controlando o refetch em background.
+const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const PERSIST_BUSTER = "panet-query-cache-2026-06-11";
 
 const PERSISTED_QUERY_ROOTS = new Set([
   "dashboard-snapshot",
