@@ -75,51 +75,71 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
   useEffect(() => () => clearTimeout(overlayTimerRef.current), []);
 
   // ── Logica de transicao do host ───────────────────────────────────────────
-  const transicaoRef = useRef("");
-  // Em caso de falha (ex.: timeout/lock transitório), liberar o ref só depois de
-  // um intervalo evita re-disparo em loop a cada render (storm de writes).
-  const liberarComBackoff = (chave) => {
-    setTimeout(() => {
-      if (transicaoRef.current === chave) transicaoRef.current = "";
-    }, 3000);
+  // Guarda de reentrância + backoff exponencial + teto de tentativas. Sem isso,
+  // o useEffect (que roda a cada tick) re-dispara a mutation que falha em loop,
+  // gerando storm de writes que satura o pool de conexões do banco.
+  const transicaoRef = useRef({ chave: "", emVoo: false, tentativas: 0, bloqueadoAte: 0 });
+  const MAX_TENTATIVAS_TRANSICAO = 4;
+
+  const resetTransicao = () => {
+    transicaoRef.current = { chave: "", emVoo: false, tentativas: 0, bloqueadoAte: 0 };
   };
+
+  const tentarTransicao = (chave, executar) => {
+    const st = transicaoRef.current;
+    const agora = Date.now();
+    if (st.chave === chave) {
+      if (st.emVoo) return; // já rodando esta transição
+      if (st.tentativas >= MAX_TENTATIVAS_TRANSICAO) return; // desistiu após N falhas
+      if (agora < st.bloqueadoAte) return; // aguardando backoff
+    } else {
+      transicaoRef.current = { chave, emVoo: false, tentativas: 0, bloqueadoAte: 0 };
+    }
+    transicaoRef.current.emVoo = true;
+    Promise.resolve()
+      .then(executar)
+      .then(() => {
+        // Sucesso: a sala muda de fase e a chave deixa de casar; só libera o flag.
+        if (transicaoRef.current.chave === chave) transicaoRef.current.emVoo = false;
+      })
+      .catch(() => {
+        const s = transicaoRef.current;
+        if (s.chave !== chave) return;
+        s.emVoo = false;
+        s.tentativas += 1;
+        s.bloqueadoAte = Date.now() + Math.min(3000 * 2 ** s.tentativas, 30000);
+      });
+  };
+
+  // Sem array de deps de propósito: precisa reavaliar a cada render (o tick de
+  // 1s força isso) para checar as transições por tempo. O storm é evitado pelo
+  // guard de reentrância + backoff em tentarTransicao, não pelas deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isHost || !sala || !data) return;
     const cfg = sala.config;
 
     if (sala.fase === "preenchimento" && data.rodada) {
       const restante = segundosRestantes(sala.faseIniciadaEm, tempoSegundos(cfg.tempo));
-      const tempoEsgotou = restante <= 0;
-      const alguemDeuStop = Boolean(data.rodada.stopEm);
-      if (tempoEsgotou || alguemDeuStop) {
-        const chave = `validacao-${data.rodada.id}`;
-        if (transicaoRef.current !== chave) {
-          transicaoRef.current = chave;
-          mut.irParaValidacao({ salaId: sala.id, rodadaId: data.rodada.id }).catch(() => {
-            liberarComBackoff(chave);
-          });
-        }
+      if (restante <= 0 || Boolean(data.rodada.stopEm)) {
+        tentarTransicao(`validacao-${data.rodada.id}`, () =>
+          mut.irParaValidacao({ salaId: sala.id, rodadaId: data.rodada.id })
+        );
       }
     }
 
     if (sala.fase === "validacao" && data.rodada) {
       const { acabou } = estadoValidacao(sala.faseIniciadaEm, cfg.categorias.length);
       if (acabou) {
-        const chave = `ranking-${data.rodada.id}`;
-        if (transicaoRef.current !== chave) {
-          transicaoRef.current = chave;
-          mut
-            .fecharRodada({
-              sala,
-              rodada: data.rodada,
-              jogadores,
-              respostas: data.respostas,
-              validacoes: data.validacoes,
-            })
-            .catch(() => {
-              liberarComBackoff(chave);
-            });
-        }
+        tentarTransicao(`ranking-${data.rodada.id}`, () =>
+          mut.fecharRodada({
+            sala,
+            rodada: data.rodada,
+            jogadores,
+            respostas: data.respostas,
+            validacoes: data.validacoes,
+          })
+        );
       }
     }
 
@@ -128,24 +148,17 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
     if (sala.fase === "ranking" && data.rodada) {
       const ultimaRodada = sala.rodadaAtual >= cfg.rodadas;
       const restante = segundosRestantes(sala.faseIniciadaEm, TEMPO_RANKING_SEGUNDOS);
-      const tempoEsgotou = restante <= 0;
       const todosProntos =
         jogadores.length > 0 &&
         jogadores.every((j) => j.prontoRodada === sala.rodadaAtual);
-      if (ultimaRodada || tempoEsgotou || todosProntos) {
-        const chave = `proxima-${data.rodada.id}`;
-        if (transicaoRef.current !== chave) {
-          transicaoRef.current = chave;
-          mut
-            .proximaRodada({
-              sala,
-              rodadaAtual: sala.rodadaAtual,
-              letrasUsadas: [sala.letraAtual].filter(Boolean),
-            })
-            .catch(() => {
-              liberarComBackoff(chave);
-            });
-        }
+      if (ultimaRodada || restante <= 0 || todosProntos) {
+        tentarTransicao(`proxima-${data.rodada.id}`, () =>
+          mut.proximaRodada({
+            sala,
+            rodadaAtual: sala.rodadaAtual,
+            letrasUsadas: [sala.letraAtual].filter(Boolean),
+          })
+        );
       }
     }
   });
@@ -172,7 +185,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
       await mut.sairSala({ salaId: sala.id, jogadorId: meuJogador.id, isHost }).catch(() => {});
     }
     setSalaId(null);
-    transicaoRef.current = "";
+    resetTransicao();
   };
 
   // ── Render ───────────────────────────────────────────────────────────────

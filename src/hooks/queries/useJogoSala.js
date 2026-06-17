@@ -46,7 +46,16 @@ export function useJogoSala(salaId, options = {}) {
   const query = useQuery({
     queryKey: ["jogo-sala", salaId],
     enabled: queryEnabled && isSupabaseEnabled,
-    staleTime: 5 * 1000,
+    staleTime: 2 * 1000,
+    // Fallback de polling: o jogo não pode depender 100% do realtime (que pode
+    // atrasar/cair). Enquanto a sala está ativa, refaz o fetch a cada 2,5s para
+    // garantir que STOP/avanço de fase apareçam para todos os clientes.
+    refetchInterval: (q) => {
+      const fase = q.state.data?.sala?.fase;
+      if (!fase || fase === "fim") return false;
+      return 2500;
+    },
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase || !salaId) return null;
 

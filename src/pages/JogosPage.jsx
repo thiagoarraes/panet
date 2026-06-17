@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { AdedonhaApp } from "./jogos/adedonha/AdedonhaApp.jsx";
+import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 import "../styles/adedonha.css";
 
 const JOGOS = [
@@ -18,11 +19,16 @@ export function JogosPage({ currentUser, currentUserId }) {
 
   if (jogoAtivo === "adedonha") {
     return (
-      <AdedonhaApp
-        currentUser={currentUser}
-        currentUserId={currentUserId}
-        onSair={() => setJogoAtivo(null)}
-      />
+      <ErrorBoundary
+        mensagem="O jogo travou. Volte para os jogos e tente de novo."
+        onReset={() => setJogoAtivo(null)}
+      >
+        <AdedonhaApp
+          currentUser={currentUser}
+          currentUserId={currentUserId}
+          onSair={() => setJogoAtivo(null)}
+        />
+      </ErrorBoundary>
     );
   }
 

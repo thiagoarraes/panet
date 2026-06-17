@@ -11,9 +11,11 @@ import { JogadoresPanel } from "./JogadoresPanel.jsx";
 // auto-avança para a próxima (sem precisar clicar em nada).
 export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJogador, mut }) {
   const categorias = sala.config.categorias;
-  const { indiceVisivel, restante } = estadoValidacao(sala.faseIniciadaEm, categorias.length);
+  const { indiceVisivel, restante, acabou } = estadoValidacao(sala.faseIniciadaEm, categorias.length);
   const categoriaAtual = categorias[indiceVisivel];
-  const pct = Math.max(0, Math.min(100, (restante / TEMPO_VALIDACAO_CATEGORIA) * 100));
+  // Quando todas as categorias já passaram, a barra para (em vez de ficar
+  // ciclando 0..10s na última) enquanto o host fecha a rodada.
+  const pct = acabou ? 0 : Math.max(0, Math.min(100, (restante / TEMPO_VALIDACAO_CATEGORIA) * 100));
 
   // Meu voto por resposta.
   const meusVotos = useMemo(() => {
@@ -36,9 +38,11 @@ export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJ
       <div className="ade-topbar">
         <div className="ade-badge-letra">{rodada?.letra}</div>
         <div style={{ flex: 1 }}>
-          <h1 className="section-title">Valide as respostas</h1>
+          <h1 className="section-title">{acabou ? "Finalizando rodada…" : "Valide as respostas"}</h1>
           <p className="ade-rodada-info">
-            Rodada {sala.rodadaAtual}/{sala.config.rodadas} · categoria {indiceVisivel + 1}/{categorias.length} · {restante}s
+            {acabou
+              ? `Rodada ${sala.rodadaAtual}/${sala.config.rodadas} · apurando pontuação`
+              : `Rodada ${sala.rodadaAtual}/${sala.config.rodadas} · categoria ${indiceVisivel + 1}/${categorias.length} · ${restante}s`}
           </p>
         </div>
       </div>
