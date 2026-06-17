@@ -6,6 +6,18 @@ import { normalizeStoredMediaValue } from "../../lib/storageMedia.js";
 const isDataImageUrl = (value) =>
   /^data:image\//i.test(String(value || "").trim());
 
+// Converte uma data: URL em Blob SEM usar fetch(). fetch("data:...") é bloqueado
+// pela CSP (connect-src não inclui data:), o que fazia o upload da capa falhar
+// e o código cair no fallback de gravar base64 no banco.
+const dataUrlToBlob = (dataUrl) => {
+  const [meta, base64 = ""] = String(dataUrl).split(",");
+  const contentType = meta.match(/data:([^;]+)/)?.[1] || "application/octet-stream";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: contentType });
+};
+
 const invalidatePostagens = (queryClient) => {
   queryClient.invalidateQueries({ queryKey: ["postagens"] });
   queryClient.invalidateQueries({ queryKey: ["postagens-slug-index"] });
@@ -97,7 +109,7 @@ export function useCreatePost() {
       let imagemUrl = payload.imagem || null;
       if (isDataImageUrl(imagemUrl)) {
         try {
-          const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
+          const sourceBlob = dataUrlToBlob(imagemUrl);
           const storagePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
           const { error: uploadError } = await supabase.storage
             .from("postagens")
@@ -143,7 +155,7 @@ export function useUpdatePost() {
 
       if (isDataImageUrl(imagemUrl)) {
         try {
-          const sourceBlob = await fetch(imagemUrl).then((res) => res.blob());
+          const sourceBlob = dataUrlToBlob(imagemUrl);
           uploadedPostPath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
           const { error: uploadError } = await supabase.storage
             .from("postagens")
