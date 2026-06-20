@@ -2,7 +2,7 @@ import { LogOut } from "lucide-react";
 import { JogadoresPanel } from "./JogadoresPanel.jsx";
 
 // Tela de espera para jogadores nao-host: aguardando o host iniciar.
-export function SalaEspera({ sala, jogadores, meuJogador, onSair }) {
+export function SalaEspera({ sala, jogadores, meuJogador, onlineIds, onSair }) {
   return (
     <div className="fade-up ade-wrap">
       <div className="ade-topbar">
@@ -16,7 +16,7 @@ export function SalaEspera({ sala, jogadores, meuJogador, onSair }) {
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body" style={{ padding: 32, textAlign: "center" }}>
             <h3 style={{ marginBottom: 8 }}>Aguardando o host iniciar…</h3>

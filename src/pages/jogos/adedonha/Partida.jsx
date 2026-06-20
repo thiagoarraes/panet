@@ -3,7 +3,7 @@ import { segundosRestantes, tempoSegundos } from "../../../lib/adedonha.js";
 import { JogadoresPanel } from "./JogadoresPanel.jsx";
 
 // Fase de preenchimento: letra, cronometro, inputs por categoria e STOP.
-export function Partida({ sala, rodada, respostas, jogadores, meuJogador, mut }) {
+export function Partida({ sala, rodada, respostas, jogadores, meuJogador, mut, onlineIds }) {
   const categorias = sala.config.categorias;
   const total = tempoSegundos(sala.config.tempo);
   const restante = segundosRestantes(sala.faseIniciadaEm, total);
@@ -63,7 +63,7 @@ export function Partida({ sala, rodada, respostas, jogadores, meuJogador, mut })
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body" style={{ padding: 18 }}>
             <div className="ade-categorias">

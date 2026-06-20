@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useJogoSala } from "../../../hooks/queries/useJogoSala.js";
+import { usePresencaSala } from "../../../hooks/queries/usePresencaSala.js";
 import { useJogoMutations } from "../../../hooks/mutations/useJogoMutations.js";
 import {
   estadoValidacao,
@@ -22,6 +23,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
   const [salaId, setSalaId] = useState(null);
   const mut = useJogoMutations();
   const { data, isLoading } = useJogoSala(salaId, { enabled: Boolean(salaId) });
+  const onlineIds = usePresencaSala(salaId, currentUserId, Boolean(salaId));
 
   // Tick de 1s para recomputar cronometros.
   const [, setTick] = useState(0);
@@ -226,7 +228,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
     );
   }
 
-  const sharedProps = { sala, jogadores, meuJogador, isHost, mut, currentUserId, onSair: handleSairSala };
+  const sharedProps = { sala, jogadores, meuJogador, isHost, mut, currentUserId, onlineIds, onSair: handleSairSala };
 
   let conteudo;
   if (sala.fase === "lobby") {

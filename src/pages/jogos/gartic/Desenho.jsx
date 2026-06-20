@@ -6,7 +6,7 @@ import { ChatPalpites } from "./ChatPalpites.jsx";
 
 // Fase 'desenho': desenhista desenha (canvas + broadcast), demais adivinham no chat.
 export function Desenho(props) {
-  const { sala, jogadores, meuJogador, isDesenhista, rodada, palavra, palpites, mut, onSair } = props;
+  const { sala, jogadores, meuJogador, isDesenhista, rodada, palavra, palpites, mut, onlineIds, onSair } = props;
   const desenhista = jogadores.find((j) => j.id === rodada?.desenhistaId);
   const restante = segundosRestantes(sala.faseIniciadaEm, tempoSegundos(sala.config.tempo));
 
@@ -44,7 +44,7 @@ export function Desenho(props) {
 
       <div className="gartic-play-grid">
         <div className="gartic-side">
-          <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} />
+          <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
         </div>
         <GarticCanvas key={rodada?.id} salaId={sala.id} isDesenhista={isDesenhista} />
         <ChatPalpites

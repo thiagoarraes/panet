@@ -9,7 +9,7 @@ import { JogadoresPanel } from "./JogadoresPanel.jsx";
 
 // Fase de validação StopotS: uma categoria por vez, com timer próprio que
 // auto-avança para a próxima (sem precisar clicar em nada).
-export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJogador, mut }) {
+export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJogador, mut, onlineIds }) {
   const categorias = sala.config.categorias;
   const { indiceVisivel, restante, acabou } = estadoValidacao(sala.faseIniciadaEm, categorias.length);
   const categoriaAtual = categorias[indiceVisivel];
@@ -52,7 +52,7 @@ export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJ
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body" style={{ padding: 18 }}>
             <div className="ade-valida-cat">

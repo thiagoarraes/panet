@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useGarticSala } from "../../../hooks/queries/useGarticSala.js";
+import { usePresencaSala } from "../../../hooks/queries/usePresencaSala.js";
 import { useGarticMutations } from "../../../hooks/mutations/useGarticMutations.js";
 import {
   TEMPO_ESCOLHA_SEGUNDOS,
@@ -24,6 +25,7 @@ export function GarticApp({ currentUser, currentUserId, onSair }) {
   const [salaId, setSalaId] = useState(null);
   const mut = useGarticMutations();
   const { data, isLoading } = useGarticSala(salaId, { enabled: Boolean(salaId) });
+  const onlineIds = usePresencaSala(salaId, currentUserId, Boolean(salaId));
 
   // Tick de 1s para recomputar cronometros e reavaliar transicoes.
   const [, setTick] = useState(0);
@@ -217,6 +219,7 @@ export function GarticApp({ currentUser, currentUserId, onSair }) {
     rodada,
     palavra,
     palpites,
+    onlineIds,
     onSair: handleSairSala,
   };
 

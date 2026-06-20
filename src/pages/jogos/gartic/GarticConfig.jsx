@@ -4,7 +4,7 @@ import { RODADAS_OPCOES, TEMPO_OPCOES } from "../../../lib/gartic.js";
 import { JogadoresPanel } from "../adedonha/JogadoresPanel.jsx";
 
 // Tela de configuracao do host (lobby da sala de gartic).
-export function GarticConfig({ sala, jogadores, meuJogador, mut, onSair }) {
+export function GarticConfig({ sala, jogadores, meuJogador, mut, onlineIds, onSair }) {
   const [config, setConfig] = useState(sala.config);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -44,7 +44,7 @@ export function GarticConfig({ sala, jogadores, meuJogador, mut, onSair }) {
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 18 }}>
             <div className="ade-config-grid">

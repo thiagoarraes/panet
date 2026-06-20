@@ -11,7 +11,7 @@ import { JogadoresPanel } from "../adedonha/JogadoresPanel.jsx";
 // Fase 'escolha': o desenhista escolhe entre 3 palavras; os demais aguardam.
 // As opcoes sao sorteadas localmente no cliente do desenhista (fixadas no mount)
 // — nunca trafegam pelo banco, entao os adivinhadores nao conseguem espia-las.
-export function EscolhaPalavra({ sala, jogadores, meuJogador, isDesenhista, rodada, mut, onSair }) {
+export function EscolhaPalavra({ sala, jogadores, meuJogador, isDesenhista, rodada, mut, onlineIds, onSair }) {
   const [enviando, setEnviando] = useState(false);
   const [opcoes] = useState(() => sortearPalavras([], OPCOES_PALAVRA));
   const desenhista = jogadores.find((j) => j.id === rodada?.desenhistaId);
@@ -42,7 +42,7 @@ export function EscolhaPalavra({ sala, jogadores, meuJogador, isDesenhista, roda
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body gartic-escolha" style={{ padding: 28, textAlign: "center" }}>
             <div className="gartic-timer-badge" aria-hidden="true">{restante}s</div>

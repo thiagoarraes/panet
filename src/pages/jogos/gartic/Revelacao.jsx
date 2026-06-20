@@ -3,7 +3,7 @@ import { Avatar } from "../../../components/Avatar.jsx";
 import { JogadoresPanel } from "../adedonha/JogadoresPanel.jsx";
 
 // Fase 'revelacao' (e 'fim'): mostra a palavra, os acertos da rodada e o ranking.
-export function Revelacao({ jogadores, meuJogador, rodada, palavra, palpites, finalizado, onSair }) {
+export function Revelacao({ jogadores, meuJogador, rodada, palavra, palpites, finalizado, onlineIds, onSair }) {
   const desenhista = jogadores.find((j) => j.id === rodada?.desenhistaId);
   const palavraFinal = palavra || rodada?.palavraRevelada || "";
 
@@ -37,7 +37,7 @@ export function Revelacao({ jogadores, meuJogador, rodada, palavra, palpites, fi
       </div>
 
       <div className="ade-grid">
-        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} />
+        <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
         <div className="card">
           <div className="card-body gartic-revelacao" style={{ padding: 28 }}>
             {finalizado ? (
