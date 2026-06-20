@@ -113,7 +113,7 @@ drop policy if exists "gartic_rodadas: host ou desenhista atualiza" on public.ga
 create policy "gartic_rodadas: leitura autenticados"
   on public.gartic_rodadas for select
   to authenticated
-  using (auth.role() = 'authenticated');
+  using ((select auth.role()) = 'authenticated');
 
 create policy "gartic_rodadas: host insere"
   on public.gartic_rodadas for insert
@@ -128,14 +128,14 @@ create policy "gartic_rodadas: host ou desenhista atualiza"
     public.jogo_is_host(sala_id)
     or exists (
       select 1 from public.jogo_jogadores j
-      where j.id = gartic_rodadas.desenhista_id and j.colaborador_id = auth.uid()
+      where j.id = gartic_rodadas.desenhista_id and j.colaborador_id = (select auth.uid())
     )
   )
   with check (
     public.jogo_is_host(sala_id)
     or exists (
       select 1 from public.jogo_jogadores j
-      where j.id = gartic_rodadas.desenhista_id and j.colaborador_id = auth.uid()
+      where j.id = gartic_rodadas.desenhista_id and j.colaborador_id = (select auth.uid())
     )
   );
 
@@ -168,7 +168,7 @@ drop policy if exists "gartic_palpites: host atualiza" on public.gartic_palpites
 create policy "gartic_palpites: leitura autenticados"
   on public.gartic_palpites for select
   to authenticated
-  using (auth.role() = 'authenticated');
+  using ((select auth.role()) = 'authenticated');
 
 create policy "gartic_palpites: jogador insere proprio"
   on public.gartic_palpites for insert
