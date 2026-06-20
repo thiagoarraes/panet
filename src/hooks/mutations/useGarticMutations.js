@@ -96,17 +96,34 @@ export function useGarticMutations() {
     [invalidarSala]
   );
 
-  // Sai da sala. Se for host, encerra a sala (limitacao MVP).
+  // Sai da sala. Se for host, tenta migrar o host para outro jogador (o mais
+  // antigo) antes de encerrar — só encerra se ficar ninguém.
   const sairSala = useCallback(
     async ({ salaId, jogadorId, isHost }) => {
       guard();
       if (!salaId) return;
       if (isHost) {
-        const { error } = await supabase
-          .from("jogo_salas")
-          .update({ status: "encerrada", fase: "fim" })
-          .eq("id", salaId);
-        if (error) throw new Error(error.message);
+        const { data: outros } = await supabase
+          .from("jogo_jogadores")
+          .select("id, colaborador_id")
+          .eq("sala_id", salaId)
+          .neq("id", jogadorId || "")
+          .order("entrou_em", { ascending: true })
+          .limit(1);
+        const novo = outros?.[0];
+        if (novo) {
+          // Ordem importa para o RLS: promove o novo (enquanto ainda sou host),
+          // depois passo host_id, depois saio.
+          await supabase.from("jogo_jogadores").update({ is_host: true }).eq("id", novo.id);
+          await supabase.from("jogo_salas").update({ host_id: novo.colaborador_id }).eq("id", salaId);
+          if (jogadorId) await supabase.from("jogo_jogadores").delete().eq("id", jogadorId);
+        } else {
+          const { error } = await supabase
+            .from("jogo_salas")
+            .update({ status: "encerrada", fase: "fim" })
+            .eq("id", salaId);
+          if (error) throw new Error(error.message);
+        }
       } else if (jogadorId) {
         const { error } = await supabase.from("jogo_jogadores").delete().eq("id", jogadorId);
         if (error) throw new Error(error.message);
