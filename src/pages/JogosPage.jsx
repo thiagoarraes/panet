@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { AdedonhaApp } from "./jogos/adedonha/AdedonhaApp.jsx";
-import { GarticApp } from "./jogos/gartic/GarticApp.jsx";
 import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
+// adedonha.css fica aqui: o hub de jogos usa as classes .jogos-hub/.jogo-card.
 import "../styles/adedonha.css";
-import "../styles/gartic.css";
+
+// Cada jogo vira um chunk separado, carregado só quando o jogador o abre.
+const AdedonhaApp = lazy(() =>
+  import("./jogos/adedonha/AdedonhaApp.jsx").then((m) => ({ default: m.AdedonhaApp }))
+);
+const GarticApp = lazy(() =>
+  import("./jogos/gartic/GarticApp.jsx").then((m) => ({ default: m.GarticApp }))
+);
 
 const JOGOS = [
   {
@@ -33,11 +39,21 @@ export function JogosPage({ currentUser, currentUserId }) {
         mensagem="O jogo travou. Volte para os jogos e tente de novo."
         onReset={() => setJogoAtivo(null)}
       >
-        <JogoApp
-          currentUser={currentUser}
-          currentUserId={currentUserId}
-          onSair={() => setJogoAtivo(null)}
-        />
+        <Suspense
+          fallback={
+            <div className="card">
+              <div className="card-body" style={{ padding: 24 }}>
+                <div className="section-sub">Carregando jogo…</div>
+              </div>
+            </div>
+          }
+        >
+          <JogoApp
+            currentUser={currentUser}
+            currentUserId={currentUserId}
+            onSair={() => setJogoAtivo(null)}
+          />
+        </Suspense>
       </ErrorBoundary>
     );
   }

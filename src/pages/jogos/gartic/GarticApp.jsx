@@ -12,6 +12,7 @@ import {
 } from "../../../lib/gartic.js";
 import { GarticLobby } from "./GarticLobby.jsx";
 import { GarticConfig } from "./GarticConfig.jsx";
+import "../../../styles/gartic.css";
 import { GarticEspera } from "./GarticEspera.jsx";
 import { EscolhaPalavra } from "./EscolhaPalavra.jsx";
 import { Desenho } from "./Desenho.jsx";
