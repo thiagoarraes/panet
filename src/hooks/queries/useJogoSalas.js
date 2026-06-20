@@ -43,22 +43,26 @@ const mapSala = (row) => {
 };
 
 // Lista de salas abertas (aguardando/jogando) com nome do host e nº de jogadores.
+// `jogo` filtra por tipo de jogo (ex.: 'adedonha' | 'gartic'); omitido lista todos.
 export function useJogoSalas(options = {}) {
   const queryClient = useQueryClient();
   const queryEnabled = options?.enabled ?? true;
+  const jogo = options?.jogo || null;
 
   const query = useQuery({
-    queryKey: ["jogo-salas"],
+    queryKey: ["jogo-salas", jogo],
     enabled: queryEnabled && isSupabaseEnabled,
     staleTime: 30 * 1000,
     queryFn: async () => {
       if (!isSupabaseEnabled || !supabase) return [];
-      const { data, error } = await supabase
+      let q = supabase
         .from("jogo_salas")
         .select(
           "id,nome,jogo,status,fase,host_id,config,created_at,host:colaboradores!host_id(nome),jogadores:jogo_jogadores(id,apelido,anonimo,colaborador:colaboradores!colaborador_id(nome,foto_url,cor_avatar))"
         )
-        .neq("status", "encerrada")
+        .neq("status", "encerrada");
+      if (jogo) q = q.eq("jogo", jogo);
+      const { data, error } = await q
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw new Error(error.message);

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { AdedonhaApp } from "./jogos/adedonha/AdedonhaApp.jsx";
+import { GarticApp } from "./jogos/gartic/GarticApp.jsx";
 import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 import "../styles/adedonha.css";
+import "../styles/gartic.css";
 
 const JOGOS = [
   {
@@ -12,18 +14,26 @@ const JOGOS = [
     letras: ["A", "B", "C", "D"],
     disponivel: true,
   },
+  {
+    id: "gartic",
+    nome: "Gartic",
+    desc: "Desenhe a palavra secreta e deixe a galera adivinhar — ou seja o primeiro a chutar!",
+    letras: ["🎨", "✏️", "🖌️", "❓"],
+    disponivel: true,
+  },
 ];
 
 export function JogosPage({ currentUser, currentUserId }) {
   const [jogoAtivo, setJogoAtivo] = useState(null);
 
-  if (jogoAtivo === "adedonha") {
+  if (jogoAtivo === "adedonha" || jogoAtivo === "gartic") {
+    const JogoApp = jogoAtivo === "gartic" ? GarticApp : AdedonhaApp;
     return (
       <ErrorBoundary
         mensagem="O jogo travou. Volte para os jogos e tente de novo."
         onReset={() => setJogoAtivo(null)}
       >
-        <AdedonhaApp
+        <JogoApp
           currentUser={currentUser}
           currentUserId={currentUserId}
           onSair={() => setJogoAtivo(null)}

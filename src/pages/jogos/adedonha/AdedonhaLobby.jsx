@@ -6,7 +6,7 @@ import { AvatarStack } from "./AvatarStack.jsx";
 
 // Lobby da adedonha: lista salas abertas ("Sala criada por <nome>") + criar.
 export function AdedonhaLobby({ currentUser, onCriar, onEntrar, onVoltar }) {
-  const { data: salas = [], isLoading } = useJogoSalas();
+  const { data: salas = [], isLoading } = useJogoSalas({ jogo: "adedonha" });
   const [modal, setModal] = useState(null); // { tipo: 'criar' } | { tipo: 'entrar', sala }
 
   const fecharModal = () => setModal(null);

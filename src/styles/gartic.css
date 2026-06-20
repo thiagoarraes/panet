@@ -1,0 +1,125 @@
+/* Gartic (Skribbl-like) — estilos especificos. Reutiliza as classes ade-* do
+   adedonha.css para wrap/topbar/grid/jogadores. */
+
+/* ── Escolha de palavra ─────────────────────────────────────────────────────── */
+.gartic-escolha { position: relative; }
+.gartic-timer-badge {
+  position: absolute; top: 14px; right: 16px;
+  background: var(--accent); color: #fff; font-weight: 800;
+  padding: 4px 12px; border-radius: 999px; font-size: 14px;
+}
+.gartic-opcoes { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.gartic-opcao {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 22px; font-size: 17px; font-weight: 700;
+  cursor: pointer; transition: transform .12s ease, border-color .12s ease, background .12s ease;
+  text-transform: capitalize;
+}
+.gartic-opcao:hover:not(:disabled) {
+  transform: translateY(-3px); border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface2));
+}
+.gartic-opcao:disabled { opacity: .55; cursor: default; }
+.gartic-aguardando { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.gartic-aguardando-emoji { font-size: 48px; }
+
+/* ── Header do desenho (timer + dica) ───────────────────────────────────────── */
+.gartic-header-right { display: flex; align-items: center; gap: 10px; }
+.gartic-timer {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-weight: 800; padding: 6px 12px; border-radius: 999px;
+}
+.gartic-timer.urgente { color: #fff; background: var(--danger); border-color: var(--danger); }
+.gartic-dica {
+  text-align: center; font-weight: 800; letter-spacing: 6px;
+  font-size: clamp(20px, 4vw, 30px); color: var(--text);
+  margin: 6px 0 14px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.gartic-dica-cont { font-size: 13px; letter-spacing: normal; color: var(--muted); font-weight: 600; }
+
+/* ── Layout de jogo: jogadores | canvas | chat ──────────────────────────────── */
+.gartic-play-grid {
+  display: grid; gap: 14px;
+  grid-template-columns: 220px minmax(0, 1fr) 280px;
+  align-items: start;
+}
+.gartic-side { min-width: 0; }
+
+/* ── Canvas ─────────────────────────────────────────────────────────────────── */
+.gartic-canvas-box {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 12px;
+}
+.gartic-canvas {
+  width: 100%; aspect-ratio: 4 / 3; background: #fff;
+  border-radius: 10px; border: 1px solid var(--border);
+  touch-action: none; display: block;
+}
+.gartic-canvas.is-drawing { cursor: crosshair; }
+
+.gartic-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.gartic-cores { display: flex; flex-wrap: wrap; gap: 6px; }
+.gartic-cor {
+  width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: transform .1s ease;
+}
+.gartic-cor:hover { transform: scale(1.12); }
+.gartic-cor.on { border-color: var(--text); transform: scale(1.12); }
+.gartic-tools { display: flex; align-items: center; gap: 6px; }
+.gartic-espessura, .gartic-tool {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+}
+.gartic-espessura.on, .gartic-tool.on { border-color: var(--accent); color: var(--accent); }
+.gartic-espessura span { display: block; background: currentColor; border-radius: 50%; }
+
+/* ── Chat de palpites ───────────────────────────────────────────────────────── */
+.gartic-chat { display: flex; flex-direction: column; max-height: 520px; }
+.gartic-chat-lista {
+  flex: 1; overflow-y: auto; padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 6px; min-height: 200px;
+}
+.gartic-chat-msg {
+  font-size: 14px; color: var(--text); line-height: 1.3;
+  background: var(--surface2); border-radius: 8px; padding: 6px 9px;
+}
+.gartic-chat-msg strong { margin-right: 6px; }
+.gartic-chat-msg.acertou { background: color-mix(in srgb, var(--success) 22%, var(--surface)); }
+.gartic-acertou { color: var(--success); font-weight: 800; }
+.gartic-chat-input {
+  display: flex; gap: 6px; align-items: center; padding: 10px;
+  border-top: 1px solid var(--border);
+}
+.gartic-chat-input input {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+}
+.gartic-chat-input .btn-primary { padding: 8px 12px; }
+
+/* ── Revelacao / fim ────────────────────────────────────────────────────────── */
+.gartic-revelacao { text-align: center; }
+.gartic-palavra-revelada {
+  font-size: clamp(26px, 5vw, 40px); font-weight: 900; color: var(--accent);
+  letter-spacing: 2px; margin: 4px 0;
+}
+.gartic-acertos { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.gartic-acerto-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2); border-radius: 10px; padding: 8px 12px;
+}
+.gartic-acerto-pos { font-weight: 800; color: var(--muted); width: 28px; text-align: left; }
+.gartic-acerto-nome { flex: 1; text-align: left; font-weight: 600; }
+.gartic-acerto-pts { font-weight: 800; color: var(--success); }
+.gartic-ninguem { color: var(--muted); margin-top: 12px; }
+.gartic-campeao { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gartic-trophy { color: #f5b301; }
+
+/* ── Responsivo ─────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .gartic-play-grid { grid-template-columns: 1fr; }
+  .gartic-side { order: 3; }
+  .gartic-chat { order: 2; max-height: 360px; }
+}
