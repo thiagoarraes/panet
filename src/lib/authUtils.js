@@ -69,7 +69,8 @@ export const readCachedProfile = () => {
       localStorage.removeItem(PROFILE_CACHE_KEY);
       return null;
     }
-    const { _cachedAt, ...profile } = parsed;
+    const profile = { ...parsed };
+    delete profile._cachedAt;
     return profile;
   } catch (_err) {
     return null;

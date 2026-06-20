@@ -7,7 +7,7 @@ import { NAV_ITEMS, PAGE_PATHS } from "../lib/router.js";
 export function Sidebar() {
   const {
     pagina, navigateTo,
-    isAdmin, adminAba,
+    isAdmin,
     eu, theme,
     handleToggleTheme, handleLogout,
     mobileNavOpen,

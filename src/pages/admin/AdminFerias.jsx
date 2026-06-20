@@ -7,7 +7,6 @@ import { useCreateAusencia, useDeleteAusencia, useUpdateAusencia } from "../../h
 import { useColaboradores } from "../../hooks/queries/useColaboradores.js";
 import {
   formatAusenciaValueForForm,
-  formatDateForStore,
   getAusenciaFormComputed,
   localDateToIsoBoundary,
   localToIso,

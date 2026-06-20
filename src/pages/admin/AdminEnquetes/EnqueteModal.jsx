@@ -1,7 +1,7 @@
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
-import { Plus, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, onSave }) {
   const setOptionText = (index, value) => {

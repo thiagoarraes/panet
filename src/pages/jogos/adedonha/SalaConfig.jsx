@@ -16,8 +16,6 @@ export function SalaConfig({ sala, jogadores, meuJogador, mut, onSair }) {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
 
-  const atualizar = (patch) => setConfig((c) => ({ ...c, ...patch }));
-
   const persistir = (next) => {
     mut.salvarConfig({ salaId: sala.id, config: next }).catch(() => {});
   };

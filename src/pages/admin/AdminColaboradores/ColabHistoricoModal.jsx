@@ -13,11 +13,6 @@ const formatDateBR = (iso) => {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
-const formatMonthYear = (iso) => {
-  if (!iso) return "";
-  const d = new Date(iso.includes("T") ? iso : `${iso}T12:00:00`);
-  return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
-};
 
 const formatTimeBR = (iso) => {
   if (!iso) return "";

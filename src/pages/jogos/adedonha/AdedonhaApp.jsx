@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useJogoSala } from "../../../hooks/queries/useJogoSala.js";
 import { useJogoMutations } from "../../../hooks/mutations/useJogoMutations.js";
@@ -32,7 +32,8 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
   }, [salaId]);
 
   const sala = data?.sala || null;
-  const jogadores = data?.jogadores || [];
+  // useMemo p/ estabilizar a identidade do array entre renders (usado em deps de useEffect).
+  const jogadores = useMemo(() => data?.jogadores || [], [data?.jogadores]);
   const meuJogador = jogadores.find((j) => j.colaboradorId === currentUserId) || null;
   const isHost = sala ? sala.hostId === currentUserId : false;
 
@@ -70,7 +71,8 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
         mostrarOverlay({ tipo: "stop", nome: quem?.apelido }, 2000);
       }
     }
-  }, [data?.rodada?.stopEm, data?.rodada?.id]);
+    // stopVistoRef evita reanimar; deps incluem stopPor/jogadores p/ resolver o nome.
+  }, [data?.rodada?.stopEm, data?.rodada?.id, data?.rodada?.stopPor, jogadores]);
 
   useEffect(() => () => clearTimeout(overlayTimerRef.current), []);
 
@@ -114,7 +116,6 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
   // Sem array de deps de propósito: precisa reavaliar a cada render (o tick de
   // 1s força isso) para checar as transições por tempo. O storm é evitado pelo
   // guard de reentrância + backoff em tentarTransicao, não pelas deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isHost || !sala || !data) return;
     const cfg = sala.config;

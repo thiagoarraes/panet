@@ -1,4 +1,4 @@
-import { BarChart3, CircleStop, Pencil, Trash2 } from "lucide-react";
+import { CircleStop, Pencil, Trash2 } from "lucide-react";
 import { formatEnqueteDateTime } from "../../../lib/enquetes.js";
 
 const toTotalVotesLabel = (totalVotes) => {
