@@ -127,6 +127,33 @@ export const mascararPalavra = (palavra = "") =>
     .join(" ")
     .trim();
 
+// Quanto da palavra revelar conforme o tempo decorrido (so a partir de 40% do
+// tempo, até no máximo metade das letras).
+const letrasReveladas = (totalLetras, fracaoDecorrida) => {
+  const maxRevelar = Math.floor(totalLetras / 2);
+  const prog = Math.max(0, (fracaoDecorrida - 0.4) / 0.6); // 0 antes de 40%, 1 no fim
+  return Math.min(maxRevelar, Math.floor(prog * maxRevelar));
+};
+
+// Dica progressiva: underscores com algumas letras reveladas conforme o tempo.
+// Determinística (mesmo resultado em todos os clientes para a mesma fração).
+export const revelarDica = (palavra = "", fracaoDecorrida = 0) => {
+  const chars = String(palavra).split("");
+  const indicesLetra = chars
+    .map((c, i) => ({ c, i }))
+    .filter((x) => x.c !== " " && x.c !== "-")
+    .map((x) => x.i);
+  const reveladas = new Set(indicesLetra.slice(0, letrasReveladas(indicesLetra.length, fracaoDecorrida)));
+  return chars
+    .map((ch, i) => {
+      if (ch === " ") return "  ";
+      if (ch === "-") return "-";
+      return reveladas.has(i) ? ch.toUpperCase() : "_";
+    })
+    .join(" ")
+    .trim();
+};
+
 // Segundos restantes de uma fase, dado o timestamp de inicio e a duracao.
 export const segundosRestantes = (faseIniciadaEm, duracaoSegundos) => {
   if (!faseIniciadaEm) return duracaoSegundos;

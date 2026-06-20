@@ -205,6 +205,20 @@ export function useGarticMutations() {
     [invalidarSala]
   );
 
+  // Host publica a dica progressiva (letras parcialmente reveladas) da rodada.
+  const atualizarDica = useCallback(
+    async ({ salaId, rodadaId, dica }) => {
+      guard();
+      const { error } = await supabase
+        .from("gartic_rodadas")
+        .update({ dica })
+        .eq("id", rodadaId);
+      if (error) throw new Error(error.message);
+      invalidarSala(salaId);
+    },
+    [invalidarSala]
+  );
+
   // Adivinhador envia um palpite (acertou=false; o host avalia).
   const enviarPalpite = useCallback(
     async ({ rodadaId, jogadorId, texto }) => {
@@ -344,6 +358,7 @@ export function useGarticMutations() {
     iniciarJogo,
     escolherPalavra,
     iniciarDesenho,
+    atualizarDica,
     enviarPalpite,
     avaliarPalpites,
     revelarRodada,

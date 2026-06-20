@@ -10,10 +10,11 @@ export function Desenho(props) {
   const desenhista = jogadores.find((j) => j.id === rodada?.desenhistaId);
   const restante = segundosRestantes(sala.faseIniciadaEm, tempoSegundos(sala.config.tempo));
 
-  // Dica: desenhista/host veem a palavra; demais veem underscores pelo tamanho.
+  // Dica: desenhista/host veem a palavra; demais veem a dica progressiva (letras
+  // reveladas conforme o tempo) e, antes da 1ª revelação, underscores pelo tamanho.
   const dica = palavra
     ? palavra.toUpperCase().split("").join(" ")
-    : Array.from({ length: rodada?.palavraTamanho || 0 }, () => "_").join(" ");
+    : rodada?.dica || Array.from({ length: rodada?.palavraTamanho || 0 }, () => "_").join(" ");
 
   return (
     <div className="fade-up ade-wrap">

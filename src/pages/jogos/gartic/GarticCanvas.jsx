@@ -47,12 +47,36 @@ export function GarticCanvas({ salaId, isDesenhista, enabled = true }) {
     ctx.fillRect(0, 0, CW, CH);
   };
 
-  const { emitStroke, emitClear } = useCanvasBroadcast({
+  // Pinta um snapshot (dataURL) recebido por sync — usado por quem entra no meio.
+  const aplicarSnapshot = (dataUrl) => {
+    const ctx = ctxRef.current;
+    if (!ctx || !dataUrl) return;
+    const img = new Image();
+    img.onload = () => ctx.drawImage(img, 0, 0, CW, CH);
+    img.src = dataUrl;
+  };
+
+  const { emitStroke, emitClear, emitSync, emitSyncRequest } = useCanvasBroadcast({
     salaId,
     enabled,
     onStroke: (p) => desenharSegmento(p.from, p.to, p.cor, p.largura, p.apaga),
     onClear: limparCanvas,
+    onSync: (p) => {
+      // Só espectador aplica snapshot (o desenhista é a fonte da verdade).
+      if (!isDesenhista) aplicarSnapshot(p?.dataUrl);
+    },
+    onSyncRequest: () => {
+      // Desenhista responde a quem entrou com o estado atual do canvas.
+      if (isDesenhista) emitirSnapshot();
+    },
   });
+
+  // Snapshot JPEG leve do canvas (efemero, via broadcast — nunca vai ao banco).
+  const emitirSnapshot = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    emitSync({ dataUrl: canvas.toDataURL("image/jpeg", 0.5) });
+  };
 
   // Inicializa o contexto e pinta o fundo.
   useEffect(() => {
@@ -63,6 +87,19 @@ export function GarticCanvas({ salaId, isDesenhista, enabled = true }) {
     ctxRef.current = canvas.getContext("2d");
     limparCanvas();
   }, []);
+
+  // Sincroniza o canvas com quem entra no meio do desenho. Desenhista publica um
+  // snapshot periódico; espectador pede o estado atual logo após montar.
+  useEffect(() => {
+    if (!enabled) return undefined;
+    if (isDesenhista) {
+      const id = setInterval(emitirSnapshot, 4000);
+      return () => clearInterval(id);
+    }
+    const t = setTimeout(() => emitSyncRequest(), 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, isDesenhista]);
 
   const pontoNormalizado = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();

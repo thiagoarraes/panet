@@ -25,6 +25,8 @@ create table if not exists public.gartic_rodadas (
   desenhista_id uuid not null references public.jogo_jogadores(id) on delete cascade,
   fase text not null default 'escolha',
   palavra_tamanho smallint null,
+  -- Dica progressiva (publica): o host revela letras conforme o tempo passa.
+  dica text null,
   -- Preenchida pelo host apenas na revelacao: torna a palavra publica so quando a
   -- rodada acaba (a palavra "secreta" durante o jogo fica em gartic_palavra/RLS).
   palavra_revelada text null,

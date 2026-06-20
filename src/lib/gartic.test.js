@@ -11,6 +11,7 @@ import {
   normalizarPalpite,
   acertou,
   mascararPalavra,
+  revelarDica,
   segundosRestantes,
   pontosAcerto,
   pontosDesenhista,
@@ -110,6 +111,30 @@ describe("mascararPalavra", () => {
   test("underscores preservando espaços e hífens", () => {
     expect(mascararPalavra("gato")).toBe("_ _ _ _");
     expect(mascararPalavra("guarda-chuva")).toBe("_ _ _ _ _ _ - _ _ _ _ _");
+  });
+});
+
+describe("revelarDica", () => {
+  const contarLetras = (s) => (s.match(/[a-zA-ZÀ-ÿ]/g) || []).length;
+
+  test("nada revelado no começo (antes de 40%)", () => {
+    expect(contarLetras(revelarDica("gato", 0))).toBe(0);
+    expect(contarLetras(revelarDica("gato", 0.3))).toBe(0);
+  });
+
+  test("revela mais letras conforme o tempo passa", () => {
+    const cedo = contarLetras(revelarDica("cachorro", 0.5));
+    const tarde = contarLetras(revelarDica("cachorro", 1));
+    expect(tarde).toBeGreaterThan(cedo);
+  });
+
+  test("nunca revela mais que metade das letras", () => {
+    const reveladas = contarLetras(revelarDica("gato", 1));
+    expect(reveladas).toBeLessThanOrEqual(2);
+  });
+
+  test("preserva espaços e hífens", () => {
+    expect(revelarDica("guarda-chuva", 0)).toContain("-");
   });
 });
 

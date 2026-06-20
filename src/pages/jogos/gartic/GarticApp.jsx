@@ -5,6 +5,7 @@ import { useGarticMutations } from "../../../hooks/mutations/useGarticMutations.
 import {
   TEMPO_ESCOLHA_SEGUNDOS,
   TEMPO_REVELACAO_SEGUNDOS,
+  revelarDica,
   segundosRestantes,
   sortearPalavras,
   tempoSegundos,
@@ -108,7 +109,20 @@ export function GarticApp({ currentUser, currentUserId, onSair }) {
         mut.avaliarPalpites({ sala, rodada, palavra, palpites, jogadores })
       );
 
-      const restante = segundosRestantes(sala.faseIniciadaEm, tempoSegundos(cfg.tempo));
+      const duracao = tempoSegundos(cfg.tempo);
+      const restante = segundosRestantes(sala.faseIniciadaEm, duracao);
+
+      // Dica progressiva: host conhece a palavra (RLS) e publica a versão parcial
+      // quando ela muda. Chave inclui a dica → só grava a cada nova letra revelada.
+      if (palavra) {
+        const dica = revelarDica(palavra, 1 - restante / duracao);
+        if (dica !== (rodada.dica || "")) {
+          tentarTransicao(`dica-${rodada.id}-${dica}`, () =>
+            mut.atualizarDica({ salaId: sala.id, rodadaId: rodada.id, dica })
+          );
+        }
+      }
+
       const adivinhadores = jogadores.filter((j) => j.id !== rodada.desenhistaId);
       const acertaram = new Set(palpites.filter((p) => p.acertou).map((p) => p.jogadorId));
       const todosAcertaram =

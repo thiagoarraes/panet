@@ -5,17 +5,16 @@ import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 // os strokes trafegam so via Realtime (canal `gartic-draw-<salaId>`). O desenhista
 // emite segmentos e "clear"; os espectadores recebem via callbacks.
 //
-// Coordenadas trafegam normalizadas (0..1) para serem independentes do tamanho
-// do canvas de cada cliente.
-export function useCanvasBroadcast({ salaId, enabled = true, onStroke, onClear }) {
+// Sincronizacao (quem entra no meio do desenho): o espectador emite `sync-request`;
+// o desenhista responde com `sync` (snapshot JPEG do canvas, tambem efemero). Coords
+// dos strokes trafegam normalizadas (0..1) para independerem do tamanho do canvas.
+export function useCanvasBroadcast({ salaId, enabled = true, onStroke, onClear, onSync, onSyncRequest }) {
   const channelRef = useRef(null);
-  const onStrokeRef = useRef(onStroke);
-  const onClearRef = useRef(onClear);
+  const cbRef = useRef({});
 
   useEffect(() => {
-    onStrokeRef.current = onStroke;
-    onClearRef.current = onClear;
-  }, [onStroke, onClear]);
+    cbRef.current = { onStroke, onClear, onSync, onSyncRequest };
+  }, [onStroke, onClear, onSync, onSyncRequest]);
 
   useEffect(() => {
     if (!enabled || !isSupabaseEnabled || !supabase || !salaId) return undefined;
@@ -23,12 +22,10 @@ export function useCanvasBroadcast({ salaId, enabled = true, onStroke, onClear }
       config: { broadcast: { self: false } },
     });
     channel
-      .on("broadcast", { event: "stroke" }, ({ payload }) => {
-        onStrokeRef.current?.(payload);
-      })
-      .on("broadcast", { event: "clear" }, () => {
-        onClearRef.current?.();
-      })
+      .on("broadcast", { event: "stroke" }, ({ payload }) => cbRef.current.onStroke?.(payload))
+      .on("broadcast", { event: "clear" }, () => cbRef.current.onClear?.())
+      .on("broadcast", { event: "sync" }, ({ payload }) => cbRef.current.onSync?.(payload))
+      .on("broadcast", { event: "sync-request" }, () => cbRef.current.onSyncRequest?.())
       .subscribe();
     channelRef.current = channel;
     return () => {
@@ -45,5 +42,13 @@ export function useCanvasBroadcast({ salaId, enabled = true, onStroke, onClear }
     channelRef.current?.send({ type: "broadcast", event: "clear" });
   }, []);
 
-  return { emitStroke, emitClear };
+  const emitSync = useCallback((payload) => {
+    channelRef.current?.send({ type: "broadcast", event: "sync", payload });
+  }, []);
+
+  const emitSyncRequest = useCallback(() => {
+    channelRef.current?.send({ type: "broadcast", event: "sync-request" });
+  }, []);
+
+  return { emitStroke, emitClear, emitSync, emitSyncRequest };
 }

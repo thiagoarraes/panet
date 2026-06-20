@@ -101,6 +101,7 @@ export function useGarticSala(salaId, options = {}) {
             desenhistaId: rodadaRow.desenhista_id,
             fase: rodadaRow.fase,
             palavraTamanho: rodadaRow.palavra_tamanho,
+            dica: rodadaRow.dica,
             palavraRevelada: rodadaRow.palavra_revelada,
             iniciadaEm: rodadaRow.iniciada_em,
             encerradaEm: rodadaRow.encerrada_em,
