@@ -267,3 +267,36 @@ export function getAverageEnergy(entries) {
   const total = entries.reduce((sum, entry) => sum + clampEnergy(entry?.energy), 0);
   return Number((total / entries.length).toFixed(1));
 }
+
+export const MOOD_REACTIONS = [
+  { id: "clap", emoji: "👏" },
+  { id: "heart", emoji: "❤️" },
+  { id: "muscle", emoji: "💪" },
+  { id: "laugh", emoji: "😂" },
+  { id: "hug", emoji: "🫂" },
+];
+
+export const MOOD_CELEBRATIONS = {
+  rocket: "Decolando! 🚀",
+  flow: "Surfando o dia! 🌊",
+  zen: "Paz total! 🌿",
+  focus: "Mira travada! 🎯",
+  steady: "Firme e forte! 🙂",
+  storm: "Segura o furacão! 🌪️",
+  low: "Todo dia conta. Bora com calma! 🌧️",
+  fire: "Respira... você tá dando conta! 🔥",
+};
+
+export function getMoodCelebration(moodId) {
+  return MOOD_CELEBRATIONS[moodId] || "Vibe registrada! ✨";
+}
+
+export function getDominantMood(entries) {
+  const counts = {};
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    if (!entry?.moodId) continue;
+    counts[entry.moodId] = (counts[entry.moodId] || 0) + 1;
+  }
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return top ? { moodId: top[0], count: top[1] } : null;
+}

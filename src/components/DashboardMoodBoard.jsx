@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Lock, RefreshCw } from "lucide-react";
 import { useSaveMoodCheckin } from "../hooks/mutations/useMoodCheckinMutations";
+import { useToggleMoodReaction } from "../hooks/mutations/useMoodReactionMutations";
 import { useMoodCheckins } from "../hooks/queries/useMoodCheckins";
+import { useMoodReactions } from "../hooks/queries/useMoodReactions";
+import { isSupabaseEnabled } from "../lib/supabase";
 import {
   ENERGY_COLORS,
   MAX_MOOD_TAGS,
   MOOD_TIME_ZONE,
   MOOD_OPTIONS,
+  MOOD_REACTIONS,
   MOOD_TAGS,
+  getAverageEnergy,
+  getDominantMood,
   getEnergyColor,
   getEnergyGlyph,
   getEnergyLabel,
+  getMoodCelebration,
   getMoodWindowState,
   getMoodOption,
   normalizeMoodTags,
@@ -77,6 +84,10 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   const moodWindowMessage = useMemo(() => getMoodWindowMessage(moodWindow), [moodWindow]);
   const moodCheckinsQuery = useMoodCheckins(currentUserId, { dateKey });
   const saveMoodCheckin = useSaveMoodCheckin(currentUserId, { dateKey });
+  const moodReactionsQuery = useMoodReactions(currentUserId, { dateKey });
+  const toggleMoodReaction = useToggleMoodReaction(currentUserId, { dateKey });
+  const [celebration, setCelebration] = useState(null);
+  const celebrationTimeoutRef = useRef(0);
 
   const entries = useMemo(
     () => (Array.isArray(moodCheckinsQuery.data) ? moodCheckinsQuery.data : []),
@@ -85,6 +96,36 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   const myEntry = useMemo(
     () => entries.find((entry) => String(entry.colaboradorId) === String(currentUserId)) || null,
     [currentUserId, entries]
+  );
+  const reactionsByCheckin = useMemo(() => {
+    const grouped = new Map();
+    const reactions = Array.isArray(moodReactionsQuery.data) ? moodReactionsQuery.data : [];
+    for (const reaction of reactions) {
+      if (!reaction?.checkinId || !reaction?.emoji) continue;
+      const key = String(reaction.checkinId);
+      const bucket = grouped.get(key) || {};
+      const slot = bucket[reaction.emoji] || { count: 0, mine: false, myReactionId: null };
+      slot.count += 1;
+      if (String(reaction.colaboradorId) === String(currentUserId)) {
+        slot.mine = true;
+        slot.myReactionId = reaction.id;
+      }
+      bucket[reaction.emoji] = slot;
+      grouped.set(key, bucket);
+    }
+    return grouped;
+  }, [currentUserId, moodReactionsQuery.data]);
+  const dominantMood = useMemo(() => getDominantMood(entries), [entries]);
+  const averageEnergy = useMemo(() => getAverageEnergy(entries), [entries]);
+  const sameVibeCount = useMemo(
+    () =>
+      myEntry
+        ? entries.filter(
+            (entry) =>
+              entry.moodId === myEntry.moodId && String(entry.colaboradorId) !== String(myEntry.colaboradorId)
+          ).length
+        : 0,
+    [entries, myEntry]
   );
   const currentUserFirstName = useMemo(() => getFirstName(currentUser?.nome), [currentUser?.nome]);
   const shouldAutoScrollTeamWall = entries.length >= TEAM_WALL_MIN_CARDS_TO_SCROLL;
@@ -165,6 +206,53 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
     };
   }, [entries, shouldAutoScrollTeamWall]);
 
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(celebrationTimeoutRef.current);
+    };
+  }, []);
+
+  const handleToggleReaction = (entry, reactionId) => {
+    if (toggleMoodReaction.isPending) return;
+    const bucket = reactionsByCheckin.get(String(entry.id)) || {};
+    const slot = bucket[reactionId];
+    toggleMoodReaction.mutate({
+      checkinId: entry.id,
+      emoji: reactionId,
+      existingReactionId: slot?.mine ? slot.myReactionId : null,
+    });
+  };
+
+  const renderReactionRow = (entry) => {
+    const isMyCard = String(entry.colaboradorId) === String(currentUserId);
+    const isPendingEntry = Boolean(entry.pending) || String(entry.id).startsWith("optimistic-");
+    if (!isSupabaseEnabled || isMyCard || isPendingEntry) return null;
+
+    const bucket = reactionsByCheckin.get(String(entry.id)) || {};
+
+    return (
+      <div className="mood-reaction-row">
+        {MOOD_REACTIONS.map((reaction) => {
+          const slot = bucket[reaction.id];
+          const count = slot?.count || 0;
+          return (
+            <button
+              key={reaction.id}
+              type="button"
+              className={`mood-reaction-btn ${slot?.mine ? "is-mine" : ""} ${count > 0 ? "has-count" : ""}`}
+              onClick={() => handleToggleReaction(entry, reaction.id)}
+              aria-label={`Reagir com ${reaction.emoji}`}
+              aria-pressed={Boolean(slot?.mine)}
+            >
+              <span aria-hidden="true">{reaction.emoji}</span>
+              {count > 0 && <span className="mood-reaction-count">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderTeamWallCard = (entry, keyPrefix = "") => {
     const mood = getMoodOption(entry.moodId);
     const energyWidth = `${Math.max(10, entry.energy * 10)}%`;
@@ -175,7 +263,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
       <article
         key={cardKey}
         className="mood-team-card mood-team-card--wall"
-        style={{ "--energy-color": energyColor }}
+        style={{ "--energy-color": energyColor, "--mood-accent": mood.accent }}
       >
         <div className="mood-team-emoji-wrap">{mood.emoji}</div>
         <div className="mood-team-energy-bar">
@@ -193,6 +281,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
             ))}
           </div>
         )}
+        {renderReactionRow(entry)}
         <div className="mood-team-time mood-team-time--foot">{formatTimeLabel(entry.updatedAt || entry.createdAt)}</div>
       </article>
     );
@@ -235,6 +324,9 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
         energy: draft.energy,
         tags: draft.tags,
       });
+      setCelebration({ moodId: draft.moodId });
+      window.clearTimeout(celebrationTimeoutRef.current);
+      celebrationTimeoutRef.current = window.setTimeout(() => setCelebration(null), 2600);
       setStep(3);
     } catch (error) {
       setSubmitError(error?.message || "Não foi possível registrar sua vibe agora.");
@@ -263,6 +355,27 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
 
   return (
     <section className="card mood-check-card">
+      {celebration && (
+        <div className="mood-celebration" aria-hidden="true">
+          {Array.from({ length: 24 }, (_, index) => (
+            <span
+              key={index}
+              className="mood-confetti"
+              style={{
+                "--confetti-x": `${(index * 41) % 100}%`,
+                "--confetti-delay": `${(index % 8) * 0.09}s`,
+                "--confetti-color": ENERGY_COLORS[index % ENERGY_COLORS.length],
+              }}
+            />
+          ))}
+          <div
+            className="mood-celebration-phrase"
+            style={{ "--mood-accent": getMoodOption(celebration.moodId).accent }}
+          >
+            {getMoodCelebration(celebration.moodId)}
+          </div>
+        </div>
+      )}
       <div className="mood-check-shell is-single">
         {!shouldShowTeamWall && (
           <div className="mood-check-main mood-check-main--flow">
@@ -422,6 +535,48 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
               <div className="mood-window-note mood-window-note--team">
                 <strong>Registro indisponível agora</strong>
                 <span>{moodWindowMessage}</span>
+              </div>
+            )}
+
+            {entries.length >= 2 && dominantMood && (
+              <div className="mood-vibe-stats">
+                <div
+                  className="mood-vibe-stat"
+                  style={{ "--mood-accent": getMoodOption(dominantMood.moodId).accent }}
+                >
+                  <span className="mood-vibe-stat-emoji">{getMoodOption(dominantMood.moodId).emoji}</span>
+                  <div className="mood-vibe-stat-copy">
+                    <strong>Vibe do dia</strong>
+                    <span>
+                      {getMoodOption(dominantMood.moodId).label} · {dominantMood.count}{" "}
+                      {dominantMood.count === 1 ? "pessoa" : "pessoas"}
+                    </span>
+                  </div>
+                </div>
+                <div className="mood-vibe-stat">
+                  <div className="mood-vibe-stat-copy">
+                    <strong>Energia média</strong>
+                    <span>
+                      {getEnergyGlyph(averageEnergy)} {averageEnergy}/10
+                    </span>
+                  </div>
+                  <div className="mood-vibe-meter">
+                    <span
+                      style={{
+                        width: `${Math.min(100, Math.max(6, averageEnergy * 10))}%`,
+                        background: getEnergyColor(averageEnergy),
+                      }}
+                    />
+                  </div>
+                </div>
+                {sameVibeCount > 0 && (
+                  <div className="mood-vibe-stat is-match">
+                    <div className="mood-vibe-stat-copy">
+                      <strong>Match de vibe</strong>
+                      <span>+{sameVibeCount} na mesma vibe que você ✨</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

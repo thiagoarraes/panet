@@ -4363,6 +4363,158 @@
     from { transform: translateX(0); }
     to { transform: translateX(calc(-1 * (var(--mood-wall-loop-width, 0px) + var(--mood-wall-gap, 10px)))); }
   }
+
+  /* Mood: reações, celebração e clima do time */
+  .mood-check-card {
+    position: relative;
+  }
+  .mood-team-carousel:hover .mood-team-carousel-track {
+    animation-play-state: paused;
+  }
+  .mood-reaction-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .mood-reaction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--surface2) 60%, transparent);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .mood-reaction-btn:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--mood-accent, #11e7e7) 34%, transparent);
+  }
+  .mood-reaction-btn:active {
+    transform: scale(1.2);
+  }
+  .mood-reaction-btn.is-mine {
+    border-color: color-mix(in srgb, var(--mood-accent, #11e7e7) 52%, transparent);
+    background: color-mix(in srgb, var(--mood-accent, #11e7e7) 18%, transparent);
+  }
+  .mood-reaction-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .mood-reaction-btn.is-mine .mood-reaction-count {
+    color: var(--text);
+  }
+  .mood-celebration {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: inherit;
+    display: grid;
+    place-items: center;
+  }
+  .mood-confetti {
+    position: absolute;
+    top: -6%;
+    left: var(--confetti-x, 50%);
+    width: 8px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--confetti-color, #11e7e7);
+    opacity: 0;
+    animation: moodConfettiFall 1.9s var(--confetti-delay, 0s) ease-in forwards;
+  }
+  .mood-confetti:nth-child(odd) {
+    width: 7px;
+    height: 9px;
+    border-radius: 50%;
+  }
+  @keyframes moodConfettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    8% { opacity: 1; }
+    100% { transform: translateY(118vh) rotate(540deg); opacity: 0; }
+  }
+  .mood-celebration-phrase {
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--mood-accent, var(--accent));
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mood-accent, var(--accent)) 40%, transparent);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--mood-accent, var(--accent)) 22%, transparent);
+    animation: moodCelebrationPop 2.6s ease forwards;
+  }
+  @keyframes moodCelebrationPop {
+    0% { transform: scale(0.6); opacity: 0; }
+    12% { transform: scale(1.08); opacity: 1; }
+    20% { transform: scale(1); }
+    80% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.96); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mood-confetti { display: none; }
+    .mood-celebration-phrase { animation: none; }
+  }
+  .mood-vibe-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .mood-vibe-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--mood-accent, var(--accent)) 22%, var(--border));
+    background:
+      radial-gradient(circle at 92% 0%, color-mix(in srgb, var(--mood-accent, var(--accent)) 12%, transparent), transparent 46%),
+      color-mix(in srgb, var(--surface2) 72%, transparent);
+  }
+  .mood-vibe-stat-emoji {
+    font-size: 24px;
+    line-height: 1;
+  }
+  .mood-vibe-stat-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mood-vibe-stat-copy strong {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .mood-vibe-stat-copy span {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .mood-vibe-stat.is-match {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  }
+  .mood-vibe-meter {
+    height: 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .mood-vibe-meter span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.5s ease;
+  }
   /* Confetti canvas */
   .confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
 
