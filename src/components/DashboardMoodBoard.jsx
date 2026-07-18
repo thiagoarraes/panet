@@ -161,19 +161,23 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
 
   useEffect(() => {
     hydratedEntryRef.current = "";
-    setSubmitError("");
+    const id = setTimeout(() => setSubmitError(""), 0);
+    return () => clearTimeout(id);
   }, [dateKey]);
 
   useEffect(() => {
     if (moodCheckinsQuery.isLoading || myEntry) return;
-    setDraft(buildDraftFromEntry(null));
-    setStep(1);
+    const id = setTimeout(() => {
+      setDraft(buildDraftFromEntry(null));
+      setStep(1);
+    }, 0);
+    return () => clearTimeout(id);
   }, [dateKey, moodCheckinsQuery.isLoading, myEntry]);
 
   useEffect(() => {
     if (!shouldAutoScrollTeamWall) {
-      setTeamWallLoopWidth(0);
-      return undefined;
+      const id = setTimeout(() => setTeamWallLoopWidth(0), 0);
+      return () => clearTimeout(id);
     }
 
     const node = teamWallGroupRef.current;

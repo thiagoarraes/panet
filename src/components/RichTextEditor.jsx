@@ -124,6 +124,7 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
             `@${node.attrs.label ?? node.attrs.id}`,
           ];
         },
+        // eslint-disable-next-line react-hooks/refs
         suggestion: buildMentionSuggestion(colaboradoresRef),
       }),
       Placeholder.configure({ placeholder }),

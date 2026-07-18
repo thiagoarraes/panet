@@ -93,9 +93,13 @@ export function DashboardPage({
 
   useEffect(() => {
     if (!hasInitialSnapshotData || dashboardInitialSnapshotQuery.isError) {
-      setFullSnapshotEnabled(false);
-      return;
+      const id = setTimeout(() => setFullSnapshotEnabled(false), 0);
+      return () => clearTimeout(id);
     }
+  }, [hasInitialSnapshotData, dashboardInitialSnapshotQuery.isError]);
+
+  useEffect(() => {
+    if (!hasInitialSnapshotData || dashboardInitialSnapshotQuery.isError) return;
     const cancel = scheduleIdleTask(() => {
       setFullSnapshotEnabled(true);
     }, 1800);
@@ -103,7 +107,11 @@ export function DashboardPage({
   }, [hasInitialSnapshotData, dashboardInitialSnapshotQuery.isError, currentUserId]);
 
   useEffect(() => {
-    setMoodBoardReady(false);
+    const id = setTimeout(() => setMoodBoardReady(false), 0);
+    return () => clearTimeout(id);
+  }, [currentUserId]);
+
+  useEffect(() => {
     const cancel = scheduleIdleTask(() => {
       setMoodBoardReady(true);
     }, 350);
@@ -287,7 +295,8 @@ export function DashboardPage({
   };
 
   useEffect(() => {
-    setEnqueteSelectedOptionId("");
+    const id = setTimeout(() => setEnqueteSelectedOptionId(""), 0);
+    return () => clearTimeout(id);
   }, [enqueteQuery.data?.id, enqueteQuery.data?.hasVoted, enqueteQuery.data?.isClosed]);
 
   const handleVoteEnquete = async (optionId = enqueteSelectedOptionId) => {

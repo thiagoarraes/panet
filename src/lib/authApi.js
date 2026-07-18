@@ -51,7 +51,7 @@ export async function apiLogin(email, password) {
         await sleep(LOGIN_RETRY_DELAYS_MS[attempt]);
         continue;
       }
-      throw new Error("O serviço de autenticação está instável. Tente novamente.");
+      throw new Error("O serviço de autenticação está instável. Tente novamente.", { cause: networkErr });
     }
 
     const data = await res.json().catch(() => ({}));

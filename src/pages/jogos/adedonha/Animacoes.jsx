@@ -29,7 +29,7 @@ export function SorteioLetra({ letra }) {
   const intervaloRef = useRef(null);
 
   useEffect(() => {
-    setTravado(false);
+    const tid = setTimeout(() => setTravado(false), 0);
     let ticks = 0;
     intervaloRef.current = setInterval(() => {
       ticks += 1;
@@ -44,7 +44,7 @@ export function SorteioLetra({ letra }) {
         setTravado(true);
       }
     }, 90);
-    return () => clearInterval(intervaloRef.current);
+    return () => { clearTimeout(tid); clearInterval(intervaloRef.current); };
   }, [letra]);
 
   return (

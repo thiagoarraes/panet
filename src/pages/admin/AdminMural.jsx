@@ -56,17 +56,20 @@ export function AdminMural() {
   const someVisibleSelected = !allVisibleSelected && visibleIds.some((id) => selectedIds.has(id));
 
   useEffect(() => {
-    setSelectedIds((prev) => {
-      const available = new Set(rows.map((row) => row.id));
-      const next = new Set();
-      let changed = false;
-      prev.forEach((id) => {
-        if (available.has(id)) next.add(id);
-        else changed = true;
+    const tid = setTimeout(() => {
+      setSelectedIds((prev) => {
+        const available = new Set(rows.map((row) => row.id));
+        const next = new Set();
+        let changed = false;
+        prev.forEach((id) => {
+          if (available.has(id)) next.add(id);
+          else changed = true;
+        });
+        if (!changed && next.size === prev.size) return prev;
+        return next;
       });
-      if (!changed && next.size === prev.size) return prev;
-      return next;
-    });
+    }, 0);
+    return () => clearTimeout(tid);
   }, [rows]);
 
   const handleDelete = async () => {

@@ -213,7 +213,14 @@ export function AuthProvider({ children }) {
 
   // ─── Bootstrap auth ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isSupabaseEnabled) { setAuthLoading(false); return; }
+    if (!isSupabaseEnabled) {
+      const id = setTimeout(() => setAuthLoading(false), 0);
+      return () => clearTimeout(id);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
     let isMounted = true;
 
     const scheduleProfileBackgroundRefresh = (session) => {
@@ -492,7 +499,7 @@ export function AuthProvider({ children }) {
       try {
         apiData = await apiLogin(email, password);
       } catch (err) {
-        throw new Error(friendlyLoginError(err));
+        throw new Error(friendlyLoginError(err), { cause: err });
       }
       const userId = String(apiData?.user?.id || "");
       if (!userId) throw new Error("Sessão não iniciada. Tente novamente.");

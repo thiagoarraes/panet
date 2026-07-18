@@ -122,7 +122,8 @@ export function useCreatePost() {
             err?.message || err
           );
           throw new Error(
-            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente."
+            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente.",
+            { cause: err }
           );
         }
       }
@@ -168,7 +169,8 @@ export function useUpdatePost() {
             err?.message || err
           );
           throw new Error(
-            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente."
+            "Não foi possível enviar a imagem de capa. Verifique sua conexão e tente novamente.",
+            { cause: err }
           );
         }
       }

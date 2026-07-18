@@ -187,8 +187,14 @@ export function AdminFerias({ currentUserId }) {
   }, [ausenciaSearchInput]);
 
   // Reset page ao mudar filtros
-  useEffect(() => { setCurrentPage(1); }, [sub, feriasStatus, feriasMes, feriasColab]);
-  useEffect(() => { setAusenciaPage(1); }, [ausenciaStatus, ausenciaMes, ausenciaColab]);
+  useEffect(() => {
+    const id = setTimeout(() => setCurrentPage(1), 0);
+    return () => clearTimeout(id);
+  }, [sub, feriasStatus, feriasMes, feriasColab]);
+  useEffect(() => {
+    const id = setTimeout(() => setAusenciaPage(1), 0);
+    return () => clearTimeout(id);
+  }, [ausenciaStatus, ausenciaMes, ausenciaColab]);
 
   // ── Queries ─────────────────────────────────────────────────────────────
   const { data: feriasData, isLoading: feriasLoading } = useAdminFerias({

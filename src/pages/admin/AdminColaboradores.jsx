@@ -66,13 +66,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     } catch (error) {
       const parsedMessage = await parseFunctionInvokeError(error, fallbackMessage);
       if (!isJwtSessionError({ message: parsedMessage }) && !isJwtSessionError(error)) {
-        throw new Error(parsedMessage || fallbackMessage);
+        throw new Error(parsedMessage || fallbackMessage, { cause: error });
       }
       try {
         return await run(await getValidAccessToken());
       } catch (finalErr) {
         const finalMessage = await parseFunctionInvokeError(finalErr, fallbackMessage);
-        throw new Error(finalMessage || fallbackMessage);
+        throw new Error(finalMessage || fallbackMessage, { cause: finalErr });
       }
     }
   };
@@ -87,7 +87,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       try {
         return await call(await getValidAccessToken());
       } catch (finalErr) {
-        throw new Error(String(finalErr?.message || "") || "Não foi possível excluir o colaborador.");
+        throw new Error(String(finalErr?.message || "") || "Não foi possível excluir o colaborador.", { cause: finalErr });
       }
     }
   }, [getValidAccessToken]);
@@ -105,7 +105,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       try {
         return await call(await getValidAccessToken());
       } catch (finalErr) {
-        throw new Error(String(finalErr?.message || "") || fallback);
+        throw new Error(String(finalErr?.message || "") || fallback, { cause: finalErr });
       }
     }
   }, [getValidAccessToken]);
@@ -120,15 +120,21 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
   // Reset to page 1 and clear cache when the ativo filter changes
   useEffect(() => {
-    setCurrentPage(1);
-    clearCachedAdminColaboradores();
+    const id = setTimeout(() => {
+      setCurrentPage(1);
+      clearCachedAdminColaboradores();
+    }, 0);
+    return () => clearTimeout(id);
   }, [ativoFiltro]);
 
   useEffect(() => {
     if (!isSupabaseEnabled) return;
     if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return;
-    setLista((prev) => (prev.length > 0 ? prev : initialColaboradores.map((row) => mapProfileToRow(row, currentUserId))));
-    setTotalItems((prev) => (prev > 0 ? prev : initialColaboradores.length));
+    const id = setTimeout(() => {
+      setLista((prev) => (prev.length > 0 ? prev : initialColaboradores.map((row) => mapProfileToRow(row, currentUserId))));
+      setTotalItems((prev) => (prev > 0 ? prev : initialColaboradores.length));
+    }, 0);
+    return () => clearTimeout(id);
   }, [currentUserId, initialColaboradores]);
 
   const carregarColaboradores = useCallback(async (options = {}) => {
@@ -193,7 +199,8 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   }, [currentPage, currentUserId, searchTerm, ativoFiltro]);
 
   useEffect(() => {
-    carregarColaboradores({ silent: true });
+    const id = setTimeout(() => void carregarColaboradores({ silent: true }), 0);
+    return () => clearTimeout(id);
   }, [carregarColaboradores, currentPage, searchTerm]);
 
   useEffect(() => {

@@ -86,7 +86,10 @@ export function AdminPresencial({ currentUserId }) {
   }, [searchInput]);
 
   // Reset page when switching between Ativos / Passados
-  useEffect(() => { setCurrentPage(1); }, [filtroStatus]);
+  useEffect(() => {
+    const id = setTimeout(() => setCurrentPage(1), 0);
+    return () => clearTimeout(id);
+  }, [filtroStatus]);
 
   useEffect(() => {
     if (drawState.status !== "success" && drawState.status !== "error") return undefined;

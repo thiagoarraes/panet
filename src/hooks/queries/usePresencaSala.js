@@ -10,9 +10,13 @@ export function usePresencaSala(salaId, colaboradorId, enabled = true) {
 
   useEffect(() => {
     if (!enabled || !isSupabaseEnabled || !supabase || !salaId || !colaboradorId) {
-      setOnline(new Set());
-      return undefined;
+      const id = setTimeout(() => setOnline(new Set()), 0);
+      return () => clearTimeout(id);
     }
+  }, [enabled, salaId, colaboradorId]);
+
+  useEffect(() => {
+    if (!enabled || !isSupabaseEnabled || !supabase || !salaId || !colaboradorId) return undefined;
     const channel = supabase.channel(`jogo-presence-${salaId}`, {
       config: { presence: { key: colaboradorId } },
     });
