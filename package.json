@@ -31,6 +31,7 @@
     "@tiptap/starter-kit": "^3.28.0",
     "@tiptap/suggestion": "^3.28.0",
     "@vercel/functions": "^3.7.5",
+    "@vitest/mocker": "^4.1.10",
     "date-fns": "^4.4.0",
     "dompurify": "^3.4.12",
     "emoji-picker-react": "^4.19.1",
@@ -39,18 +40,19 @@
     "react-datepicker": "^9.1.0",
     "react-dom": "^18.3.1",
     "react-easy-crop": "^6.2.2",
-    "react-icons": "^5.7.0"
+    "react-icons": "^5.7.0",
+    "vite-node": "^6.0.0"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.101.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.2",
     "eslint-plugin-react-hooks": "^4.6.2",
     "rollup-plugin-visualizer": "^7.0.1",
-    "vite": "^5.2.0",
-    "vitest": "^2.1.9"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }
