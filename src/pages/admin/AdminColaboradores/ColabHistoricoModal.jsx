@@ -198,7 +198,7 @@ function AusenciaEntry({ item }) {
   const fimD = item.fim ? new Date(item.fim) : null;
   const dimmed = status === "encerrado";
 
-  let timeLabel = "";
+  let timeLabel;
   if (item.dia_todo) {
     timeLabel = "Dia todo";
   } else {

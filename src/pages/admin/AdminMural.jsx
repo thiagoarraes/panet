@@ -43,7 +43,7 @@ export function AdminMural() {
   }, [searchInput]);
 
   const { data, isLoading } = useAdminMural({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm });
-  const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data?.rows]);
+  const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data]);
   const totalItems = data?.count || 0;
   const uiTotalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const uiPage = Math.min(currentPage, uiTotalPages);
