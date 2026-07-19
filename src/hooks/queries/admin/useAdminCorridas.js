@@ -82,8 +82,24 @@ export function useAdminCorridas({
         countQ = countQ.or(expr);
       }
 
-      const [{ data, error }, { count }] = await Promise.all([rowsQ.range(from, to), countQ]);
+      // Totais do período filtrado via RPC (agregados PostgREST desabilitados no projeto).
+      let aggIni = null;
+      let aggFim = null;
+      if (mes) {
+        const [yr, mo] = mes.split("-").map(Number);
+        aggIni = `${yr}-${String(mo).padStart(2, "0")}-01T00:00:00`;
+        aggFim = new Date(yr, mo, 0, 23, 59, 59).toISOString();
+      }
+      const aggQ = supabase.rpc("corridas_totais", {
+        p_status: status || null,
+        p_colaborador: colaboradorId || null,
+        p_ini: aggIni,
+        p_fim: aggFim,
+      });
+
+      const [{ data, error }, { count }, aggResult] = await Promise.all([rowsQ.range(from, to), countQ, aggQ]);
       if (error) throw new Error(error.message);
+      const agg = aggResult?.error ? null : aggResult?.data?.[0] || null;
 
       const missingIds = Array.from(new Set((data || []).map((r) => String(r.colaborador_id || "")).filter(Boolean)));
       const lookup = new Map();
@@ -100,7 +116,8 @@ export function useAdminCorridas({
         colaborador: toAvatar(lookup.get(String(row.colaborador_id || "")) || getUnknownColaboradorFallback(row.colaborador_id)),
       }));
       const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
-      return { rows, count: safeCount };
+      const toNum = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+      return { rows, count: safeCount, totals: agg ? { valor: toNum(agg.valor), km: toNum(agg.km) } : null };
     },
     staleTime: 30 * 1000,
     enabled: isSupabaseEnabled,
