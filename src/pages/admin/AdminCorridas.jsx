@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus, ChevronDown, Users } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
 import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
@@ -33,6 +33,82 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
+
+// Select custom de colaborador com avatar (option nativa não renderiza imagem).
+function ColaboradorSelect({ colaboradores, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const selecionado = colaboradores.find((c) => c.id === value) || null;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (!wrapRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  const escolher = (id) => {
+    onChange(id);
+    setOpen(false);
+  };
+
+  return (
+    <div className="corridas-colab-select" ref={wrapRef}>
+      <button
+        type="button"
+        className="form-input corridas-colab-trigger"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="corridas-colab-atual">
+          {selecionado ? (
+            <>
+              <Avatar col={selecionado} size={22} />
+              <span className="corridas-colab-nome">{selecionado.nome}</span>
+            </>
+          ) : (
+            <>
+              <span className="corridas-colab-todos-icone"><Users size={13} /></span>
+              <span className="corridas-colab-nome">Todos os colaboradores</span>
+            </>
+          )}
+        </span>
+        <ChevronDown size={14} className={`corridas-colab-chevron ${open ? "is-open" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="corridas-colab-lista" role="listbox">
+          <button
+            type="button"
+            role="option"
+            aria-selected={value === ""}
+            className={`corridas-colab-opcao ${value === "" ? "active" : ""}`}
+            onClick={() => escolher("")}
+          >
+            <span className="corridas-colab-todos-icone"><Users size={13} /></span>
+            <span className="corridas-colab-nome">Todos os colaboradores</span>
+          </button>
+          {colaboradores.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="option"
+              aria-selected={value === c.id}
+              className={`corridas-colab-opcao ${value === c.id ? "active" : ""}`}
+              onClick={() => escolher(c.id)}
+            >
+              <Avatar col={c} size={22} />
+              <span className="corridas-colab-nome">{c.nome}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Mini modal para vincular um cliente a um destino.
 function ClienteModal({ endereco, clienteAtual, onClose }) {
@@ -148,17 +224,7 @@ export function AdminCorridas({ currentUserId }) {
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header corridas-filtros">
-          <select
-            className="form-input corridas-filtro-colab"
-            value={colaboradorId}
-            onChange={(e) => setColaboradorId(e.target.value)}
-            aria-label="Filtrar por colaborador"
-          >
-            <option value="">Todos os colaboradores</option>
-            {colaboradores.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+          <ColaboradorSelect colaboradores={colaboradores} value={colaboradorId} onChange={setColaboradorId} />
           <input
             type="month"
             className="form-input corridas-filtro-mes"
