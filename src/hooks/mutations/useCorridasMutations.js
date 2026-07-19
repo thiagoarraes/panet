@@ -2,11 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const ALLOWED_MIMES = ["application/pdf"];
 const EXT_BY_MIME = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
   "application/pdf": "pdf",
 };
 
@@ -20,7 +17,7 @@ export function useEnviarCorrida(currentUserId) {
       if (!currentUserId) throw new Error("Sessão inválida.");
       if (!(file instanceof File)) throw new Error("Selecione o recibo da corrida.");
       if (!ALLOWED_MIMES.includes(file.type)) {
-        throw new Error("Formato inválido. Envie uma imagem (JPG, PNG, WEBP) ou PDF.");
+        throw new Error("Formato inválido. Envie o recibo em PDF.");
       }
       if (file.size > MAX_FILE_BYTES) throw new Error("Arquivo muito grande (máx. 10MB).");
       const motivoLimpo = String(motivo || "").trim();

@@ -5436,7 +5436,7 @@
 .corrida-modal-fato-label { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
 
 .corrida-modal-motivo {
-  font-size: 13px; line-height: 1.55; font-style: italic;
+  font-size: 13px; line-height: 1.55;
   padding: 10px 14px; border-radius: 12px;
   border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
   background: var(--surface2);

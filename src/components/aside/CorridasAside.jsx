@@ -1,16 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Car, Upload, Loader2, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import { useCorridas } from "../../hooks/queries/useCorridas";
 import { useEnviarCorrida } from "../../hooks/mutations/useCorridasMutations";
 
-const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
-
-const formatBrl = (v) =>
-  typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "";
+const ACCEPT = "application/pdf";
 
 const STATUS_META = {
   pendente: { label: "Processando...", Icon: Loader2, color: "var(--muted)", spin: true },
-  ok: { label: "Extraído", Icon: CheckCircle2, color: "var(--accent)", spin: false },
   erro: { label: "Falha na leitura", Icon: AlertTriangle, color: "var(--danger)", spin: false },
 };
 
@@ -18,11 +14,15 @@ export function CorridasAside({ currentUserId }) {
   const corridasQuery = useCorridas(currentUserId, { limit: 5 });
   const enviarCorrida = useEnviarCorrida(currentUserId);
   const fileInputRef = useRef(null);
+  const sucessoTimer = useRef(null);
   const [file, setFile] = useState(null);
   const [motivo, setMotivo] = useState("");
   const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState(false);
 
   const corridas = corridasQuery.data || [];
+
+  useEffect(() => () => clearTimeout(sucessoTimer.current), []);
 
   const handlePickFile = (e) => {
     const picked = e.target.files?.[0] || null;
@@ -37,6 +37,9 @@ export function CorridasAside({ currentUserId }) {
       setFile(null);
       setMotivo("");
       if (fileInputRef.current) fileInputRef.current.value = "";
+      setSucesso(true);
+      clearTimeout(sucessoTimer.current);
+      sucessoTimer.current = setTimeout(() => setSucesso(false), 5000);
     } catch (err) {
       setErro(err?.message || "Não foi possível enviar a corrida.");
     }
@@ -57,7 +60,7 @@ export function CorridasAside({ currentUserId }) {
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12 }}
         >
           {file ? <FileText size={14} /> : <Upload size={14} />}
-          {file ? file.name : "Anexar recibo (imagem ou PDF)"}
+          {file ? file.name : "Anexar recibo (PDF)"}
         </button>
         <input ref={fileInputRef} type="file" accept={ACCEPT} onChange={handlePickFile} style={{ display: "none" }} />
 
@@ -86,19 +89,18 @@ export function CorridasAside({ currentUserId }) {
           {enviarCorrida.isPending ? "Enviando..." : "Registrar corrida"}
         </button>
 
-        {corridas.length > 0 && (
+        {sucesso && (
+          <div className="corrida-aside-ok">
+            <CheckCircle2 size={14} />
+            Recibo enviado com sucesso
+          </div>
+        )}
+
+        {corridas.some((c) => c.status_extracao !== "ok") && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
-            {corridas.map((c) => {
+            {corridas.filter((c) => c.status_extracao !== "ok").map((c) => {
               const meta = STATUS_META[c.status_extracao] || STATUS_META.pendente;
               const { Icon } = meta;
-              if (c.status_extracao === "ok") {
-                return (
-                  <div key={c.id} className="corrida-aside-ok">
-                    <CheckCircle2 size={14} />
-                    Recibo enviado com sucesso
-                  </div>
-                );
-              }
               return (
                 <div
                   key={c.id}

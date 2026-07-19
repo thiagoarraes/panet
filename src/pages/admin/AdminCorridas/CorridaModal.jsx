@@ -106,7 +106,7 @@ export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null,
           {/* ── Motivo ────────────────────────────────────────────────────── */}
           <div className="corrida-modal-secao">
             <div className="corrida-modal-secao-titulo">Motivo informado</div>
-            <div className="corrida-modal-motivo">“{corrida.motivo}”</div>
+            <div className="corrida-modal-motivo">{corrida.motivo}</div>
             <div className="corrida-modal-enviada">Enviada em {formatCreatedAt(corrida.created_at)}</div>
           </div>
 
