@@ -1,45 +1,23 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, FileText } from "lucide-react";
+import { AlertTriangle, CarFront, Clock3, FileText, Gauge, Loader2, Route, UserRound, Wallet } from "lucide-react";
+import { Avatar } from "../../../components/Avatar";
 import { supabase, isSupabaseEnabled } from "../../../lib/supabase.js";
-import { useAtualizarCorrida } from "../../../hooks/mutations/useCorridasMutations";
 
-const CAMPOS = [
-  { key: "origem", label: "Origem", type: "text" },
-  { key: "destino", label: "Destino", type: "text" },
-  { key: "horario", label: "Horário", type: "datetime-local" },
-  { key: "duracao_min", label: "Duração (min)", type: "number" },
-  { key: "km", label: "Km", type: "number" },
-  { key: "veiculo", label: "Veículo", type: "text" },
-  { key: "motorista", label: "Motorista", type: "text" },
-  { key: "valor_total", label: "Valor total (R$)", type: "number" },
+const formatBrl = (v) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
+const formatDateTime = (iso) =>
+  iso ? new Date(iso).toLocaleString("pt-BR", { weekday: "short", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" }) : "—";
+const formatCreatedAt = (iso) =>
+  iso ? new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
+
+const FATOS = [
+  { key: "duracao_min", label: "Duração", Icon: Clock3, render: (v) => (typeof v === "number" ? `${v} min` : "—") },
+  { key: "km", label: "Distância", Icon: Gauge, render: (v) => (typeof v === "number" ? `${v} km` : "—") },
+  { key: "veiculo", label: "Veículo", Icon: CarFront, render: (v) => v || "—" },
+  { key: "motorista", label: "Motorista", Icon: UserRound, render: (v) => v || "—" },
 ];
-
-// Converte ISO -> valor aceito por <input type="datetime-local"> (sem timezone).
-const isoToLocalInput = (iso) => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
-const buildForm = (corrida) => ({
-  origem: corrida.origem || "",
-  destino: corrida.destino || "",
-  horario: isoToLocalInput(corrida.horario),
-  duracao_min: corrida.duracao_min ?? "",
-  km: corrida.km ?? "",
-  veiculo: corrida.veiculo || "",
-  motorista: corrida.motorista || "",
-  valor_total: corrida.valor_total ?? "",
-});
 
 export function CorridaModal({ corrida, onClose }) {
   const [reciboUrl, setReciboUrl] = useState("");
-  const [form, setForm] = useState(() => buildForm(corrida));
-  const [erro, setErro] = useState("");
-  const atualizar = useAtualizarCorrida();
-
   const isPdf = corrida.recibo_mime === "application/pdf";
 
   useEffect(() => {
@@ -54,81 +32,91 @@ export function CorridaModal({ corrida, onClose }) {
     };
   }, [corrida.recibo_path]);
 
-  const handleSalvar = async () => {
-    setErro("");
-    const campos = {
-      origem: form.origem.trim() || null,
-      destino: form.destino.trim() || null,
-      horario: form.horario ? new Date(form.horario).toISOString() : null,
-      duracao_min: form.duracao_min === "" ? null : Math.round(Number(form.duracao_min)),
-      km: form.km === "" ? null : Number(form.km),
-      veiculo: form.veiculo.trim() || null,
-      motorista: form.motorista.trim() || null,
-      valor_total: form.valor_total === "" ? null : Number(form.valor_total),
-      status_extracao: "ok",
-      erro_extracao: null,
-    };
-    try {
-      await atualizar.mutateAsync({ id: corrida.id, campos });
-      onClose();
-    } catch (err) {
-      setErro(err?.message || "Não foi possível salvar.");
-    }
-  };
-
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="modal collab-modal" style={{ maxWidth: 720 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Detalhes da corrida</div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Recibo enviado</div>
-            {corrida.status_extracao === "erro" && corrida.erro_extracao && (
-              <div style={{ fontSize: 11, color: "var(--danger)", background: "rgba(255,107,107,0.08)", border: "1px solid rgba(255,107,107,0.28)", borderRadius: 8, padding: "6px 8px", marginBottom: 8, display: "flex", gap: 6 }}>
-                <AlertTriangle size={13} /> {corrida.erro_extracao}
-              </div>
+      <div className="modal collab-modal corrida-modal" onClick={(e) => e.stopPropagation()}>
+        {/* ── Cabeçalho: quem + valor ─────────────────────────────────────── */}
+        <div className="corrida-modal-hero">
+          <button className="modal-close corrida-modal-close" onClick={onClose} aria-label="Fechar">×</button>
+          <div className="corrida-modal-quem">
+            <Avatar col={corrida.colaborador} size={46} />
+            <div>
+              <div className="corrida-modal-nome">{corrida.colaborador?.nome}</div>
+              <div className="corrida-modal-cargo">{corrida.colaborador?.cargo || "—"}</div>
+            </div>
+          </div>
+          <div className="corrida-modal-valor-bloco">
+            <span className="corrida-modal-valor-label"><Wallet size={12} /> Valor da corrida</span>
+            <span className="corrida-modal-valor">{formatBrl(corrida.valor_total)}</span>
+            {corrida.status_extracao === "pendente" && (
+              <span className="corrida-status is-pendente"><Loader2 size={11} className="spin" /> Processando extração</span>
             )}
+            {corrida.status_extracao === "erro" && (
+              <span className="corrida-status is-erro"><AlertTriangle size={11} /> Erro na leitura do recibo</span>
+            )}
+          </div>
+        </div>
+
+        <div className="modal-body corrida-modal-body">
+          {/* ── Trajeto ───────────────────────────────────────────────────── */}
+          <div className="corrida-modal-secao">
+            <div className="corrida-modal-secao-titulo"><Route size={13} /> Trajeto</div>
+            <div className="corrida-rota corrida-modal-rota">
+              <span className="corrida-rota-linha" aria-hidden="true">
+                <i className="dot-origem" />
+                <i className="tracado" />
+                <i className="dot-destino" />
+              </span>
+              <div className="corrida-rota-textos">
+                <div>
+                  <div className="corrida-modal-rota-label">Origem</div>
+                  <div className="corrida-modal-rota-endereco">{corrida.origem || "Não identificada"}</div>
+                </div>
+                <div>
+                  <div className="corrida-modal-rota-label">Destino</div>
+                  <div className="corrida-modal-rota-endereco is-destino">{corrida.destino || "Não identificado"}</div>
+                </div>
+              </div>
+            </div>
+            <div className="corrida-modal-horario"><Clock3 size={12} /> {formatDateTime(corrida.horario)}</div>
+          </div>
+
+          {/* ── Fatos da viagem ───────────────────────────────────────────── */}
+          <div className="corrida-modal-fatos">
+            {FATOS.map(({ key, label, Icon, render }) => (
+              <div key={key} className="corrida-modal-fato">
+                <span className="corrida-modal-fato-icone"><Icon size={14} /></span>
+                <div>
+                  <div className="corrida-modal-fato-valor">{render(corrida[key])}</div>
+                  <div className="corrida-modal-fato-label">{label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Motivo ────────────────────────────────────────────────────── */}
+          <div className="corrida-modal-secao">
+            <div className="corrida-modal-secao-titulo">Motivo informado</div>
+            <div className="corrida-modal-motivo">“{corrida.motivo}”</div>
+            <div className="corrida-modal-enviada">Enviada em {formatCreatedAt(corrida.created_at)}</div>
+          </div>
+
+          {/* ── Recibo ────────────────────────────────────────────────────── */}
+          <div className="corrida-modal-secao">
+            <div className="corrida-modal-secao-titulo"><FileText size={13} /> Recibo</div>
             {reciboUrl ? (
               isPdf ? (
-                <a href={reciboUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <a href={reciboUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost corrida-modal-pdf">
                   <FileText size={14} /> Abrir PDF do recibo
                 </a>
               ) : (
-                <img src={reciboUrl} alt="Recibo" style={{ width: "100%", borderRadius: 10, border: "1px solid var(--border)" }} />
+                <a href={reciboUrl} target="_blank" rel="noopener noreferrer" className="corrida-modal-recibo-link">
+                  <img src={reciboUrl} alt="Recibo da corrida" className="corrida-modal-recibo" />
+                </a>
               )
             ) : (
               <div className="section-sub">Carregando recibo...</div>
             )}
-            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>Motivo</div>
-            <div style={{ fontSize: 13 }}>{corrida.motivo}</div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Dados extraídos (editável)</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {CAMPOS.map((campo) => (
-                <div key={campo.key} className="form-group">
-                  <label className="form-label" style={{ fontSize: 11 }}>{campo.label}</label>
-                  <input
-                    className="form-input"
-                    type={campo.type}
-                    step={campo.type === "number" ? "any" : undefined}
-                    value={form[campo.key]}
-                    onChange={(e) => setForm((prev) => ({ ...prev, [campo.key]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-            {erro && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 8 }}>{erro}</div>}
-            <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
-              <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-              <button className="btn-primary" onClick={handleSalvar} disabled={atualizar.isPending}>
-                {atualizar.isPending ? "Salvando..." : "Salvar"}
-              </button>
-            </div>
           </div>
         </div>
       </div>

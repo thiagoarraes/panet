@@ -61,20 +61,3 @@ export function useEnviarCorrida(currentUserId) {
     },
   });
 }
-
-// Update manual dos campos de uma corrida (uso admin, fallback quando a IA falha).
-export function useAtualizarCorrida() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, campos }) => {
-      if (!isSupabaseEnabled || !supabase || !id) throw new Error("Serviço indisponível.");
-      const { error } = await supabase.from("corridas").update(campos).eq("id", id);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["corridas"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "corridas"] });
-    },
-  });
-}
