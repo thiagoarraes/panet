@@ -5482,7 +5482,63 @@
 
 /* ═══ Filtros de corridas: colaborador + mês ═════════════════════════════ */
 .corridas-filtros { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.corridas-filtro-mes { max-width: 170px; font-size: 12px; flex: none; }
+
+/* Filtro de mês (trigger) */
+.corridas-mes-select { position: relative; flex: none; }
+.corridas-mes-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-width: 190px; cursor: pointer; text-align: left; padding: 7px 10px;
+}
+.corridas-mes-atual { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.corridas-mes-icone {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.corridas-mes-textos { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.corridas-mes-caption { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.corridas-mes-valor { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Popover do picker */
+.corridas-mes-pop {
+  position: fixed; z-index: 1200; width: 268px;
+  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.6);
+}
+.corridas-mes-pop-head { display: flex; align-items: center; justify-content: space-between; }
+.corridas-mes-ano { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 15px; }
+.corridas-mes-nav {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--muted); background: var(--surface2);
+  border: 1px solid var(--border); cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.corridas-mes-nav:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.corridas-mes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.corridas-mes-cel {
+  font: inherit; font-size: 12px; font-weight: 600; text-transform: capitalize;
+  color: var(--muted); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 9px;
+  padding: 9px 0; cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+.corridas-mes-cel:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.corridas-mes-cel.active {
+  color: #0a1929; border-color: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
+}
+.corridas-mes-limpar {
+  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted);
+  background: transparent; border: none; border-top: 1px solid var(--border);
+  padding: 8px 0 2px; margin-top: 2px; cursor: pointer;
+  transition: color 0.14s ease;
+}
+.corridas-mes-limpar:hover:not(:disabled) { color: var(--danger); }
+.corridas-mes-limpar:disabled { opacity: 0.4; cursor: default; }
 
 .corridas-colab-select { position: relative; flex: none; width: 250px; }
 .corridas-colab-trigger {

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus, ChevronDown, Users } from "lucide-react";
+import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
 import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
@@ -141,6 +141,117 @@ function ColaboradorSelect({ colaboradores, value, onChange }) {
   );
 }
 
+const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MESES_LONGO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+// Filtro de mês custom (input type=month não deixa customizar o popup do browser).
+function MesSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
+  const [ano, setAno] = useState(() => (value ? Number(value.split("-")[0]) : new Date().getFullYear()));
+  const triggerRef = useRef(null);
+  const popRef = useRef(null);
+
+  const selAno = value ? Number(value.split("-")[0]) : null;
+  const selMes = value ? Number(value.split("-")[1]) - 1 : null;
+  const label = value ? `${MESES_LONGO[selMes]} de ${selAno}` : "Todos os meses";
+
+  const abrir = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+    setAno(value ? Number(value.split("-")[0]) : new Date().getFullYear());
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const fechar = (event) => {
+      if (triggerRef.current?.contains(event.target) || popRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    const onScroll = (event) => {
+      if (popRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", fechar);
+    window.addEventListener("resize", () => setOpen(false));
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("pointerdown", fechar);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
+
+  const escolher = (mesIdx) => {
+    onChange(`${ano}-${String(mesIdx + 1).padStart(2, "0")}`);
+    setOpen(false);
+  };
+
+  return (
+    <div className="corridas-mes-select">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="form-input corridas-mes-trigger"
+        onClick={() => (open ? setOpen(false) : abrir())}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <span className="corridas-mes-atual">
+          <span className="corridas-mes-icone"><Calendar size={13} /></span>
+          <span className="corridas-mes-textos">
+            <span className="corridas-mes-caption">Mês</span>
+            <span className="corridas-mes-valor">{label}</span>
+          </span>
+        </span>
+        <ChevronDown size={14} className={`corridas-colab-chevron ${open ? "is-open" : ""}`} />
+      </button>
+
+      {open && pos &&
+        createPortal(
+          <div ref={popRef} className="corridas-mes-pop" role="dialog" style={{ top: pos.top, right: pos.right }}>
+            <div className="corridas-mes-pop-head">
+              <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="corridas-mes-ano">{ano}</span>
+              <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div className="corridas-mes-grid">
+              {MESES_ABREV.map((m, i) => {
+                const ativo = selAno === ano && selMes === i;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`corridas-mes-cel ${ativo ? "active" : ""}`}
+                    onClick={() => escolher(i)}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="corridas-mes-limpar"
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+              disabled={!value}
+            >
+              Limpar filtro
+            </button>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
 // Mini modal para vincular um cliente a um destino.
 function ClienteModal({ endereco, clienteAtual, onClose }) {
   const [nome, setNome] = useState(clienteAtual || "");
@@ -256,13 +367,7 @@ export function AdminCorridas({ currentUserId }) {
       <div className="card">
         <div className="card-header corridas-filtros">
           <ColaboradorSelect colaboradores={colaboradores} value={colaboradorId} onChange={setColaboradorId} />
-          <input
-            type="month"
-            className="form-input corridas-filtro-mes"
-            value={mes}
-            onChange={(e) => setMes(e.target.value)}
-            aria-label="Filtrar por mês"
-          />
+          <MesSelect value={mes} onChange={setMes} />
         </div>
 
         {/* ── Lista de trajetos ──────────────────────────────────────────── */}
