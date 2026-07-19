@@ -14,8 +14,9 @@ const jsonResponse = (body: Record<string, unknown>, status: number) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const EXTRACTION_PROMPT = `Este é um recibo de corrida de aplicativo (Uber ou similar). Extraia os dados e responda APENAS com um JSON válido, sem cercas de código, exatamente com estas chaves:
+const EXTRACTION_PROMPT = `Você recebe um documento enviado por um colaborador que deveria ser o recibo/comprovante de uma corrida de aplicativo (Uber, 99 ou similar). Analise o documento e responda APENAS com um JSON válido, sem cercas de código, exatamente com estas chaves:
 {
+  "eh_recibo_corrida": boolean,
   "origem": string | null,
   "destino": string | null,
   "horario": string | null,
@@ -25,7 +26,10 @@ const EXTRACTION_PROMPT = `Este é um recibo de corrida de aplicativo (Uber ou s
   "motorista": string | null,
   "valor_total": number | null
 }
-Regras: origem/destino são os endereços de partida/chegada; horario é a data/hora de início em ISO 8601 (se o recibo só tiver hora sem data, use null); duracao_min em minutos; km é a distância; veiculo é modelo/placa; valor_total é o valor pago em reais como número (ex: 24.90). Use null para campo não encontrado.`;
+Regras:
+- eh_recibo_corrida = true SOMENTE se o documento for claramente um recibo/comprovante de viagem de app de transporte (Uber, 99, InDrive, Cabify e similares), com sinais como trajeto/endereços, valor da corrida, motorista/veículo ou a marca do app. Qualquer outra coisa (nota fiscal de loja, boleto, cardápio, foto aleatória, print sem relação, documento em branco) = false.
+- Se eh_recibo_corrida = false, coloque null em todos os outros campos.
+- origem/destino são os endereços de partida/chegada; horario é a data/hora de início em ISO 8601 (se só houver hora sem data, use null); duracao_min em minutos; km é a distância; veiculo é modelo/placa; valor_total é o valor pago em reais como número (ex: 24.90). Use null para campo não encontrado.`;
 
 // deno-lint-ignore no-explicit-any
 const parseExtraction = (text: string): Record<string, any> => {
@@ -138,6 +142,16 @@ serve(async (req) => {
     } catch (parseErr) {
       await markError(`Resposta inválida da IA: ${parseErr instanceof Error ? parseErr.message : "parse"}`);
       return jsonResponse({ ok: false, error: "Não foi possível interpretar a resposta da IA." }, 502);
+    }
+
+    // Documento não é recibo de corrida: rejeita, apaga arquivo e a corrida.
+    if (fields.eh_recibo_corrida === false) {
+      await adminClient.storage.from("recibos").remove([corrida.recibo_path]).catch(() => {});
+      await adminClient.from("corridas").delete().eq("id", corridaId);
+      return jsonResponse(
+        { ok: false, rejected: true, error: "O documento enviado não é um recibo de corrida de aplicativo (Uber/99)." },
+        200,
+      );
     }
 
     const toNumberOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);

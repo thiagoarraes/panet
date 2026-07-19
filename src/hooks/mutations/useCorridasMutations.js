@@ -47,9 +47,16 @@ export function useEnviarCorrida(currentUserId) {
         throw new Error(insertError.message);
       }
 
-      // Dispara a extração; não bloqueia o sucesso do envio se a função falhar
-      // (o status fica "pendente"/"erro" e o admin pode reprocessar/editar).
-      supabase.functions.invoke("extract-recibo", { body: { corrida_id: corrida.id } }).catch(() => {});
+      // Aguarda a extração/validação: se o documento não for recibo de corrida,
+      // a edge function apaga a corrida e retorna { rejected: true } — aí o envio falha.
+      const { data: extract, error: invokeError } = await supabase.functions.invoke("extract-recibo", {
+        body: { corrida_id: corrida.id },
+      });
+      if (!invokeError && extract?.rejected) {
+        throw new Error(extract.error || "O documento enviado não é um recibo de corrida de aplicativo.");
+      }
+      // invokeError ou falha de extração não bloqueiam o envio: fica "pendente"/"erro"
+      // e o admin reprocessa/edita.
 
       return corrida;
     },
