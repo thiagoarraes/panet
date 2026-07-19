@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, MapPin, Briefcase, Plus, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
+import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, MapPin, Briefcase, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
 import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
@@ -12,6 +12,9 @@ const CorridaModal = lazy(() => import("./AdminCorridas/CorridaModal").then((m) 
 const PAGE_SIZE = 20;
 
 const formatBrl = (v) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
+
+const formatDia = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "—");
+const formatHora = (iso) => (iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "");
 
 const StatusBadge = ({ status }) => {
   if (status === "ok") {
@@ -373,59 +376,38 @@ export function AdminCorridas({ currentUserId }) {
         {/* ── Lista de trajetos ──────────────────────────────────────────── */}
         <div className="card-body corridas-lista">
           {rows.map((c) => {
-            const cliente = c.destino ? clientes.get(normalizeEndereco(c.destino)) : null;
             return (
               <button key={c.id} type="button" className="corrida-item" onClick={() => setSelecionada(c)}>
                 <div className="corrida-quem">
-                  <Avatar col={c.colaborador} size={38} />
+                  <Avatar col={c.colaborador} size={42} />
                   <div className="corrida-quem-texto">
                     <span className="corrida-quem-nome">{c.colaborador?.nome}</span>
                     <span className="corrida-quem-cargo">{c.colaborador?.cargo || "—"}</span>
                   </div>
                 </div>
 
-                <div className="corrida-destino-bloco">
-                  <span className="corrida-destino-icone"><MapPin size={14} /></span>
-                  <div className="corrida-destino-textos">
-                    {cliente ? (
-                      <span className="corrida-cliente-badge"><Briefcase size={11} /> {cliente}</span>
-                    ) : (
-                      c.destino && (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          className="corrida-cliente-definir"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setClienteDestino(c.destino);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              setClienteDestino(c.destino);
-                            }
-                          }}
-                        >
-                          <Plus size={11} /> Definir cliente
-                        </span>
-                      )
-                    )}
-                    <span className="corrida-destino-endereco" title={c.destino || ""}>
-                      {c.destino || "Destino não identificado"}
-                    </span>
+                <div className="corrida-datahora">
+                  <span className="corrida-datahora-icone"><Clock3 size={15} /></span>
+                  <div className="corrida-datahora-textos">
+                    <span className="corrida-datahora-dia">{formatDia(c.horario || c.created_at)}</span>
+                    <span className="corrida-datahora-hora">{formatHora(c.horario || c.created_at)}</span>
                   </div>
                 </div>
 
-                <div className="corrida-motivo-bloco">
-                  <span className="corrida-motivo-label">Motivo</span>
-                  <span className="corrida-motivo" title={c.motivo}>{c.motivo}</span>
+                <div className="corrida-valor-bloco">
+                  {c.status_extracao === "ok" ? (
+                    <>
+                      <span className="corrida-valor-icone"><Wallet size={15} /></span>
+                      <span className="corrida-valor">{formatBrl(c.valor_total)}</span>
+                    </>
+                  ) : (
+                    <StatusBadge status={c.status_extracao} />
+                  )}
                 </div>
 
-                <div className="corrida-valor-bloco">
-                  <span className="corrida-valor">{formatBrl(c.valor_total)}</span>
-                  <StatusBadge status={c.status_extracao} />
-                </div>
+                <span className="corrida-vermais">
+                  Ver mais <ChevronRight size={15} />
+                </span>
               </button>
             );
           })}
@@ -456,6 +438,7 @@ export function AdminCorridas({ currentUserId }) {
           <CorridaModal
             corrida={selecionada}
             cliente={selecionada.destino ? clientes.get(normalizeEndereco(selecionada.destino)) : null}
+            onDefinirCliente={selecionada.destino ? () => setClienteDestino(selecionada.destino) : null}
             onClose={() => setSelecionada(null)}
           />
         </Suspense>

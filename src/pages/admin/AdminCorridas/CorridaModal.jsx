@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, CarFront, Clock3, FileText, Gauge, Loader2, Route, UserRound, Wallet } from "lucide-react";
+import { AlertTriangle, CarFront, Clock3, FileText, Gauge, Loader2, MapPin, Route, UserRound, Wallet } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { supabase, isSupabaseEnabled } from "../../../lib/supabase.js";
 
@@ -16,7 +16,7 @@ const FATOS = [
   { key: "motorista", label: "Motorista", Icon: UserRound, render: (v) => v || "—" },
 ];
 
-export function CorridaModal({ corrida, cliente = null, onClose }) {
+export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null, onClose }) {
   const [reciboUrl, setReciboUrl] = useState("");
   const isPdf = corrida.recibo_mime === "application/pdf";
 
@@ -75,7 +75,15 @@ export function CorridaModal({ corrida, cliente = null, onClose }) {
                 <div>
                   <div className="corrida-modal-rota-label">Destino{cliente ? ` · Cliente` : ""}</div>
                   <div className="corrida-modal-rota-endereco is-destino">{corrida.destino || "Não identificado"}</div>
-                  {cliente && <span className="corrida-cliente-badge" style={{ marginTop: 4 }}>{cliente}</span>}
+                  {cliente ? (
+                    <span className="corrida-cliente-badge" style={{ marginTop: 4 }}>{cliente}</span>
+                  ) : (
+                    corrida.destino && onDefinirCliente && (
+                      <button type="button" className="corrida-cliente-definir" style={{ marginTop: 4 }} onClick={onDefinirCliente}>
+                        <MapPin size={11} /> Definir cliente para este destino
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             </div>
