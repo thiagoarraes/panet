@@ -16,7 +16,7 @@ const FATOS = [
   { key: "motorista", label: "Motorista", Icon: UserRound, render: (v) => v || "—" },
 ];
 
-export function CorridaModal({ corrida, onClose }) {
+export function CorridaModal({ corrida, cliente = null, onClose }) {
   const [reciboUrl, setReciboUrl] = useState("");
   const isPdf = corrida.recibo_mime === "application/pdf";
 
@@ -73,8 +73,9 @@ export function CorridaModal({ corrida, onClose }) {
                   <div className="corrida-modal-rota-endereco">{corrida.origem || "Não identificada"}</div>
                 </div>
                 <div>
-                  <div className="corrida-modal-rota-label">Destino</div>
+                  <div className="corrida-modal-rota-label">Destino{cliente ? ` · Cliente` : ""}</div>
                   <div className="corrida-modal-rota-endereco is-destino">{corrida.destino || "Não identificado"}</div>
+                  {cliente && <span className="corrida-cliente-badge" style={{ marginTop: 4 }}>{cliente}</span>}
                 </div>
               </div>
             </div>

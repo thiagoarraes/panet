@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Car, Search, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, Clock3, Gauge, CarFront, UserRound } from "lucide-react";
+import { Car, Search, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
+import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
+import { useDefinirClienteDestino } from "../../hooks/mutations/useCorridasMutations.js";
 import { useColaboradores } from "../../hooks/queries/useColaboradores";
 
 const CorridaModal = lazy(() => import("./AdminCorridas/CorridaModal").then((m) => ({ default: m.CorridaModal })));
@@ -16,8 +18,6 @@ const STATUS_OPCOES = [
 ];
 
 const formatBrl = (v) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
-const formatDateTime = (iso) =>
-  iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
 
 const StatusBadge = ({ status }) => {
   if (status === "ok") {
@@ -41,12 +41,61 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const MetaChip = ({ Icon, children }) => (
-  <span className="corrida-meta-chip">
-    <Icon size={11} />
-    {children}
-  </span>
-);
+// Mini modal para vincular um cliente a um destino.
+function ClienteModal({ endereco, clienteAtual, onClose }) {
+  const [nome, setNome] = useState(clienteAtual || "");
+  const [erro, setErro] = useState("");
+  const definirCliente = useDefinirClienteDestino();
+
+  const handleSalvar = async () => {
+    setErro("");
+    try {
+      await definirCliente.mutateAsync({ endereco, nome });
+      onClose();
+    } catch (err) {
+      setErro(err?.message || "Não foi possível salvar.");
+    }
+  };
+
+  return (
+    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
+      <div className="modal collab-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>
+            <Briefcase size={16} /> Vincular cliente ao destino
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="corrida-cliente-endereco">
+            <MapPin size={13} /> {endereco}
+          </div>
+          <div className="form-group" style={{ marginTop: 12 }}>
+            <label className="form-label">Nome do cliente</label>
+            <input
+              className="form-input"
+              placeholder="Ex: Cliente Acme"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSalvar()}
+              autoFocus
+            />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+            Próximas corridas para este destino já vão mostrar o cliente automaticamente.
+          </div>
+          {erro && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 8 }}>{erro}</div>}
+          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn-primary" onClick={handleSalvar} disabled={definirCliente.isPending || !nome.trim()}>
+              {definirCliente.isPending ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function AdminCorridas({ currentUserId }) {
   const [searchInput, setSearchInput] = useState("");
@@ -56,6 +105,7 @@ export function AdminCorridas({ currentUserId }) {
   const [colaboradorId, setColaboradorId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selecionada, setSelecionada] = useState(null);
+  const [clienteDestino, setClienteDestino] = useState(null); // endereço sendo vinculado
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -71,6 +121,8 @@ export function AdminCorridas({ currentUserId }) {
   }, [status, mes, colaboradorId]);
 
   const { data, isLoading } = useAdminCorridas({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, status, mes, colaboradorId });
+  const clientesQuery = useCorridasClientes();
+  const clientes = clientesQuery.data || new Map();
   const colaboradoresQuery = useColaboradores(currentUserId);
 
   const rows = useMemo(() => (Array.isArray(data?.rows) ? data.rows : []), [data]);
@@ -143,44 +195,63 @@ export function AdminCorridas({ currentUserId }) {
 
         {/* ── Lista de trajetos ──────────────────────────────────────────── */}
         <div className="card-body corridas-lista">
-          {rows.map((c) => (
-            <button key={c.id} type="button" className="corrida-item" onClick={() => setSelecionada(c)}>
-              <div className="corrida-quem">
-                <Avatar col={c.colaborador} size={38} />
-                <div className="corrida-quem-texto">
-                  <span className="corrida-quem-nome">{c.colaborador?.nome}</span>
-                  <span className="corrida-quem-cargo">{c.colaborador?.cargo || "—"}</span>
+          {rows.map((c) => {
+            const cliente = c.destino ? clientes.get(normalizeEndereco(c.destino)) : null;
+            return (
+              <button key={c.id} type="button" className="corrida-item" onClick={() => setSelecionada(c)}>
+                <div className="corrida-quem">
+                  <Avatar col={c.colaborador} size={38} />
+                  <div className="corrida-quem-texto">
+                    <span className="corrida-quem-nome">{c.colaborador?.nome}</span>
+                    <span className="corrida-quem-cargo">{c.colaborador?.cargo || "—"}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="corrida-rota">
-                <span className="corrida-rota-linha" aria-hidden="true">
-                  <i className="dot-origem" />
-                  <i className="tracado" />
-                  <i className="dot-destino" />
-                </span>
-                <div className="corrida-rota-textos">
-                  <span className="corrida-rota-endereco">{c.origem || "Origem não identificada"}</span>
-                  <span className="corrida-rota-endereco is-destino">{c.destino || "Destino não identificado"}</span>
+                <div className="corrida-destino-bloco">
+                  <span className="corrida-destino-icone"><MapPin size={14} /></span>
+                  <div className="corrida-destino-textos">
+                    {cliente ? (
+                      <span className="corrida-cliente-badge"><Briefcase size={11} /> {cliente}</span>
+                    ) : (
+                      c.destino && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="corrida-cliente-definir"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClienteDestino(c.destino);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setClienteDestino(c.destino);
+                            }
+                          }}
+                        >
+                          <Plus size={11} /> Definir cliente
+                        </span>
+                      )
+                    )}
+                    <span className="corrida-destino-endereco" title={c.destino || ""}>
+                      {c.destino || "Destino não identificado"}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="corrida-detalhes">
-                <div className="corrida-meta">
-                  <MetaChip Icon={Clock3}>{formatDateTime(c.horario)}{typeof c.duracao_min === "number" ? ` · ${c.duracao_min} min` : ""}</MetaChip>
-                  {typeof c.km === "number" && <MetaChip Icon={Gauge}>{c.km} km</MetaChip>}
-                  {c.veiculo && <MetaChip Icon={CarFront}>{c.veiculo}</MetaChip>}
-                  {c.motorista && <MetaChip Icon={UserRound}>{c.motorista}</MetaChip>}
+                <div className="corrida-motivo-bloco">
+                  <span className="corrida-motivo-label">Motivo</span>
+                  <span className="corrida-motivo" title={c.motivo}>{c.motivo}</span>
                 </div>
-                <div className="corrida-motivo" title={c.motivo}>{c.motivo}</div>
-              </div>
 
-              <div className="corrida-valor-bloco">
-                <span className="corrida-valor">{formatBrl(c.valor_total)}</span>
-                <StatusBadge status={c.status_extracao} />
-              </div>
-            </button>
-          ))}
+                <div className="corrida-valor-bloco">
+                  <span className="corrida-valor">{formatBrl(c.valor_total)}</span>
+                  <StatusBadge status={c.status_extracao} />
+                </div>
+              </button>
+            );
+          })}
 
           {rows.length === 0 && (
             <div className="corridas-vazio">
@@ -205,8 +276,20 @@ export function AdminCorridas({ currentUserId }) {
 
       {selecionada && (
         <Suspense fallback={null}>
-          <CorridaModal corrida={selecionada} onClose={() => setSelecionada(null)} />
+          <CorridaModal
+            corrida={selecionada}
+            cliente={selecionada.destino ? clientes.get(normalizeEndereco(selecionada.destino)) : null}
+            onClose={() => setSelecionada(null)}
+          />
         </Suspense>
+      )}
+
+      {clienteDestino && (
+        <ClienteModal
+          endereco={clienteDestino}
+          clienteAtual={clientes.get(normalizeEndereco(clienteDestino)) || ""}
+          onClose={() => setClienteDestino(null)}
+        />
       )}
     </div>
   );

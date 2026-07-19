@@ -61,3 +61,33 @@ export function useEnviarCorrida(currentUserId) {
     },
   });
 }
+
+// Vincula (ou atualiza) um cliente a um endereço de destino. Admin only (RLS).
+export function useDefinirClienteDestino() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ endereco, nome }) => {
+      if (!isSupabaseEnabled || !supabase) throw new Error("Serviço indisponível.");
+      const enderecoLimpo = String(endereco || "").trim();
+      const nomeLimpo = String(nome || "").trim();
+      if (!enderecoLimpo) throw new Error("Endereço de destino inválido.");
+      if (!nomeLimpo) throw new Error("Informe o nome do cliente.");
+
+      // Upsert manual: o índice único é por expressão (lower/btrim), não por coluna.
+      const { data: existente } = await supabase
+        .from("corridas_clientes")
+        .select("id")
+        .ilike("endereco", enderecoLimpo)
+        .maybeSingle();
+
+      const { error } = existente
+        ? await supabase.from("corridas_clientes").update({ nome: nomeLimpo }).eq("id", existente.id)
+        : await supabase.from("corridas_clientes").insert({ endereco: enderecoLimpo, nome: nomeLimpo });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "corridas-clientes"] });
+    },
+  });
+}

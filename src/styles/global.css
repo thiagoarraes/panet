@@ -5426,3 +5426,56 @@
   .corrida-modal-valor-bloco { align-items: flex-start; padding-right: 0; }
   .corrida-modal-fatos { grid-template-columns: 1fr; }
 }
+
+/* ═══ Card de corrida enxuto + cliente por destino ═══════════════════════ */
+.corrida-item { grid-template-columns: 200px minmax(0, 1.5fr) minmax(0, 1.1fr) 140px; }
+
+.corrida-destino-bloco { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.corrida-destino-icone {
+  width: 28px; height: 28px; border-radius: 9px; flex: none; margin-top: 2px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.corrida-destino-textos { display: flex; flex-direction: column; gap: 4px; min-width: 0; align-items: flex-start; }
+.corrida-destino-endereco {
+  font-size: 12.5px; font-weight: 500; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+
+.corrida-cliente-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 999px; padding: 3px 10px;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.corrida-cliente-definir {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 600; color: var(--muted);
+  border: 1px dashed var(--border); border-radius: 999px;
+  padding: 3px 9px; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.corrida-cliente-definir:hover, .corrida-cliente-definir:focus-visible {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: none;
+}
+
+.corrida-motivo-bloco { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.corrida-motivo-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.corrida-cliente-endereco {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text);
+  padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface2);
+}
+
+@media (max-width: 900px) {
+  .corrida-item { grid-template-columns: 1fr; }
+}
