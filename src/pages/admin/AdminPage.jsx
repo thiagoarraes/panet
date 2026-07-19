@@ -1,10 +1,9 @@
 import { Suspense, lazy, useEffect } from "react";
-import { BarChart3, CalendarDays, Car, FileText, Images, MessageSquare, Plane, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarDays, Car, FileText, Images, Plane, Settings, Users } from "lucide-react";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
 const AdminPostagens = lazy(() => import("./AdminPostagens").then((m) => ({ default: m.AdminPostagens })));
 const AdminFerias = lazy(() => import("./AdminFerias").then((m) => ({ default: m.AdminFerias })));
-const AdminMural = lazy(() => import("./AdminMural").then((m) => ({ default: m.AdminMural })));
 const AdminGaleria = lazy(() => import("./AdminGaleria").then((m) => ({ default: m.AdminGaleria })));
 const AdminPresencial = lazy(() => import("./AdminPresencial").then((m) => ({ default: m.AdminPresencial })));
 const AdminEnquetes = lazy(() => import("./AdminEnquetes").then((m) => ({ default: m.AdminEnquetes })));
@@ -25,7 +24,6 @@ const ALL_ABAS = [
   { id: "presencial", label: "Eventos", icon: CalendarDays },
   { id: "enquetes", label: "Enquetes", icon: BarChart3 },
   { id: "galeria", label: "Galerias", icon: Images },
-  { id: "mural", label: "PanZap", icon: MessageSquare },
   { id: "corridas", label: "PanUber", icon: Car },
 ];
 
@@ -95,11 +93,6 @@ export function AdminPage({
       {abaAtiva === "presencial" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminPresencial currentUserId={currentUserId} />
-        </Suspense>
-      )}
-      {abaAtiva === "mural" && (
-        <Suspense fallback={<AdminTabFallback />}>
-          <AdminMural />
         </Suspense>
       )}
       {abaAtiva === "enquetes" && (

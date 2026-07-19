@@ -113,7 +113,6 @@ export const MODULES = [
   { id: "presencial", label: "Eventos" },
   { id: "enquetes", label: "Enquetes" },
   { id: "galeria", label: "Galerias" },
-  { id: "mural", label: "PanZap" },
   { id: "corridas", label: "Corridas" },
 ];
 

@@ -10,7 +10,6 @@ const PERSIST_BUSTER = "panet-query-cache-2026-06-11";
 const PERSISTED_QUERY_ROOTS = new Set([
   "dashboard-snapshot",
   "postagens",
-  "mural",
   "ferias",
   "ausencias",
   "aniversarios",

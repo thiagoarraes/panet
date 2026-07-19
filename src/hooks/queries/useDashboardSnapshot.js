@@ -73,29 +73,6 @@ const mapDbPostSummaryToUi = (post, currentUserId) => {
   };
 };
 
-const mapDbMuralToUi = (item) => {
-  const date = new Date(item?.created_at || "");
-  const validDate = Number.isNaN(date.getTime()) ? new Date() : date;
-  const hoje = new Date();
-  const ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
-  const label =
-    validDate.toDateString() === hoje.toDateString()
-      ? "Hoje"
-      : validDate.toDateString() === ontem.toDateString()
-        ? "Ontem"
-        : validDate.toLocaleDateString("pt-BR");
-
-  const rawColaborador = item?.colaborador || { id: item?.colaborador_id, nome: "Colaborador" };
-
-  return {
-    id: item?.id,
-    texto: item?.texto || "",
-    hora: validDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-    data: label,
-    colaborador: toAvatar(rawColaborador),
-  };
-};
-
 const mapDbFeriasToUi = (item) => ({
   id: item?.id,
   inicio: formatBrDate(item?.inicio),
@@ -144,9 +121,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
   const safePostsLimit = Number.isFinite(Number(options?.postsLimit))
     ? Math.max(1, Math.min(100, Number(options.postsLimit)))
     : 20;
-  const safeMuralLimit = Number.isFinite(Number(options?.muralLimit))
-    ? Math.max(1, Math.min(200, Number(options.muralLimit)))
-    : 60;
   const safeFeriasLimit = Number.isFinite(Number(options?.feriasLimit))
     ? Math.max(1, Math.min(500, Number(options.feriasLimit)))
     : 120;
@@ -163,7 +137,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
       userId,
       {
         postsLimit: safePostsLimit,
-        muralLimit: safeMuralLimit,
         feriasLimit: safeFeriasLimit,
         ausenciasLimit: safeAusenciasLimit,
         colaboradoresLimit: safeColaboradoresLimit,
@@ -174,7 +147,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
       let { data, error } = await timeQuery(`rpc get_dashboard_snapshot (posts=${safePostsLimit})`, () =>
         supabase.rpc("get_dashboard_snapshot", {
           p_posts_limit: safePostsLimit,
-          p_mural_limit: safeMuralLimit,
           p_ferias_limit: safeFeriasLimit,
           p_ausencias_limit: safeAusenciasLimit,
           p_colaboradores_limit: safeColaboradoresLimit,
@@ -183,7 +155,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
       if (error && isMissingExtendedSnapshotFunction(error)) {
         const fallback = await supabase.rpc("get_dashboard_snapshot", {
           p_posts_limit: safePostsLimit,
-          p_mural_limit: safeMuralLimit,
         });
         data = fallback.data;
         error = fallback.error;
@@ -200,7 +171,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
       const postagens = safeArray(payload.postagens).map((post) =>
         mapDbPostSummaryToUi(post, userId)
       );
-      const mural = safeArray(payload.mural).map(mapDbMuralToUi);
       const feriasRows = safeArray(payload.ferias).map(mapDbFeriasToUi);
       const ausencias = safeArray(payload.ausencias).map(mapDbAusenciaToUi);
       const aniversariantes = safeArray(payload.aniversarios)
@@ -213,7 +183,6 @@ export function getDashboardSnapshotQueryOptions(userId, options = {}) {
 
       return {
         postagens,
-        mural,
         feriasData: {
           ferias: feriasRows.filter((item) => item.tipo === "ferias"),
           dayoff: feriasRows.filter((item) => item.tipo === "dayoff"),

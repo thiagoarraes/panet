@@ -31,7 +31,6 @@ export const ADMIN_TAB_PATHS = {
   ferias:        "/admin/folgas",
   presencial:    "/admin/eventos",
   galeria:       "/admin/galeria",
-  mural:         "/admin/mural",
   enquetes:      "/admin/enquetes",
   corridas:      "/admin/corridas",
 };
@@ -79,8 +78,6 @@ export const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "presencial", known: true };
     case "/admin/galeria":
       return { pagina: "admin", adminAba: "galeria", known: true };
-    case "/admin/mural":
-      return { pagina: "admin", adminAba: "mural", known: true };
     case "/admin/enquetes":
       return { pagina: "admin", adminAba: "enquetes", known: true };
     case "/admin/corridas":

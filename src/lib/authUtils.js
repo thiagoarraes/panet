@@ -7,7 +7,6 @@ export const PROFILE_DEDUP_WINDOW_MS = 3000;
 export const PROFILE_BACKGROUND_REFRESH_DELAY_MS = 12000;
 export const PROFILE_CACHE_KEY = "panet.profile.cache";
 export const PROFILE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-export const PANZAP_METRICS_STORAGE_KEY = "panet.metrics.panzap.v1";
 export const LOGIN_RETRY_DELAYS_MS = [700, 1500];
 
 // Shared across module instances (e.g. StrictMode double-mount)

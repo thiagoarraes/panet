@@ -1,16 +1,13 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { SkeletonPostCard } from "../components/Skeleton";
 import { Suspense, lazy } from "react";
 import { BarChart3, Cake, CheckCircle2, Heart, Sparkles } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { AniversariosAside } from "../components/aside/AniversariosAside";
 import { PanOffAside } from "../components/aside/PanOffAside";
-import { PanzapAside } from "../components/aside/PanzapAside";
 import { CorridasAside } from "../components/aside/CorridasAside";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
-import { useMural } from "../hooks/queries/useMural";
-import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 import { usePostagens } from "../hooks/queries/usePostagens";
 import { useToggleCurtida } from "../hooks/mutations/usePostMutations";
 import { useFerias } from "../hooks/queries/useFerias";
@@ -121,8 +118,6 @@ export function DashboardPage({
 
   const postagensQuery = usePostagens(currentUserId, { limit: 20, enabled: useLegacyQueries });
   const toggleCurtida = useToggleCurtida();
-  const muralQuery = useMural(currentUserId, { enabled: useLegacyQueries });
-  const enviarMensagem = useEnviarMensagem(currentUserId);
   const feriasQuery = useFerias(currentUserId, { summaryOnly: true, enabled: useLegacyQueries });
   const ausenciasQuery = useAusencias(currentUserId, { summaryOnly: true, enabled: useLegacyQueries });
   const aniversariosQuery = useAniversarios(currentUserId, { enabled: useLegacyQueries });
@@ -134,10 +129,6 @@ export function DashboardPage({
   const postagens = useMemo(
     () => (hasSnapshotData ? dashboardSnapshotData?.postagens || [] : postagensQuery.data || []),
     [hasSnapshotData, dashboardSnapshotData, postagensQuery.data]
-  );
-  const muralMsgs = useMemo(
-    () => (hasSnapshotData ? dashboardSnapshotData?.mural || [] : muralQuery.data || []),
-    [hasSnapshotData, dashboardSnapshotData, muralQuery.data]
   );
   const feriasData = useMemo(
     () => (hasSnapshotData ? dashboardSnapshotData?.feriasData || null : feriasQuery.data || null),
@@ -163,11 +154,8 @@ export function DashboardPage({
   const voteEnquete = useVoteEnquete();
   const [pagina, setPagina] = useState(1);
   const [parabenizando, setParabenizando] = useState(false);
-  const [textoMural, setTextoMural] = useState("");
-  const [enviandoMural, setEnviandoMural] = useState(false);
   const [enqueteSelectedOptionId, setEnqueteSelectedOptionId] = useState("");
   const [enqueteError, setEnqueteError] = useState("");
-  const muralListRef = useRef(null);
   const { canvasRef, launch } = useConfetti();
   const POR_PAGINA = 5;
   const totalPags = Math.ceil(postagens.length / POR_PAGINA);
@@ -175,7 +163,6 @@ export function DashboardPage({
   const dashboardIssues = useLegacyQueries
     ? [
         { label: "PanNews", error: postagensQuery.error },
-        { label: "PanZap", error: muralQuery.error },
         { label: "PanOff", error: feriasQuery.error || ausenciasQuery.error },
         { label: "Aniversários", error: aniversariosQuery.error },
         { label: "Colaboradores", error: colaboradoresQuery.error },
@@ -215,16 +202,7 @@ export function DashboardPage({
   }, [colaboradores, today]);
 
   const userJaParabenizou = Boolean(today?.reacoes?.includes(currentUserId));
-  const muralOrdenado = useMemo(() => [...muralMsgs].slice(0, 20).reverse(), [muralMsgs]);
 
-  useEffect(() => {
-    const el = muralListRef.current;
-    if (!el) return;
-    const frameId = window.requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [muralOrdenado.length]);
   const ausentesAgora = useMemo(() => {
     const now = new Date();
     return ausencias
@@ -275,24 +253,6 @@ export function DashboardPage({
     } finally {
       setParabenizando(false);
     }
-  };
-
-  const handleEnviarMural = async () => {
-    const texto = textoMural.trim();
-    if (!texto || enviandoMural) return;
-    setEnviandoMural(true);
-    setTextoMural("");
-    enviarMensagem.mutate(
-      { texto, currentProfile: currentUser },
-      {
-        onError: () => {
-          setTextoMural((prev) => prev || texto);
-        },
-        onSettled: () => {
-          setEnviandoMural(false);
-        },
-      }
-    );
   };
 
   useEffect(() => {
@@ -602,16 +562,6 @@ export function DashboardPage({
             onVerTodos={onOpenFolgas}
           />
           <CorridasAside currentUserId={currentUserId} />
-          <PanzapAside
-            mensagens={muralOrdenado}
-            currentUser={currentUser}
-            currentUserId={currentUserId}
-            textoMural={textoMural}
-            setTextoMural={setTextoMural}
-            enviandoMural={enviandoMural}
-            onEnviar={handleEnviarMural}
-            muralListRef={muralListRef}
-          />
         </div>
       </div>
     </div>

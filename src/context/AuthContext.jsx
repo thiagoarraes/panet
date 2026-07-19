@@ -10,7 +10,6 @@ import {
   AUTH_TIMEOUT_MS,
   PROFILE_DEDUP_WINDOW_MS,
   PROFILE_BACKGROUND_REFRESH_DELAY_MS,
-  PANZAP_METRICS_STORAGE_KEY,
   globalProfileLoadState,
   getFreshSessionAccessToken,
   invokeEdgeFunctionHttp,
@@ -404,25 +403,6 @@ export function AuthProvider({ children }) {
     window.addEventListener("popstate", applyLocation);
     return () => window.removeEventListener("popstate", applyLocation);
   }, [isAdmin, adminServerConfirmed, navigateTo, tela]);
-
-  // ─── Panzap metrics ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    window.__PANET_GET_PANZAP_METRICS = () => {
-      try {
-        const raw = localStorage.getItem(PANZAP_METRICS_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_err) { return []; }
-    };
-    window.__PANET_CLEAR_PANZAP_METRICS = () => {
-      try { localStorage.removeItem(PANZAP_METRICS_STORAGE_KEY); } catch (_err) { /* ignore */ }
-    };
-    return () => {
-      delete window.__PANET_GET_PANZAP_METRICS;
-      delete window.__PANET_CLEAR_PANZAP_METRICS;
-    };
-  }, []);
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
   useEffect(() => {

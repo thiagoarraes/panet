@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Heart, MessageCircle, Send, Pencil, Trash2 } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { RichContent } from "../components/RichContent";
 import { Badge } from "../components/Badge";
 import { AniversariosAside } from "../components/aside/AniversariosAside";
 import { PanOffAside } from "../components/aside/PanOffAside";
-import { PanzapAside } from "../components/aside/PanzapAside";
 import { usePostagemDetalhe } from "../hooks/queries/usePostagemDetalhe";
 import { usePostagensSlugIndex } from "../hooks/queries/usePostagensSlugIndex";
 import { useAniversarios } from "../hooks/queries/useAniversarios";
 import { useColaboradores } from "../hooks/queries/useColaboradores";
-import { useMural } from "../hooks/queries/useMural";
 import { useFerias } from "../hooks/queries/useFerias";
 import { useAusencias } from "../hooks/queries/useAusencias";
 import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentario } from "../hooks/mutations/usePostMutations";
-import { useEnviarMensagem } from "../hooks/mutations/useMuralMutations";
 import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
 import { getFeriasStatusByDate, parseBrDate } from "../lib/panoff.js";
 import { toPostSlug } from "../lib/postRouting.js";
@@ -62,9 +59,6 @@ export function PostDetalhePage({
   const [editandoId, setEditandoId] = useState(null);
   const [textoEdicao, setTextoEdicao] = useState("");
   const [loadingEdicao, setLoadingEdicao] = useState(false);
-  const [textoMural, setTextoMural] = useState("");
-  const [enviandoMural, setEnviandoMural] = useState(false);
-  const muralListRef = useRef(null);
 
   const postSlugIndexQuery = usePostagensSlugIndex(currentUserId);
   const postagensIndex = useMemo(() => postSlugIndexQuery.data || [], [postSlugIndexQuery.data]);
@@ -72,8 +66,6 @@ export function PostDetalhePage({
   const aniversariantes = useMemo(() => aniversariosQuery.data || [], [aniversariosQuery.data]);
   const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
   const colaboradores = useMemo(() => colaboradoresQuery.data || [], [colaboradoresQuery.data]);
-  const muralQuery = useMural(currentUserId);
-  const muralMsgs = useMemo(() => muralQuery.data || [], [muralQuery.data]);
   const feriasQuery = useFerias(currentUserId, { summaryOnly: true });
   const feriasData = useMemo(() => feriasQuery.data || null, [feriasQuery.data]);
   const ferias = useMemo(() => feriasData?.ferias || [], [feriasData]);
@@ -85,7 +77,6 @@ export function PostDetalhePage({
   const comentarMutation = useComentar();
   const editarComentarioMutation = useEditarComentario();
   const deletarComentarioMutation = useDeletarComentario();
-  const enviarMensagemMutation = useEnviarMensagem(currentUserId);
 
   const postResumo = useMemo(
     () => postagensIndex.find((p) => toPostSlug(p.titulo) === postSlug) || null,
@@ -129,17 +120,6 @@ export function PostDetalhePage({
     [aniversariantesTodos]
   );
 
-  const muralOrdenado = useMemo(() => [...muralMsgs].slice(0, 20).reverse(), [muralMsgs]);
-
-  useEffect(() => {
-    const el = muralListRef.current;
-    if (!el) return;
-    const frameId = window.requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-    });
-    return () => window.cancelAnimationFrame(frameId);
-  }, [muralOrdenado.length]);
-
   const proximasFolgas = useMemo(() => {
     const hoje = new Date();
     const hojeNoon = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 12, 0, 0);
@@ -178,7 +158,6 @@ export function PostDetalhePage({
   const sideIssues = [
     { label: "Aniversários", error: aniversariosQuery.error },
     { label: "Colaboradores", error: colaboradoresQuery.error },
-    { label: "PanZap", error: muralQuery.error },
     { label: "PanOff", error: feriasQuery.error || ausenciasQuery.error },
   ].filter((item) => Boolean(item.error));
 
@@ -223,22 +202,6 @@ export function PostDetalhePage({
     if (!post) return;
     const alreadyLiked = post.curtidas.includes(currentUserId);
     toggleCurtidaMutation.mutate({ postId, userId: currentUserId, alreadyLiked });
-  };
-
-  const handleEnviarMural = async () => {
-    const valor = textoMural.trim();
-    if (!valor || enviandoMural) return;
-    setEnviandoMural(true);
-    setTextoMural("");
-    Promise.resolve(
-      enviarMensagemMutation.mutateAsync({ texto: valor, currentProfile: currentUser })
-    )
-      .catch(() => {
-        setTextoMural((prev) => prev || valor);
-      })
-      .finally(() => {
-        setEnviandoMural(false);
-      });
   };
 
   return (
@@ -389,16 +352,6 @@ export function PostDetalhePage({
             proximasFolgas={proximasFolgas}
             isLoading={feriasQuery.isLoading || ausenciasQuery.isLoading}
             onVerTodos={onOpenFolgas}
-          />
-          <PanzapAside
-            mensagens={muralOrdenado}
-            currentUser={currentUser}
-            currentUserId={currentUserId}
-            textoMural={textoMural}
-            setTextoMural={setTextoMural}
-            enviandoMural={enviandoMural}
-            onEnviar={handleEnviarMural}
-            muralListRef={muralListRef}
           />
         </div>
       </div>
