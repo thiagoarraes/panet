@@ -6,6 +6,7 @@ import { Avatar } from "../components/Avatar";
 import { AniversariosAside } from "../components/aside/AniversariosAside";
 import { PanOffAside } from "../components/aside/PanOffAside";
 import { PanzapAside } from "../components/aside/PanzapAside";
+import { CorridasAside } from "../components/aside/CorridasAside";
 import { PostCard } from "../components/PostCard";
 import useConfetti from "../hooks/useConfetti";
 import { useMural } from "../hooks/queries/useMural";
@@ -600,6 +601,7 @@ export function DashboardPage({
             isLoading={snapshotIsLoading || (useLegacyQueries && (feriasQuery.isLoading || ausenciasQuery.isLoading))}
             onVerTodos={onOpenFolgas}
           />
+          <CorridasAside currentUserId={currentUserId} />
           <PanzapAside
             mensagens={muralOrdenado}
             currentUser={currentUser}
