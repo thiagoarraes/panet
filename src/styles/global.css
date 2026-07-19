@@ -5579,3 +5579,12 @@
 @media (max-width: 640px) {
   .corridas-colab-select { width: 100%; }
 }
+
+/* ── CorridasAside — mensagem de sucesso ──────────────────────────────────── */
+.corrida-aside-ok {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 20px; padding: 5px 12px;
+}

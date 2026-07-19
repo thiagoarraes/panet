@@ -26,7 +26,7 @@ const ALL_ABAS = [
   { id: "enquetes", label: "Enquetes", icon: BarChart3 },
   { id: "galeria", label: "Galerias", icon: Images },
   { id: "mural", label: "PanZap", icon: MessageSquare },
-  { id: "corridas", label: "Corridas", icon: Car },
+  { id: "corridas", label: "PanUber", icon: Car },
 ];
 
 export function AdminPage({

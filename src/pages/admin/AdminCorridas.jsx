@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, MapPin, Briefcase, Plus, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
 import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
@@ -344,21 +344,21 @@ export function AdminCorridas({ currentUserId }) {
           <span className="corridas-stat-icon"><Wallet size={16} /></span>
           <div>
             <div className="corridas-stat-value">{totals && typeof totals.valor === "number" ? formatBrl(totals.valor) : "—"}</div>
-            <div className="corridas-stat-label">Total investido</div>
+            <div className="corridas-stat-label">Total gasto</div>
           </div>
         </div>
         <div className="corridas-stat">
           <span className="corridas-stat-icon"><Car size={16} /></span>
           <div>
             <div className="corridas-stat-value">{totalItems}</div>
-            <div className="corridas-stat-label">Corrida(s) no período</div>
+            <div className="corridas-stat-label">Corridas</div>
           </div>
         </div>
         <div className="corridas-stat">
-          <span className="corridas-stat-icon"><Route size={16} /></span>
+          <span className="corridas-stat-icon"><Clock3 size={16} /></span>
           <div>
-            <div className="corridas-stat-value">{totals && typeof totals.km === "number" ? `${Number(totals.km.toFixed(1))} km` : "—"}</div>
-            <div className="corridas-stat-label">Distância percorrida</div>
+            <div className="corridas-stat-value">{totals && typeof totals.minutos === "number" ? `${Math.round(totals.minutos)} min` : "—"}</div>
+            <div className="corridas-stat-label">Minutos gastos</div>
           </div>
         </div>
       </div>

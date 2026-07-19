@@ -117,7 +117,7 @@ export function useAdminCorridas({
       }));
       const safeCount = Number.isFinite(count) ? Number(count) : from + rows.length;
       const toNum = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
-      return { rows, count: safeCount, totals: agg ? { valor: toNum(agg.valor), km: toNum(agg.km) } : null };
+      return { rows, count: safeCount, totals: agg ? { valor: toNum(agg.valor), km: toNum(agg.km), minutos: toNum(agg.minutos) } : null };
     },
     staleTime: 30 * 1000,
     enabled: isSupabaseEnabled,

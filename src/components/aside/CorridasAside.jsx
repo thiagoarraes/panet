@@ -46,7 +46,7 @@ export function CorridasAside({ currentUserId }) {
     <div className="card">
       <div className="card-header">
         <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <Car size={14} /> Corridas Uber
+          <Car size={14} /> PanUber
         </span>
       </div>
       <div className="card-body" style={{ padding: "12px 12px 10px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -91,6 +91,14 @@ export function CorridasAside({ currentUserId }) {
             {corridas.map((c) => {
               const meta = STATUS_META[c.status_extracao] || STATUS_META.pendente;
               const { Icon } = meta;
+              if (c.status_extracao === "ok") {
+                return (
+                  <div key={c.id} className="corrida-aside-ok">
+                    <CheckCircle2 size={14} />
+                    Recibo enviado com sucesso
+                  </div>
+                );
+              }
               return (
                 <div
                   key={c.id}
@@ -100,16 +108,8 @@ export function CorridasAside({ currentUserId }) {
                     <span style={{ fontSize: 11, color: meta.color, display: "inline-flex", alignItems: "center", gap: 4 }}>
                       <Icon size={12} className={meta.spin ? "spin" : ""} /> {meta.label}
                     </span>
-                    {c.status_extracao === "ok" && c.valor_total != null && (
-                      <span style={{ fontSize: 12, fontWeight: 700 }}>{formatBrl(c.valor_total)}</span>
-                    )}
                   </div>
                   <div style={{ fontSize: 12, marginTop: 3, color: "var(--text)" }}>{c.motivo}</div>
-                  {c.status_extracao === "ok" && (c.origem || c.destino) && (
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                      {c.origem || "?"} → {c.destino || "?"}
-                    </div>
-                  )}
                 </div>
               );
             })}
