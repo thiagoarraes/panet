@@ -148,26 +148,17 @@ export function AdminCorridas({ currentUserId }) {
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header corridas-filtros">
-          <div className="corridas-colab-pills">
-            <button
-              type="button"
-              className={`corrida-colab-pill ${colaboradorId === "" ? "active" : ""}`}
-              onClick={() => setColaboradorId("")}
-            >
-              Todos
-            </button>
+          <select
+            className="form-input corridas-filtro-colab"
+            value={colaboradorId}
+            onChange={(e) => setColaboradorId(e.target.value)}
+            aria-label="Filtrar por colaborador"
+          >
+            <option value="">Todos os colaboradores</option>
             {colaboradores.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`corrida-colab-pill ${colaboradorId === c.id ? "active" : ""}`}
-                onClick={() => setColaboradorId(colaboradorId === c.id ? "" : c.id)}
-              >
-                <Avatar col={c} size={20} />
-                {c.nome.split(" ")[0]}
-              </button>
+              <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
-          </div>
+          </select>
           <input
             type="month"
             className="form-input corridas-filtro-mes"
