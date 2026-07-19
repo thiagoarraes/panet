@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus, ChevronDown, Users } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
@@ -35,18 +36,35 @@ const StatusBadge = ({ status }) => {
 };
 
 // Select custom de colaborador com avatar (option nativa não renderiza imagem).
+// A lista abre num portal com posição fixed para não ser cortada pelo overflow do card.
 function ColaboradorSelect({ colaboradores, value, onChange }) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
+  const [pos, setPos] = useState(null);
+  const triggerRef = useRef(null);
+  const listaRef = useRef(null);
   const selecionado = colaboradores.find((c) => c.id === value) || null;
+
+  const abrir = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return undefined;
-    const handlePointerDown = (event) => {
-      if (!wrapRef.current?.contains(event.target)) setOpen(false);
+    const fechar = (event) => {
+      if (triggerRef.current?.contains(event.target) || listaRef.current?.contains(event.target)) return;
+      setOpen(false);
     };
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    const onScrollResize = () => setOpen(false);
+    document.addEventListener("pointerdown", fechar);
+    window.addEventListener("resize", onScrollResize);
+    window.addEventListener("scroll", onScrollResize, true);
+    return () => {
+      document.removeEventListener("pointerdown", fechar);
+      window.removeEventListener("resize", onScrollResize);
+      window.removeEventListener("scroll", onScrollResize, true);
+    };
   }, [open]);
 
   const escolher = (id) => {
@@ -55,11 +73,12 @@ function ColaboradorSelect({ colaboradores, value, onChange }) {
   };
 
   return (
-    <div className="corridas-colab-select" ref={wrapRef}>
+    <div className="corridas-colab-select">
       <button
+        ref={triggerRef}
         type="button"
         className="form-input corridas-colab-trigger"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? setOpen(false) : abrir())}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -79,33 +98,40 @@ function ColaboradorSelect({ colaboradores, value, onChange }) {
         <ChevronDown size={14} className={`corridas-colab-chevron ${open ? "is-open" : ""}`} />
       </button>
 
-      {open && (
-        <div className="corridas-colab-lista" role="listbox">
-          <button
-            type="button"
-            role="option"
-            aria-selected={value === ""}
-            className={`corridas-colab-opcao ${value === "" ? "active" : ""}`}
-            onClick={() => escolher("")}
+      {open && pos &&
+        createPortal(
+          <div
+            ref={listaRef}
+            className="corridas-colab-lista"
+            role="listbox"
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
-            <span className="corridas-colab-todos-icone"><Users size={13} /></span>
-            <span className="corridas-colab-nome">Todos os colaboradores</span>
-          </button>
-          {colaboradores.map((c) => (
             <button
-              key={c.id}
               type="button"
               role="option"
-              aria-selected={value === c.id}
-              className={`corridas-colab-opcao ${value === c.id ? "active" : ""}`}
-              onClick={() => escolher(c.id)}
+              aria-selected={value === ""}
+              className={`corridas-colab-opcao ${value === "" ? "active" : ""}`}
+              onClick={() => escolher("")}
             >
-              <Avatar col={c} size={22} />
-              <span className="corridas-colab-nome">{c.nome}</span>
+              <span className="corridas-colab-todos-icone"><Users size={13} /></span>
+              <span className="corridas-colab-nome">Todos os colaboradores</span>
             </button>
-          ))}
-        </div>
-      )}
+            {colaboradores.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                role="option"
+                aria-selected={value === c.id}
+                className={`corridas-colab-opcao ${value === c.id ? "active" : ""}`}
+                onClick={() => escolher(c.id)}
+              >
+                <Avatar col={c} size={22} />
+                <span className="corridas-colab-nome">{c.nome}</span>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
