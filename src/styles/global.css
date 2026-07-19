@@ -5479,3 +5479,27 @@
 @media (max-width: 900px) {
   .corrida-item { grid-template-columns: 1fr; }
 }
+
+/* ═══ Filtros de corridas: pills de colaborador + mês ═════════════════════ */
+.corridas-colab-pills {
+  display: flex; align-items: center; gap: 6px;
+  overflow-x: auto; flex: 1; min-width: 0;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+.corrida-colab-pill {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  font: inherit; font-size: 12px; font-weight: 600; color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 4px 12px 4px 5px; cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.corrida-colab-pill:first-child { padding-left: 12px; }
+.corrida-colab-pill:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.corrida-colab-pill.active {
+  color: #0a1929;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
+  border-color: transparent;
+}
+.corridas-filtro-mes { max-width: 170px; font-size: 12px; flex: none; }

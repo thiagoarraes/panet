@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Car, Search, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus } from "lucide-react";
+import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, Route, MapPin, Briefcase, Plus } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
 import { useCorridasClientes, normalizeEndereco } from "../../hooks/queries/admin/useCorridasClientes.js";
@@ -9,13 +9,6 @@ import { useColaboradores } from "../../hooks/queries/useColaboradores";
 const CorridaModal = lazy(() => import("./AdminCorridas/CorridaModal").then((m) => ({ default: m.CorridaModal })));
 
 const PAGE_SIZE = 20;
-
-const STATUS_OPCOES = [
-  { id: "", label: "Todas" },
-  { id: "ok", label: "Extraídas" },
-  { id: "pendente", label: "Processando" },
-  { id: "erro", label: "Com erro" },
-];
 
 const formatBrl = (v) => (typeof v === "number" ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—");
 
@@ -98,9 +91,6 @@ function ClienteModal({ endereco, clienteAtual, onClose }) {
 }
 
 export function AdminCorridas({ currentUserId }) {
-  const [searchInput, setSearchInput] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [status, setStatus] = useState("");
   const [mes, setMes] = useState("");
   const [colaboradorId, setColaboradorId] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,19 +98,11 @@ export function AdminCorridas({ currentUserId }) {
   const [clienteDestino, setClienteDestino] = useState(null); // endereço sendo vinculado
 
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      setSearchTerm(searchInput.trim());
-      setCurrentPage(1);
-    }, 250);
-    return () => window.clearTimeout(t);
-  }, [searchInput]);
-
-  useEffect(() => {
     const id = setTimeout(() => setCurrentPage(1), 0);
     return () => clearTimeout(id);
-  }, [status, mes, colaboradorId]);
+  }, [mes, colaboradorId]);
 
-  const { data, isLoading } = useAdminCorridas({ page: currentPage, pageSize: PAGE_SIZE, search: searchTerm, status, mes, colaboradorId });
+  const { data, isLoading } = useAdminCorridas({ page: currentPage, pageSize: PAGE_SIZE, mes, colaboradorId });
   const clientesQuery = useCorridasClientes();
   const clientes = clientesQuery.data || new Map();
   const colaboradoresQuery = useColaboradores(currentUserId);
@@ -166,31 +148,33 @@ export function AdminCorridas({ currentUserId }) {
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header corridas-filtros">
-          <div className="filter-tabs" style={{ margin: 0 }}>
-            {STATUS_OPCOES.map((o) => (
-              <button key={o.id} className={`filter-tab ${status === o.id ? "active" : ""}`} onClick={() => setStatus(o.id)}>
-                {o.label}
+          <div className="corridas-colab-pills">
+            <button
+              type="button"
+              className={`corrida-colab-pill ${colaboradorId === "" ? "active" : ""}`}
+              onClick={() => setColaboradorId("")}
+            >
+              Todos
+            </button>
+            {colaboradores.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`corrida-colab-pill ${colaboradorId === c.id ? "active" : ""}`}
+                onClick={() => setColaboradorId(colaboradorId === c.id ? "" : c.id)}
+              >
+                <Avatar col={c} size={20} />
+                {c.nome.split(" ")[0]}
               </button>
             ))}
           </div>
-          <div className="corridas-filtros-campos">
-            <div className="corridas-busca">
-              <Search size={13} />
-              <input
-                className="form-input"
-                placeholder="Nome, motivo ou endereço"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-            </div>
-            <input type="month" className="form-input" value={mes} onChange={(e) => setMes(e.target.value)} />
-            <select className="form-input" value={colaboradorId} onChange={(e) => setColaboradorId(e.target.value)}>
-              <option value="">Todos os colaboradores</option>
-              {colaboradores.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
+          <input
+            type="month"
+            className="form-input corridas-filtro-mes"
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+            aria-label="Filtrar por mês"
+          />
         </div>
 
         {/* ── Lista de trajetos ──────────────────────────────────────────── */}
