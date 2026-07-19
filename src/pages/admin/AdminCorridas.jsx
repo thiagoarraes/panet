@@ -56,14 +56,19 @@ function ColaboradorSelect({ colaboradores, value, onChange }) {
       if (triggerRef.current?.contains(event.target) || listaRef.current?.contains(event.target)) return;
       setOpen(false);
     };
-    const onScrollResize = () => setOpen(false);
+    const onResize = () => setOpen(false);
+    const onScroll = (event) => {
+      // Rolar dentro da própria lista não deve fechar o dropdown.
+      if (listaRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("pointerdown", fechar);
-    window.addEventListener("resize", onScrollResize);
-    window.addEventListener("scroll", onScrollResize, true);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", fechar);
-      window.removeEventListener("resize", onScrollResize);
-      window.removeEventListener("scroll", onScrollResize, true);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
 
