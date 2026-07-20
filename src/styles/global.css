@@ -5634,11 +5634,58 @@
   .corridas-colab-select { width: 100%; }
 }
 
-/* ── CorridasAside — mensagem de sucesso ──────────────────────────────────── */
-.corrida-aside-ok {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 600; color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  border-radius: 20px; padding: 5px 12px;
+/* ── CorridasAside — feedback de envio (sucesso / recusa) ─────────────────── */
+.corrida-feedback {
+  position: relative; overflow: hidden;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  border: 1px solid transparent;
+  animation: corridaFeedbackIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.corrida-feedback::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit;
+}
+.corrida-feedback-icone {
+  width: 30px; height: 30px; border-radius: 9px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.corrida-feedback-textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.corrida-feedback-titulo { font-size: 12px; font-weight: 700; letter-spacing: -0.1px; }
+.corrida-feedback-msg { font-size: 11px; color: var(--muted); line-height: 1.45; }
+
+.corrida-feedback.is-ok {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2));
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.corrida-feedback.is-ok::before {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 55%);
+}
+.corrida-feedback.is-ok .corrida-feedback-icone {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.corrida-feedback.is-ok .corrida-feedback-titulo { color: var(--accent); }
+
+.corrida-feedback.is-erro {
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface2));
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.corrida-feedback.is-erro::before {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--danger) 12%, transparent) 0%, transparent 55%);
+}
+.corrida-feedback.is-erro .corrida-feedback-icone {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.corrida-feedback.is-erro .corrida-feedback-titulo { color: var(--danger); }
+
+@keyframes corridaFeedbackIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corrida-feedback { animation: none; }
 }

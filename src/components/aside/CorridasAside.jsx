@@ -74,8 +74,12 @@ export function CorridasAside({ currentUserId }) {
         />
 
         {erro && (
-          <div style={{ fontSize: 11, color: "var(--danger)", background: "rgba(255,107,107,0.08)", border: "1px solid rgba(255,107,107,0.28)", borderRadius: 8, padding: "6px 8px" }}>
-            {erro}
+          <div className="corrida-feedback is-erro">
+            <span className="corrida-feedback-icone"><AlertTriangle size={15} /></span>
+            <div className="corrida-feedback-textos">
+              <span className="corrida-feedback-titulo">Não foi possível enviar</span>
+              <span className="corrida-feedback-msg">{erro}</span>
+            </div>
           </div>
         )}
 
@@ -90,9 +94,12 @@ export function CorridasAside({ currentUserId }) {
         </button>
 
         {sucesso && (
-          <div className="corrida-aside-ok">
-            <CheckCircle2 size={14} />
-            Recibo enviado com sucesso
+          <div className="corrida-feedback is-ok">
+            <span className="corrida-feedback-icone"><CheckCircle2 size={15} /></span>
+            <div className="corrida-feedback-textos">
+              <span className="corrida-feedback-titulo">Recibo enviado</span>
+              <span className="corrida-feedback-msg">Corrida registrada com sucesso.</span>
+            </div>
           </div>
         )}
 
