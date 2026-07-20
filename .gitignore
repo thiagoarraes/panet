@@ -41,3 +41,6 @@ skills-lock.json
 
 # Supabase local temp
 supabase/.temp/
+
+# Kilo Code (extensão do editor)
+.kilocode/
