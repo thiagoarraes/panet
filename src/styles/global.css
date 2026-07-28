@@ -2194,7 +2194,7 @@
   }
   .dashboard-enquete-result-head {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     font-size: 11px;
@@ -2202,9 +2202,7 @@
   .dashboard-enquete-result-label {
     color: var(--text);
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
   .dashboard-enquete-result-value {
     color: var(--muted);
