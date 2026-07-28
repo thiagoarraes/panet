@@ -2149,9 +2149,7 @@
     color: var(--text);
     line-height: 1.4;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
   .dashboard-enquete-radio.is-selected {
     border-color: color-mix(in srgb, var(--accent) 62%, var(--border));
