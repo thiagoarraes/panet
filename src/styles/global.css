@@ -3889,13 +3889,37 @@
     opacity: 1;
     transform: translate(-50%, calc(-100% - 16px));
   }
-  /* Fundo rosa choque no tooltip do Jorge Maia */
+  /* Tooltip do Jorge Maia: fundo rose + borda arco-iris girando (combinado com ele) */
+  @property --jorge-a {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
   .mention-tooltip.is-jorge-maia {
-    background: #ff1493;
-    border-color: #ff1493;
+    border: 2px solid transparent;
+    background:
+      linear-gradient(#f43f5e, #f43f5e) padding-box,
+      conic-gradient(
+        from var(--jorge-a),
+        #ff2d55, #ff8a00, #ffd60a, #34c759, #00c7be, #0a84ff, #bf5af2, #ff2d55
+      ) border-box;
+    animation: jorge-spin 3s linear infinite, jorge-glow 2.2s ease-in-out infinite;
   }
   .mention-tooltip.is-jorge-maia .mention-tooltip-nome,
-  .mention-tooltip.is-jorge-maia .mention-tooltip-cargo { color: #fff; }
+  .mention-tooltip.is-jorge-maia .mention-tooltip-cargo {
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  @keyframes jorge-spin {
+    to { --jorge-a: 360deg; }
+  }
+  @keyframes jorge-glow {
+    0%, 100% { box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28), 0 0 18px rgba(255, 45, 85, 0.55); }
+    50% { box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28), 0 0 30px rgba(191, 90, 242, 0.75); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mention-tooltip.is-jorge-maia { animation: none; }
+  }
   .mention-tooltip-info { display: flex; flex-direction: column; min-width: 0; }
   .mention-tooltip-nome {
     font-family: 'Sora', sans-serif;
