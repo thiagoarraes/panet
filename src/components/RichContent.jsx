@@ -7,6 +7,7 @@ import { Avatar } from "./Avatar";
 export function RichContent({ html, colaboradores = [], className = "rich-content", style }) {
   const containerRef = useRef(null);
   const hideTimerRef = useRef(null);
+  const activeRef = useRef(false);
   const [tooltip, setTooltip] = useState(null); // { col, top, left }
   const [open, setOpen] = useState(false);
 
@@ -32,36 +33,37 @@ export function RichContent({ html, colaboradores = [], className = "rich-conten
       }
     };
 
-    const handleOver = (event) => {
-      const mention = event.target.closest?.(".mention");
-      if (!mention || !container.contains(mention)) return;
-      const col = colaboradoresById.get(String(mention.getAttribute("data-id")));
-      if (!col) return;
-      clearHideTimer();
-      const rect = mention.getBoundingClientRect();
-      setTooltip({
-        col,
-        top: rect.top + window.scrollY,
-        left: rect.left + window.scrollX + rect.width / 2,
-      });
-      setOpen(true);
-    };
-
-    const handleOut = (event) => {
-      const mention = event.target.closest?.(".mention");
-      if (!mention) return;
-      const next = event.relatedTarget;
-      if (next && mention.contains(next)) return;
+    const hide = () => {
+      if (!activeRef.current) return;
+      activeRef.current = false;
       setOpen(false);
       clearHideTimer();
       hideTimerRef.current = window.setTimeout(() => setTooltip(null), 180);
     };
 
-    container.addEventListener("pointerover", handleOver);
-    container.addEventListener("pointerout", handleOut);
+    // Segue o cursor: a cada movimento reavalia se ainda está sobre uma menção.
+    // Sair da menção (ou do container) esconde com fade.
+    const handleMove = (event) => {
+      const mention = event.target.closest?.(".mention");
+      const col =
+        mention && container.contains(mention)
+          ? colaboradoresById.get(String(mention.getAttribute("data-id")))
+          : null;
+      if (!col) {
+        hide();
+        return;
+      }
+      clearHideTimer();
+      activeRef.current = true;
+      setTooltip({ col, top: event.pageY, left: event.pageX });
+      setOpen(true);
+    };
+
+    container.addEventListener("pointermove", handleMove);
+    container.addEventListener("pointerleave", hide);
     return () => {
-      container.removeEventListener("pointerover", handleOver);
-      container.removeEventListener("pointerout", handleOut);
+      container.removeEventListener("pointermove", handleMove);
+      container.removeEventListener("pointerleave", hide);
       clearHideTimer();
     };
   }, [colaboradoresById, sanitized]);
@@ -76,7 +78,9 @@ export function RichContent({ html, colaboradores = [], className = "rich-conten
       />
       {tooltip && (
         <div
-          className={`mention-tooltip ${open ? "is-open" : ""}`}
+          className={`mention-tooltip ${open ? "is-open" : ""} ${
+            /jorge\s+maia/i.test(tooltip.col.nome || "") ? "is-jorge-maia" : ""
+          }`}
           style={{ top: tooltip.top, left: tooltip.left }}
           role="tooltip"
         >

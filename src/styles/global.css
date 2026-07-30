@@ -3889,6 +3889,13 @@
     opacity: 1;
     transform: translate(-50%, calc(-100% - 16px));
   }
+  /* Fundo rosa choque no tooltip do Jorge Maia */
+  .mention-tooltip.is-jorge-maia {
+    background: #ff1493;
+    border-color: #ff1493;
+  }
+  .mention-tooltip.is-jorge-maia .mention-tooltip-nome,
+  .mention-tooltip.is-jorge-maia .mention-tooltip-cargo { color: #fff; }
   .mention-tooltip-info { display: flex; flex-direction: column; min-width: 0; }
   .mention-tooltip-nome {
     font-family: 'Sora', sans-serif;
