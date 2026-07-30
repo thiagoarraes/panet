@@ -3889,6 +3889,36 @@
     opacity: 1;
     transform: translate(-50%, calc(-100% - 16px));
   }
+  /* Confete rosa caindo atras do tooltip do Jorge Maia.
+     Precisa ser irmao (z-index menor), nao pseudo-elemento: um filho com
+     z-index negativo ainda pintaria por cima do fundo do proprio tooltip. */
+  .mention-confetti {
+    position: absolute;
+    z-index: 1299;
+    width: 320px;
+    height: 150px;
+    transform: translate(-50%, calc(-100% + 18px));
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.16s ease;
+    background-image:
+      radial-gradient(circle 3px at 12px 9px, #ff2d78 96%, transparent),
+      radial-gradient(circle 2px at 44px 24px, #ff7ab6 96%, transparent),
+      radial-gradient(circle 3.5px at 30px 14px, #ffb3d4 96%, transparent),
+      radial-gradient(circle 2.5px at 62px 31px, #ff5c9d 96%, transparent);
+    background-size: 74px 42px, 58px 52px, 96px 36px, 82px 60px;
+    background-position: 0 0, 20px 0, 9px 0, 41px 0;
+    animation: jorge-confete 2.8s linear infinite;
+    mask-image: radial-gradient(ellipse at center, #000 40%, transparent 80%);
+  }
+  .mention-confetti.is-open { opacity: 0.9; }
+  @keyframes jorge-confete {
+    to { background-position: 0 42px, 20px 52px, 9px 36px, 41px 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mention-confetti { animation: none; }
+  }
+
   /* Tooltip do Jorge Maia: fundo rose + borda arco-iris girando (combinado com ele) */
   @property --jorge-a {
     syntax: "<angle>";

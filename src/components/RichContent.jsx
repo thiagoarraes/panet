@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { Avatar } from "./Avatar";
 
+// Tema especial (rose + borda arco-iris + confete) combinado com o colaborador.
+const isJorgeMaia = (col) => /jorge\s+maia/i.test(col?.nome || "");
+
 // Renderiza o HTML de um post (sanitizado) e exibe um tooltip ao passar o mouse
 // sobre menções (`<span class="mention" data-id="...">`), com foto, nome e cargo.
 export function RichContent({ html, colaboradores = [], className = "rich-content", style }) {
@@ -76,10 +79,17 @@ export function RichContent({ html, colaboradores = [], className = "rich-conten
         style={style}
         dangerouslySetInnerHTML={{ __html: sanitized }}
       />
+      {tooltip && isJorgeMaia(tooltip.col) && (
+        <div
+          className={`mention-confetti ${open ? "is-open" : ""}`}
+          style={{ top: tooltip.top, left: tooltip.left }}
+          aria-hidden="true"
+        />
+      )}
       {tooltip && (
         <div
           className={`mention-tooltip ${open ? "is-open" : ""} ${
-            /jorge\s+maia/i.test(tooltip.col.nome || "") ? "is-jorge-maia" : ""
+            isJorgeMaia(tooltip.col) ? "is-jorge-maia" : ""
           }`}
           style={{ top: tooltip.top, left: tooltip.left }}
           role="tooltip"
