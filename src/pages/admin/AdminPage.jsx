@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { BarChart3, CalendarDays, Car, FileText, Images, Plane, Settings, Users } from "lucide-react";
+import { BarChart3, CalendarDays, Car, FileText, Images, KeyRound, Plane, Settings, Users } from "lucide-react";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
 const AdminPostagens = lazy(() => import("./AdminPostagens").then((m) => ({ default: m.AdminPostagens })));
@@ -8,6 +8,7 @@ const AdminGaleria = lazy(() => import("./AdminGaleria").then((m) => ({ default:
 const AdminPresencial = lazy(() => import("./AdminPresencial").then((m) => ({ default: m.AdminPresencial })));
 const AdminEnquetes = lazy(() => import("./AdminEnquetes").then((m) => ({ default: m.AdminEnquetes })));
 const AdminCorridas = lazy(() => import("./AdminCorridas").then((m) => ({ default: m.AdminCorridas })));
+const AdminPanPass = lazy(() => import("./AdminPanPass").then((m) => ({ default: m.AdminPanPass })));
 
 const AdminTabFallback = () => (
   <div className="card">
@@ -25,6 +26,7 @@ const ALL_ABAS = [
   { id: "enquetes", label: "Enquetes", icon: BarChart3 },
   { id: "galeria", label: "Galerias", icon: Images },
   { id: "corridas", label: "PanUber", icon: Car },
+  { id: "panpass", label: "PanPass", icon: KeyRound },
 ];
 
 export function AdminPage({
@@ -103,6 +105,11 @@ export function AdminPage({
       {abaAtiva === "corridas" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminCorridas currentUserId={currentUserId} />
+        </Suspense>
+      )}
+      {abaAtiva === "panpass" && (
+        <Suspense fallback={<AdminTabFallback />}>
+          <AdminPanPass currentUserId={currentUserId} />
         </Suspense>
       )}
     </div>

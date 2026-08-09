@@ -114,6 +114,7 @@ export const MODULES = [
   { id: "enquetes", label: "Enquetes" },
   { id: "galeria", label: "Galerias" },
   { id: "corridas", label: "Corridas" },
+  { id: "panpass", label: "PanPass" },
 ];
 
 export const MONTH_OPTIONS = [

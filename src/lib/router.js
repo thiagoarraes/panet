@@ -1,4 +1,4 @@
-import { Home, FileText, Users, Cake, Plane, Images, CalendarDays, Gamepad2 } from "lucide-react";
+import { Home, FileText, Users, Cake, Plane, Images, CalendarDays, Gamepad2, KeyRound } from "lucide-react";
 import { extractPostSlugFromPathname } from "./postRouting.js";
 
 export const NAV_ITEMS = [
@@ -10,6 +10,7 @@ export const NAV_ITEMS = [
   { id: "presencial",  label: "Eventos",             icon: CalendarDays },
   { id: "galeria",     label: "Galerias",            icon: Images },
   { id: "jogos",       label: "Jogos",               icon: Gamepad2 },
+  { id: "panpass",     label: "PanPass",             icon: KeyRound },
 ];
 
 export const PAGE_PATHS = {
@@ -21,6 +22,7 @@ export const PAGE_PATHS = {
   presencial: "/eventos",
   galeria:    "/galerias",
   jogos:      "/jogos",
+  panpass:    "/panpass",
   perfil:     "/perfil",
   admin:      "/admin",
 };
@@ -33,6 +35,7 @@ export const ADMIN_TAB_PATHS = {
   galeria:       "/admin/galeria",
   enquetes:      "/admin/enquetes",
   corridas:      "/admin/corridas",
+  panpass:       "/admin/panpass",
 };
 
 export const resolveRoute = (pathname) => {
@@ -62,6 +65,8 @@ export const resolveRoute = (pathname) => {
       return { pagina: "galeria", adminAba: "colaboradores", known: true };
     case "/jogos":
       return { pagina: "jogos", adminAba: "colaboradores", known: true };
+    case "/panpass":
+      return { pagina: "panpass", adminAba: "colaboradores", known: true };
     case "/perfil":
       return { pagina: "perfil", adminAba: "colaboradores", known: true };
     case "/admin":
@@ -82,6 +87,8 @@ export const resolveRoute = (pathname) => {
       return { pagina: "admin", adminAba: "enquetes", known: true };
     case "/admin/corridas":
       return { pagina: "admin", adminAba: "corridas", known: true };
+    case "/admin/panpass":
+      return { pagina: "admin", adminAba: "panpass", known: true };
     default:
       break;
   }

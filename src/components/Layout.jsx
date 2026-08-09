@@ -17,6 +17,7 @@ const GaleriaPage       = lazy(() => import("../pages/GaleriaPage").then((m) => 
 const PresencialPage    = lazy(() => import("../pages/PresencialPage").then((m) => ({ default: m.PresencialPage })));
 const PerfilPage        = lazy(() => import("../pages/PerfilPage").then((m) => ({ default: m.PerfilPage })));
 const JogosPage         = lazy(() => import("../pages/JogosPage").then((m) => ({ default: m.JogosPage })));
+const PanPassPage       = lazy(() => import("../pages/PanPassPage").then((m) => ({ default: m.PanPassPage })));
 const AdminPage         = lazy(() => import("../pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 
 const PageFallback = () => (
@@ -68,6 +69,7 @@ function AppContent() {
     presencial:    <PresencialPage currentUserId={effectiveUserId} />,
     galeria:       <GaleriaPage currentUserId={effectiveUserId} />,
     jogos:         <JogosPage currentUser={eu} currentUserId={effectiveUserId} />,
+    panpass:       <PanPassPage />,
     perfil:        <PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />,
     admin: (
       <AdminPage
