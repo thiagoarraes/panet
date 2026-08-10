@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, ExternalLink, Eye, KeyRound, Mail, Smartphone, UserRound } from "lucide-react";
+
+// Só http(s) — nunca renderiza javascript:/data: vindo do corpo de um e-mail.
+const linkSeguro = (url) => {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) ? url : null;
+  } catch {
+    return null;
+  }
+};
 import { usePanPassServicos } from "../hooks/queries/usePanPassServicos";
 import { useRevelarCredencial } from "../hooks/mutations/usePanPassMutations";
 
@@ -77,22 +87,32 @@ function ServicoCard({ servico }) {
         onSuccess: (data) => {
           const revelado =
             tipo === "senha"
-              ? { valor: data.senha, rotulo: "Senha", segundos: SEGUNDOS_VISIVEL }
+              ? { valor: data.senha, rotulo: "Senha", segundos: SEGUNDOS_VISIVEL, ehLink: false }
               : tipo === "totp"
                 ? {
                     valor: data.codigo,
                     rotulo: "Código do autenticador",
                     segundos: data.segundos_restantes || 30,
+                    ehLink: false,
                   }
-                : {
-                    valor: data.codigo,
-                    rotulo: "Código recebido por e-mail",
-                    segundos: SEGUNDOS_VISIVEL,
-                  };
+                : data.email_tipo === "link"
+                  ? {
+                      valor: data.valor,
+                      rotulo: "Link de login",
+                      segundos: SEGUNDOS_VISIVEL,
+                      ehLink: true,
+                    }
+                  : {
+                      valor: data.valor,
+                      rotulo: "Código recebido por e-mail",
+                      segundos: SEGUNDOS_VISIVEL,
+                      ehLink: false,
+                    };
           setAgora(Date.now());
           setSegredo({
             valor: revelado.valor,
             rotulo: revelado.rotulo,
+            ehLink: revelado.ehLink,
             duracao: revelado.segundos,
             expiraEm: Date.now() + revelado.segundos * 1000,
           });
@@ -142,7 +162,29 @@ function ServicoCard({ servico }) {
             <BotaoCopiar valor={servico.usuario} titulo="Copiar login" />
           </div>
 
-          {segredo && (
+          {segredo && segredo.ehLink && (
+            <div className="panpass-linha panpass-revelado panpass-linha-link">
+              <a
+                className="btn-primary panpass-btn-link"
+                href={linkSeguro(segredo.valor) || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink size={14} /> Abrir link de login
+              </a>
+              <BotaoCopiar valor={segredo.valor} titulo="Copiar link" />
+              <span
+                className="panpass-contagem"
+                style={{ "--pct": percentRestante }}
+                title="Some automaticamente"
+              >
+                <span className="panpass-contagem-anel" aria-hidden="true" />
+                <span className="panpass-contagem-num">{restante}</span>
+              </span>
+            </div>
+          )}
+
+          {segredo && !segredo.ehLink && (
             <div className="panpass-linha panpass-revelado">
               <span className="panpass-rotulo">{segredo.rotulo}</span>
               <code className="panpass-valor panpass-segredo">{segredo.valor}</code>

@@ -57,3 +57,26 @@ describe("cifra AES-GCM dos segredos", () => {
     await expect(decrypt("sem-separador")).rejects.toThrow(/inválido/);
   });
 });
+
+describe("extração de código/link do corpo do e-mail", () => {
+  it("acha código de 6 dígitos ignorando outros números", async () => {
+    const { extrairCodigo } = await import("../../supabase/functions/_shared/gmail.ts");
+    expect(extrairCodigo("Pedido #12345 — seu código é 837291. Válido por 10 min.")).toBe("837291");
+  });
+
+  it("acha o link do botão de login, não o de rodapé", async () => {
+    const { extrairLink } = await import("../../supabase/functions/_shared/gmail.ts");
+    const html = `
+      <p>Clique no botão abaixo para concluir o login.</p>
+      <a href="https://claude.ai/login?token=abc123">Entrar</a>
+      <a href="https://claude.ai/politica-de-privacidade">Política de privacidade</a>
+    `;
+    expect(extrairLink(html)).toBe("https://claude.ai/login?token=abc123");
+  });
+
+  it("não confunde link de cancelar inscrição com link de login", async () => {
+    const { extrairLink } = await import("../../supabase/functions/_shared/gmail.ts");
+    const html = `<a href="https://mail.exemplo.com/unsubscribe?id=9">Cancelar inscrição</a>`;
+    expect(extrairLink(html)).toBeNull();
+  });
+});

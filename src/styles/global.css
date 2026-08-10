@@ -5840,6 +5840,12 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
   animation: panpassRevelar 180ms ease-out;
 }
+.panpass-linha-link { padding: 7px 7px 7px 11px; }
+.panpass-btn-link {
+  flex: 1; min-width: 0; height: 30px; padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 12.5px; white-space: nowrap;
+}
 
 .panpass-contagem {
   position: relative;

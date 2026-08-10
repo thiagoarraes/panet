@@ -42,7 +42,7 @@ const temPista = (texto: string): boolean => {
 };
 
 // Prefere sequências de 6 dígitos (o formato mais comum); cai para 4-8.
-const extrairCodigo = (texto: string): string | null => {
+export const extrairCodigo = (texto: string): string | null => {
   const semTags = texto.replace(/<[^>]+>/g, " ");
   return (
     semTags.match(/\b\d{6}\b/)?.[0] ??
@@ -51,11 +51,32 @@ const extrairCodigo = (texto: string): string | null => {
   );
 };
 
+// Alguns serviços (Claude, Notion...) não mandam código: mandam um link de
+// login de uso único. Pega o href do primeiro botão/link cujo texto sugere
+// entrada — evita links de rodapé (política, cancelar inscrição etc.) que
+// também aparecem no e-mail.
+const TEXTO_BOTAO_LOGIN =
+  /\b(entrar|log ?in|sign ?in|confirmar|iniciar sess[aã]o|verify|verificar|magic link)\b/i;
+
+export const extrairLink = (corpoHtml: string): string | null => {
+  const candidatos = [...corpoHtml.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)];
+  for (const [, href, textoInterno] of candidatos) {
+    if (!href.startsWith("http")) continue;
+    const textoLimpo = textoInterno.replace(/<[^>]+>/g, " ").trim();
+    if (TEXTO_BOTAO_LOGIN.test(textoLimpo)) return href;
+  }
+  return null;
+};
+
+type Achado =
+  | { tipo: "codigo"; valor: string; assunto: string; recebidoEm: string }
+  | { tipo: "link"; valor: string; assunto: string; recebidoEm: string };
+
 export async function buscarCodigoVerificacao(
   caixaEmail: string,
   remetente?: string | null,
   janela = "newer_than:1h",
-): Promise<{ codigo: string; assunto: string; recebidoEm: string } | null> {
+): Promise<Achado | null> {
   const token = await getImpersonatedToken(caixaEmail, GMAIL_SCOPE);
   const auth = { Authorization: `Bearer ${token}` };
 
@@ -87,7 +108,15 @@ export async function buscarCodigoVerificacao(
       extrairCodigo(candidata.assunto) ??
       extrairCodigo(msg.snippet || "") ??
       extrairCodigo(candidata.corpo);
-    if (codigo) return { codigo, assunto: candidata.assunto, recebidoEm: candidata.recebidoEm };
+    if (codigo) {
+      return { tipo: "codigo", valor: codigo, assunto: candidata.assunto, recebidoEm: candidata.recebidoEm };
+    }
+
+    // Sem dígitos: tenta o padrão de link mágico (Claude, Notion...).
+    const link = extrairLink(candidata.corpo);
+    if (link) {
+      return { tipo: "link", valor: link, assunto: candidata.assunto, recebidoEm: candidata.recebidoEm };
+    }
   }
 
   return null;

@@ -152,9 +152,14 @@ serve(async (req) => {
       );
     }
 
-    await registrar(true);
+    await registrar(true, achado.tipo === "link" ? "link de login" : undefined);
     return jsonResponse(
-      { codigo: achado.codigo, assunto: achado.assunto, recebido_em: achado.recebidoEm },
+      {
+        email_tipo: achado.tipo, // "codigo" | "link" — a UI decide como exibir
+        valor: achado.valor,
+        assunto: achado.assunto,
+        recebido_em: achado.recebidoEm,
+      },
       200,
     );
   } catch (error) {
