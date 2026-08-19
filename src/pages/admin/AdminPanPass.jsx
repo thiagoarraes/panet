@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, AlertTriangle, Check, Download, Eye, KeyRound,
+  Activity, AlertTriangle, Check, ChevronDown, Download, Eye, KeyRound,
   Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
@@ -177,6 +177,88 @@ function SeletorColaboradores({ colaboradores, selecionados, onChange }) {
               {busca ? "Ninguém encontrado com esse nome." : "Todo mundo já foi adicionado."}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Combobox flutuante pro filtro de auditoria: mostra avatar+nome do
+// selecionado no gatilho, painel com busca reaproveita o mesmo padrão de
+// SeletorColaboradores (lista com avatar+nome+cargo).
+function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState("");
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!aberto) return undefined;
+    const onClickFora = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setAberto(false);
+    };
+    document.addEventListener("mousedown", onClickFora);
+    return () => document.removeEventListener("mousedown", onClickFora);
+  }, [aberto]);
+
+  const selecionado = colaboradores.find((c) => c.id === selecionadoId) || null;
+
+  const sugestoes = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return colaboradores.filter((c) => (termo ? c.nome.toLowerCase().includes(termo) : true)).slice(0, 30);
+  }, [colaboradores, busca]);
+
+  const selecionar = (id) => {
+    onChange(id);
+    setAberto(false);
+    setBusca("");
+  };
+
+  return (
+    <div className="pp-filtro-colab" ref={wrapRef}>
+      <button type="button" className="pp-filtro-colab-trigger" onClick={() => setAberto((v) => !v)}>
+        {selecionado ? (
+          <>
+            <Avatar col={selecionado} size={18} />
+            <span>{selecionado.nome}</span>
+          </>
+        ) : (
+          <>
+            <Users size={14} />
+            <span>Todos os colaboradores</span>
+          </>
+        )}
+        <ChevronDown size={13} />
+      </button>
+
+      {aberto && (
+        <div className="pp-filtro-colab-painel pp-mfa-painel">
+          <div className="pp-busca pp-busca-pessoas">
+            <Search size={13} />
+            <input
+              autoFocus
+              placeholder="Buscar colaborador..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+
+          <ul className="pp-sugestoes">
+            <li>
+              <button type="button" onClick={() => selecionar(null)}>
+                <span className="pp-filtro-colab-todos-icone"><Users size={14} /></span>
+                <span className="pp-sugestao-nome">Todos os colaboradores</span>
+              </button>
+            </li>
+            {sugestoes.map((c) => (
+              <li key={c.id}>
+                <button type="button" onClick={() => selecionar(c.id)}>
+                  <Avatar col={c} size={22} />
+                  <span className="pp-sugestao-nome">{c.nome}</span>
+                  {c.cargo && <span className="pp-sugestao-cargo">{c.cargo}</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
@@ -390,7 +472,9 @@ export function AdminPanPass({ currentUserId }) {
   const [modal, setModal] = useState(null);
   const [excluindo, setExcluindo] = useState(null);
   const [busca, setBusca] = useState("");
-  const [filtroAcao, setFiltroAcao] = useState("todas");
+  const [filtroColaboradorId, setFiltroColaboradorId] = useState(null);
+  const [filtroDataDe, setFiltroDataDe] = useState("");
+  const [filtroDataAte, setFiltroDataAte] = useState("");
   // Instante fixo da montagem: a janela de "7 dias" não pode mudar a cada render.
   const [montadoEm] = useState(() => Date.now());
 
@@ -408,10 +492,19 @@ export function AdminPanPass({ currentUserId }) {
     );
   }, [servicosTodos, busca]);
 
-  const acessosFiltrados = useMemo(
-    () => (filtroAcao === "todas" ? acessos : acessos.filter((a) => a.acao === filtroAcao)),
-    [acessos, filtroAcao],
-  );
+  const acessosFiltrados = useMemo(() => {
+    // Até inclui o dia inteiro: comparação por string yyyy-mm-dd evita fuso
+    // horário estragar o "hoje" do filtro.
+    const dataDe = filtroDataDe || null;
+    const dataAte = filtroDataAte || null;
+    return acessos.filter((a) => {
+      if (filtroColaboradorId && a.colaborador_id !== filtroColaboradorId) return false;
+      const dia = a.created_at.slice(0, 10);
+      if (dataDe && dia < dataDe) return false;
+      if (dataAte && dia > dataAte) return false;
+      return true;
+    });
+  }, [acessos, filtroColaboradorId, filtroDataDe, filtroDataAte]);
 
   const stats = useMemo(() => {
     const seteDias = montadoEm - 7 * 24 * 60 * 60 * 1000;
@@ -530,19 +623,33 @@ export function AdminPanPass({ currentUserId }) {
             </span>
           </div>
           <div className="pp-secao-acoes">
-            <div className="pp-chips">
-              {[["todas", "Todas"], ...Object.entries(ACAO).map(([k, v]) => [k, v.label])].map(
-                ([valor, label]) => (
-                  <button
-                    key={valor}
-                    className={`pp-chip ${filtroAcao === valor ? "is-ativo" : ""}`}
-                    onClick={() => setFiltroAcao(valor)}
-                  >
-                    {label}
-                  </button>
-                ),
-              )}
+            <div className="pp-filtro-data">
+              <div className="form-group">
+                <label className="form-label">DE</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={filtroDataDe}
+                  max={filtroDataAte || undefined}
+                  onChange={(e) => setFiltroDataDe(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">ATÉ</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={filtroDataAte}
+                  min={filtroDataDe || undefined}
+                  onChange={(e) => setFiltroDataAte(e.target.value)}
+                />
+              </div>
             </div>
+            <FiltroColaborador
+              colaboradores={colaboradores}
+              selecionadoId={filtroColaboradorId}
+              onChange={setFiltroColaboradorId}
+            />
             <button className="btn-ghost pp-btn-csv" onClick={baixarCsv} disabled={acessosFiltrados.length === 0}>
               <Download size={14} /> CSV
             </button>

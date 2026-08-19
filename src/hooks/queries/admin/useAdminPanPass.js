@@ -30,7 +30,7 @@ export function useAdminPanPassAcessos({ dias = 30, limit = 300 } = {}) {
       const { data, error } = await supabase
         .from("panpass_acessos")
         .select(
-          "id,acao,sucesso,detalhe,ip,created_at,servico:panpass_servicos(nome),colaborador:colaboradores(nome)",
+          "id,acao,sucesso,detalhe,ip,created_at,colaborador_id,servico:panpass_servicos(nome),colaborador:colaboradores(nome)",
         )
         .gte("created_at", desde)
         .order("created_at", { ascending: false })
