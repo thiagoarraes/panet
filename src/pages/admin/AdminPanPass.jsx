@@ -57,12 +57,6 @@ const ACAO_VERBO = {
 const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-const formatarHora = (iso) =>
-  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-
-const formatarDataCurta = (iso) =>
-  new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
-
 const iniciais = (nome) =>
   (nome || "?")
     .split(" ")
@@ -500,6 +494,7 @@ export function AdminPanPass({ currentUserId }) {
   const [filtroColaboradorId, setFiltroColaboradorId] = useState(null);
   const [filtroDataDe, setFiltroDataDe] = useState("");
   const [filtroDataAte, setFiltroDataAte] = useState("");
+  const [buscaAuditoria, setBuscaAuditoria] = useState("");
   // Instante fixo da montagem: a janela de "7 dias" não pode mudar a cada render.
   const [montadoEm] = useState(() => Date.now());
 
@@ -526,14 +521,19 @@ export function AdminPanPass({ currentUserId }) {
     // horário estragar o "hoje" do filtro.
     const dataDe = filtroDataDe || null;
     const dataAte = filtroDataAte || null;
+    const termo = buscaAuditoria.trim().toLowerCase();
     return acessos.filter((a) => {
       if (filtroColaboradorId && a.colaborador_id !== filtroColaboradorId) return false;
       const dia = a.created_at.slice(0, 10);
       if (dataDe && dia < dataDe) return false;
       if (dataAte && dia > dataAte) return false;
+      if (termo) {
+        const alvo = `${a.colaborador?.nome || ""} ${a.servico?.nome || ""} ${a.ip || ""}`.toLowerCase();
+        if (!alvo.includes(termo)) return false;
+      }
       return true;
     });
-  }, [acessos, filtroColaboradorId, filtroDataDe, filtroDataAte]);
+  }, [acessos, filtroColaboradorId, filtroDataDe, filtroDataAte, buscaAuditoria]);
 
   const stats = useMemo(() => {
     const seteDias = montadoEm - 7 * 24 * 60 * 60 * 1000;
@@ -652,6 +652,14 @@ export function AdminPanPass({ currentUserId }) {
             </span>
           </div>
           <div className="pp-secao-acoes">
+            <div className="pp-busca">
+              <Search size={14} />
+              <input
+                placeholder="Buscar por nome, serviço ou IP..."
+                value={buscaAuditoria}
+                onChange={(e) => setBuscaAuditoria(e.target.value)}
+              />
+            </div>
             <div className="pp-filtro-data">
               <div className="form-group">
                 <label className="form-label">DE</label>
@@ -726,8 +734,7 @@ export function AdminPanPass({ currentUserId }) {
                   <div className="pp-log-meta">
                     <span className="pp-log-quando">
                       <Clock size={11} />
-                      <strong>{formatarHora(a.created_at)}</strong>
-                      <span className="pp-log-quando-data">{formatarDataCurta(a.created_at)}</span>
+                      {formatarData(a.created_at)}
                     </span>
                     {a.ip && (
                       <span className="pp-log-ip">

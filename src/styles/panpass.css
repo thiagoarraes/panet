@@ -220,11 +220,6 @@
   font-size: 11.5px; color: var(--text); font-variant-numeric: tabular-nums;
 }
 .pp-log-quando svg { color: var(--muted); flex-shrink: 0; }
-.pp-log-quando strong { font-weight: 600; }
-.pp-log-quando-data {
-  color: var(--muted); font-size: 10.5px; text-transform: capitalize;
-  border-left: 1px solid var(--border); margin-left: 3px; padding-left: 6px;
-}
 .pp-log-ip {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 2px 8px; border-radius: 999px;
