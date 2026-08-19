@@ -212,14 +212,27 @@
   margin-top: 4px; font-size: 11px; color: var(--danger);
 }
 .pp-log-meta {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
-  font-size: 11px; color: var(--muted); flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  flex-shrink: 0;
 }
-.pp-log-hora { font-variant-numeric: tabular-nums; }
+.pp-log-quando {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; color: var(--text); font-variant-numeric: tabular-nums;
+}
+.pp-log-quando svg { color: var(--muted); flex-shrink: 0; }
+.pp-log-quando strong { font-weight: 600; }
+.pp-log-quando-data {
+  color: var(--muted); font-size: 10.5px; text-transform: capitalize;
+  border-left: 1px solid var(--border); margin-left: 3px; padding-left: 6px;
+}
 .pp-log-ip {
-  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px;
-  color: var(--muted); opacity: .75;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--surface2); border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px;
+  color: var(--muted);
 }
+.pp-log-ip svg { color: var(--muted); flex-shrink: 0; opacity: .8; }
 
 /* ─── Estado vazio ─────────────────────────────────────────────────────────── */
 .pp-vazio {

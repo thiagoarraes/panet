@@ -3,7 +3,7 @@ import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import {
-  Activity, AlertTriangle, Check, ChevronDown, Download, Eye, KeyRound,
+  Activity, AlertTriangle, Check, ChevronDown, Clock, Download, Eye, Globe2, KeyRound,
   Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
@@ -56,6 +56,12 @@ const ACAO_VERBO = {
 
 const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+const formatarHora = (iso) =>
+  new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+const formatarDataCurta = (iso) =>
+  new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
 
 const iniciais = (nome) =>
   (nome || "?")
@@ -718,8 +724,17 @@ export function AdminPanPass({ currentUserId }) {
                     )}
                   </div>
                   <div className="pp-log-meta">
-                    <span className="pp-log-hora">{formatarData(a.created_at)}</span>
-                    {a.ip && <span className="pp-log-ip">{a.ip}</span>}
+                    <span className="pp-log-quando">
+                      <Clock size={11} />
+                      <strong>{formatarHora(a.created_at)}</strong>
+                      <span className="pp-log-quando-data">{formatarDataCurta(a.created_at)}</span>
+                    </span>
+                    {a.ip && (
+                      <span className="pp-log-ip">
+                        <Globe2 size={10} />
+                        {a.ip}
+                      </span>
+                    )}
                   </div>
                 </li>
               );
