@@ -191,7 +191,7 @@
   background: var(--surface);
 }
 .pp-log-item {
-  display: flex; align-items: center; gap: 11px; padding: 11px 15px;
+  display: flex; align-items: center; gap: 13px; padding: 13px 16px;
   border-top: 1px solid var(--border); transition: background 140ms ease;
 }
 .pp-log-item:first-child { border-top: 0; }
@@ -199,31 +199,27 @@
 .pp-log-item.is-falha {
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--danger) 65%, transparent);
 }
-.pp-log-avatar {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
-  font-size: 10.5px; font-weight: 700; color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
 .pp-log-corpo { flex: 1; min-width: 0; }
 .pp-log-linha {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px;
+  display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;
+  font-size: 13px; color: var(--text); line-height: 1.4;
 }
-.pp-log-acao {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 7px; border-radius: 999px; font-size: 10.5px;
-  color: var(--muted); background: var(--surface2); border: 1px solid var(--border);
-}
-.pp-log-servico { font-size: 12px; color: var(--muted); }
+.pp-log-linha strong { font-weight: 600; }
+.pp-log-conector { color: var(--muted); font-weight: 400; }
+.pp-log-servico { color: var(--accent); }
 .pp-log-detalhe {
   display: inline-flex; align-items: center; gap: 5px;
-  margin-top: 3px; font-size: 11px; color: var(--danger);
+  margin-top: 4px; font-size: 11px; color: var(--danger);
 }
 .pp-log-meta {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
   font-size: 11px; color: var(--muted); flex-shrink: 0;
 }
-.pp-log-ip { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; opacity: .8; }
+.pp-log-hora { font-variant-numeric: tabular-nums; }
+.pp-log-ip {
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px;
+  color: var(--muted); opacity: .75;
+}
 
 /* ─── Estado vazio ─────────────────────────────────────────────────────────── */
 .pp-vazio {

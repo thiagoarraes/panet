@@ -46,6 +46,14 @@ const ACAO = {
   codigo_email: { label: "Código por e-mail (descontinuado)", Icon: KeyRound },
 };
 
+// Frase natural da auditoria — sem badge de ação, já que hoje só existe
+// "revelar senha". Os verbos de totp/codigo_email só aparecem em histórico.
+const ACAO_VERBO = {
+  senha: "revelou a senha de",
+  totp: "gerou o código de",
+  codigo_email: "buscou o código de",
+};
+
 const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -494,6 +502,10 @@ export function AdminPanPass({ currentUserId }) {
   const servicosTodos = useMemo(() => servicosQuery.data || [], [servicosQuery.data]);
   const acessos = useMemo(() => acessosQuery.data || [], [acessosQuery.data]);
   const colaboradores = colaboradoresQuery.data || [];
+  const colaboradoresPorId = useMemo(
+    () => new Map(colaboradores.map((c) => [c.id, c])),
+    [colaboradores],
+  );
 
   const servicos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -686,15 +698,18 @@ export function AdminPanPass({ currentUserId }) {
         ) : (
           <ul className="pp-log">
             {acessosFiltrados.map((a) => {
-              const { label, Icon } = ACAO[a.acao] || { label: a.acao, Icon: KeyRound };
+              const verbo = ACAO_VERBO[a.acao] || "acessou";
+              const colaboradorAvatar = colaboradoresPorId.get(a.colaborador_id) || {
+                nome: a.colaborador?.nome,
+              };
               return (
                 <li key={a.id} className={`pp-log-item ${a.sucesso ? "" : "is-falha"}`}>
-                  <span className="pp-log-avatar">{iniciais(a.colaborador?.nome)}</span>
+                  <Avatar col={colaboradorAvatar} size={34} />
                   <div className="pp-log-corpo">
                     <div className="pp-log-linha">
                       <strong>{a.colaborador?.nome || "Colaborador removido"}</strong>
-                      <span className="pp-log-acao"><Icon size={11} /> {label}</span>
-                      <span className="pp-log-servico">{a.servico?.nome || "serviço removido"}</span>
+                      <span className="pp-log-conector">{a.sucesso ? verbo : `tentou ${verbo}`}</span>
+                      <strong className="pp-log-servico">{a.servico?.nome || "serviço removido"}</strong>
                     </div>
                     {!a.sucesso && (
                       <div className="pp-log-detalhe">
@@ -703,7 +718,7 @@ export function AdminPanPass({ currentUserId }) {
                     )}
                   </div>
                   <div className="pp-log-meta">
-                    <span>{formatarData(a.created_at)}</span>
+                    <span className="pp-log-hora">{formatarData(a.created_at)}</span>
                     {a.ip && <span className="pp-log-ip">{a.ip}</span>}
                   </div>
                 </li>
