@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import DatePicker from "react-datepicker";
+import { ptBR } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
 import {
   Activity, AlertTriangle, Check, ChevronDown, Download, Eye, KeyRound,
   Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
@@ -13,7 +16,15 @@ import {
   useSalvarServicoPanPass,
 } from "../../hooks/mutations/usePanPassMutations";
 import { useColaboradores } from "../../hooks/queries/useColaboradores";
+import { formatDateForStore } from "../../lib/adminAusenciaForm.js";
 import "../../styles/panpass.css";
+
+const parseIsoToDate = (isoDate) => {
+  if (!isoDate) return null;
+  const [year, month, day] = String(isoDate).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, 12, 0, 0);
+};
 
 const VAZIO = {
   id: null,
@@ -626,22 +637,32 @@ export function AdminPanPass({ currentUserId }) {
             <div className="pp-filtro-data">
               <div className="form-group">
                 <label className="form-label">DE</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={filtroDataDe}
-                  max={filtroDataAte || undefined}
-                  onChange={(e) => setFiltroDataDe(e.target.value)}
+                <DatePicker
+                  selected={parseIsoToDate(filtroDataDe)}
+                  onChange={(date) => setFiltroDataDe(formatDateForStore(date))}
+                  locale={ptBR}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="dd/mm/aaaa"
+                  isClearable
+                  maxDate={parseIsoToDate(filtroDataAte)}
+                  className="form-input datepicker-input"
+                  calendarClassName="panet-datepicker"
+                  popperClassName="panet-datepicker-popper"
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">ATÉ</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={filtroDataAte}
-                  min={filtroDataDe || undefined}
-                  onChange={(e) => setFiltroDataAte(e.target.value)}
+                <DatePicker
+                  selected={parseIsoToDate(filtroDataAte)}
+                  onChange={(date) => setFiltroDataAte(formatDateForStore(date))}
+                  locale={ptBR}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="dd/mm/aaaa"
+                  isClearable
+                  minDate={parseIsoToDate(filtroDataDe)}
+                  className="form-input datepicker-input"
+                  calendarClassName="panet-datepicker"
+                  popperClassName="panet-datepicker-popper"
                 />
               </div>
             </div>
