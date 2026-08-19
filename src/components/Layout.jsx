@@ -32,7 +32,7 @@ const PageFallback = () => (
 function AppContent() {
   const {
     tela, pagina, adminAba, postSlug,
-    authLoading, currentProfile, theme,
+    authLoading, currentProfile, theme, sessionExpiredNotice,
     eu, effectiveUserId,
     mobileNavOpen, setMobileNavOpen,
     navigateTo,
@@ -40,7 +40,7 @@ function AppContent() {
   } = useAuth();
 
   if (authLoading) return <AppShellSkeleton theme={theme} />;
-  if (tela === "login") return <LoginPage onLogin={handleLogin} theme={theme} />;
+  if (tela === "login") return <LoginPage onLogin={handleLogin} theme={theme} notice={sessionExpiredNotice} />;
   if (tela === "primeiro_acesso") return <PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} theme={theme} />;
 
   const PAGINAS = {

@@ -1,5 +1,4 @@
 import { describe, expect, it, beforeAll } from "vitest";
-import { gerarTotp } from "../../supabase/functions/_shared/totp.ts";
 
 // As funções vivem nas Edge Functions (Deno), mas são JS puro com WebCrypto —
 // rodam igual no Node do Vitest. O único acoplamento é `Deno.env`, que o
@@ -7,32 +6,6 @@ import { gerarTotp } from "../../supabase/functions/_shared/totp.ts";
 beforeAll(() => {
   const chave = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
   globalThis.Deno = { env: { get: (k) => (k === "PANPASS_MASTER_KEY" ? chave : undefined) } };
-});
-
-describe("TOTP (RFC 6238)", () => {
-  // Vetor oficial da RFC 6238: secret SHA-1 "12345678901234567890" em Base32,
-  // T = 59s → código 94287082. Com 6 dígitos, os últimos seis: 287082.
-  const SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
-
-  it("gera o código esperado para o timestamp do vetor de referência", async () => {
-    const { codigo } = await gerarTotp(SECRET, 59 * 1000);
-    expect(codigo).toBe("287082");
-  });
-
-  it("gera código diferente na janela seguinte", async () => {
-    const a = await gerarTotp(SECRET, 59 * 1000);
-    const b = await gerarTotp(SECRET, (59 + 30) * 1000);
-    expect(a.codigo).not.toBe(b.codigo);
-  });
-
-  it("reporta os segundos restantes dentro da janela de 30s", async () => {
-    const { segundosRestantes } = await gerarTotp(SECRET, 65 * 1000);
-    expect(segundosRestantes).toBe(25);
-  });
-
-  it("rejeita secret que não é Base32", async () => {
-    await expect(gerarTotp("nao-base32!!")).rejects.toThrow(/Base32/);
-  });
 });
 
 describe("cifra AES-GCM dos segredos", () => {
@@ -55,28 +28,5 @@ describe("cifra AES-GCM dos segredos", () => {
   it("falha em valor cifrado malformado", async () => {
     const { decrypt } = await import("../../supabase/functions/_shared/crypto.ts");
     await expect(decrypt("sem-separador")).rejects.toThrow(/inválido/);
-  });
-});
-
-describe("extração de código/link do corpo do e-mail", () => {
-  it("acha código de 6 dígitos ignorando outros números", async () => {
-    const { extrairCodigo } = await import("../../supabase/functions/_shared/gmail.ts");
-    expect(extrairCodigo("Pedido #12345 — seu código é 837291. Válido por 10 min.")).toBe("837291");
-  });
-
-  it("acha o link do botão de login, não o de rodapé", async () => {
-    const { extrairLink } = await import("../../supabase/functions/_shared/gmail.ts");
-    const html = `
-      <p>Clique no botão abaixo para concluir o login.</p>
-      <a href="https://claude.ai/login?token=abc123">Entrar</a>
-      <a href="https://claude.ai/politica-de-privacidade">Política de privacidade</a>
-    `;
-    expect(extrairLink(html)).toBe("https://claude.ai/login?token=abc123");
-  });
-
-  it("não confunde link de cancelar inscrição com link de login", async () => {
-    const { extrairLink } = await import("../../supabase/functions/_shared/gmail.ts");
-    const html = `<a href="https://mail.exemplo.com/unsubscribe?id=9">Cancelar inscrição</a>`;
-    expect(extrairLink(html)).toBeNull();
   });
 });

@@ -20,8 +20,8 @@ async function invokeOuErro(nome, body) {
   return data;
 }
 
-// Revela senha / gera TOTP / busca o código no e-mail.
-// Deliberadamente sem cache: o valor volta para o componente e morre lá.
+// Revela a senha do serviço. Deliberadamente sem cache: o valor volta para o
+// componente e morre lá.
 export function useRevelarCredencial() {
   return useMutation({
     mutationFn: ({ servicoId, tipo }) =>

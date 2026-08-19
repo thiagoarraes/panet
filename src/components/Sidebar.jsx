@@ -84,7 +84,7 @@ export function Sidebar() {
             <button
               className="user-menu-item danger"
               style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-              onClick={handleLogout}
+              onClick={() => handleLogout()}
             >
               <LogOut size={14} />
               Deslogar

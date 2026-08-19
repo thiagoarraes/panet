@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function LoginPage({ onLogin, theme }) {
+export function LoginPage({ onLogin, theme, notice }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [error, setError] = useState("");
@@ -49,6 +49,7 @@ export function LoginPage({ onLogin, theme }) {
         </div>
         <div className="login-title">Olá, Panner!</div>
         <div className="login-sub">Entre com seu email da Pan e acompanhe os bastidores.</div>
+        {notice && <div style={{ color: "var(--warning, #b45309)", fontSize: 13, marginBottom: 14 }}>{notice}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">SEU E-MAIL DA PAN</label>

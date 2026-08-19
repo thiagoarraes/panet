@@ -77,6 +77,7 @@ export function AuthProvider({ children }) {
   const [adminServerConfirmed, setAdminServerConfirmed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || "dark");
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState("");
 
   // ─── Refs ──────────────────────────────────────────────────────────────────
   const initialDataLoadRef = useRef({ userId: null, at: 0 });
@@ -387,6 +388,18 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfileAndRoute, queryClient]);
 
+  // ─── Sessão expirada (token rejeitado pelo Supabase em pleno uso) ─────────
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
+    const onSessionExpired = () => {
+      if (telaRef.current === "app" || telaRef.current === "primeiro_acesso") {
+        handleLogout("Sua sessão expirou. Faça login novamente.");
+      }
+    };
+    window.addEventListener("panet:session-expired", onSessionExpired);
+    return () => window.removeEventListener("panet:session-expired", onSessionExpired);
+  }, []);
+
   // ─── Route resolution ──────────────────────────────────────────────────────
   useEffect(() => {
     if (tela !== "app" || typeof window === "undefined") return;
@@ -472,6 +485,7 @@ export function AuthProvider({ children }) {
   }, [queryClient]);
 
   const handleLogin = async (email, password) => {
+    setSessionExpiredNotice("");
     if (!isSupabaseEnabled) { setTela("primeiro_acesso"); return; }
 
     if (USE_SECURE_COOKIES) {
@@ -615,7 +629,8 @@ export function AuthProvider({ children }) {
     navigateTo("post_detalhe", "colaboradores", { path: `/${slug}`, postSlug: slug });
   };
 
-  const handleLogout = () => {
+  const handleLogout = (notice = "") => {
+    setSessionExpiredNotice(notice);
     initialDataLoadRef.current = { userId: null, at: 0 };
     profileLoadInFlightRef.current = { userId: null, promise: null };
     globalProfileLoadState.userId = null;
@@ -647,7 +662,7 @@ export function AuthProvider({ children }) {
   // ─── Context value ─────────────────────────────────────────────────────────
   const value = {
     tela, pagina, adminAba, postSlug,
-    authLoading, currentProfile, sessionUserId, adminServerConfirmed,
+    authLoading, currentProfile, sessionUserId, adminServerConfirmed, sessionExpiredNotice,
     mobileNavOpen, setMobileNavOpen, theme,
     eu, isAdmin, effectiveUserId,
     navigateTo,

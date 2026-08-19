@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
-  Activity, AlertTriangle, Check, ClipboardPaste, Download, Eye, KeyRound, Mail,
-  Pencil, Plus, Search, ShieldCheck, Smartphone, Trash2, UserCheck, Users, X,
+  Activity, AlertTriangle, Check, Download, Eye, KeyRound,
+  Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import {
@@ -23,34 +23,17 @@ const VAZIO = {
   logo_url: "",
   usuario: "",
   senha: "",
-  mfa_tipo: "nenhum",
-  totp_secret: "",
   restrito_a: [],
   ativo: true,
 };
 
-// Só caixa @agenciapan.com está sob a delegação do Google Workspace — é o que
-// permite o PanPass buscar o código sozinho. Mesma regra de PanPassPage.jsx e
-// de panpass-reveal/index.ts; detectado automaticamente, sem toggle manual
-// (um admin já esqueceu de marcar isso à mão e quebrou o fluxo do colaborador).
-const ehEmailCorporativo = (email) => Boolean(email?.toLowerCase().endsWith("@agenciapan.com"));
-
+// "totp"/"codigo_email" só aparecem em registros antigos de auditoria (a
+// funcionalidade de MFA foi removida do PanPass — hoje só existe "senha").
 const ACAO = {
   senha: { label: "Senha", Icon: Eye },
-  totp: { label: "Código TOTP", Icon: Smartphone },
-  codigo_email: { label: "Código por e-mail", Icon: Mail },
+  totp: { label: "Código TOTP (descontinuado)", Icon: KeyRound },
+  codigo_email: { label: "Código por e-mail (descontinuado)", Icon: KeyRound },
 };
-
-const MFA = {
-  nenhum: { label: "Sem 2FA", desc: "Só login e senha", Icon: KeyRound },
-  totp: { label: "Autenticador", desc: "Código de 6 dígitos", Icon: Smartphone },
-  email: { label: "Por e-mail", desc: "Código enviado na hora", Icon: Mail },
-};
-
-// Base32 (RFC 4648) é o formato em que todo serviço entrega o secret do TOTP.
-// Validar no cadastro evita descobrir o erro só quando o colaborador precisa.
-const BASE32_VALIDO = /^[A-Z2-7]+=*$/;
-const normalizarSecret = (v) => String(v || "").toUpperCase().replace(/[\s-]/g, "");
 
 const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -212,25 +195,8 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
       [campo]: e.target.type === "checkbox" ? e.target.checked : e.target.value,
     }));
 
-  // Só acusa formato errado depois que o admin digitou algo — campo vazio na
-  // edição é válido (significa "mantém o secret atual").
-  const secretInvalido =
-    form.mfa_tipo === "totp" &&
-    Boolean(form.totp_secret) &&
-    !BASE32_VALIDO.test(form.totp_secret);
-
-  const colarSecret = async () => {
-    try {
-      const texto = await navigator.clipboard.readText();
-      setForm((f) => ({ ...f, totp_secret: normalizarSecret(texto) }));
-    } catch {
-      // Sem permissão de leitura da área de transferência: o admin digita.
-    }
-  };
-
   const submeter = (e) => {
     e.preventDefault();
-    if (secretInvalido) return;
     setErro("");
     salvar.mutate(form, { onSuccess: onFechar, onError: (err) => setErro(err.message) });
   };
@@ -301,87 +267,6 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
           </div>
 
           <div className="pp-fieldset">
-            <div className="pp-fieldset-titulo">Verificação em duas etapas</div>
-
-            <div className="pp-mfa-grid" role="radiogroup" aria-label="Verificação em duas etapas">
-              {Object.entries(MFA).map(([valor, { label, desc, Icon }]) => {
-                const ativa = form.mfa_tipo === valor;
-                return (
-                  <button
-                    key={valor}
-                    type="button"
-                    role="radio"
-                    aria-checked={ativa}
-                    className={`pp-mfa-card ${ativa ? "is-ativa" : ""}`}
-                    onClick={() => setForm((f) => ({ ...f, mfa_tipo: valor }))}
-                  >
-                    <span className="pp-mfa-card-icone"><Icon size={16} /></span>
-                    <span className="pp-mfa-card-label">{label}</span>
-                    <span className="pp-mfa-card-desc">{desc}</span>
-                    {ativa && <Check size={13} className="pp-mfa-card-check" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            {form.mfa_tipo === "totp" && (
-              <div className="pp-mfa-painel">
-                <div className="pp-mfa-painel-topo">
-                  <label className="pp-mfa-painel-label" htmlFor="pp-totp-secret">
-                    Secret do autenticador
-                    <span className="pp-badge-fmt">Base32</span>
-                  </label>
-                  {editando && <span className="pp-mfa-painel-hint">vazio mantém o atual</span>}
-                </div>
-
-                <div className={`pp-input-acao ${secretInvalido ? "is-invalido" : ""}`}>
-                  <input
-                    id="pp-totp-secret"
-                    className="pp-input-mono"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={form.totp_secret}
-                    onChange={(e) => setForm((f) => ({ ...f, totp_secret: normalizarSecret(e.target.value) }))}
-                    placeholder="JBSWY3DPEHPK3PXP"
-                    aria-invalid={secretInvalido}
-                  />
-                  {form.totp_secret && !secretInvalido && (
-                    <span className="pp-input-ok" title="Base32 válido"><Check size={13} /></span>
-                  )}
-                  <button type="button" className="pp-input-btn" onClick={colarSecret} title="Colar da área de transferência">
-                    <ClipboardPaste size={13} />
-                  </button>
-                </div>
-
-                {secretInvalido ? (
-                  <div className="pp-ajuda pp-ajuda-erro">
-                    <AlertTriangle size={11} /> Só letras A–Z e números 2–7. Confira o secret copiado do serviço.
-                  </div>
-                ) : (
-                  <div className="pp-ajuda">
-                    O PanPass gera o código de 6 dígitos sozinho — ninguém precisa consultar o celular.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {form.mfa_tipo === "email" && form.usuario && (
-              <div className="pp-mfa-painel">
-                {ehEmailCorporativo(form.usuario) ? (
-                  <div className="pp-status-ok">
-                    <Mail size={12} /> Domínio @agenciapan.com — o PanPass busca o código sozinho.
-                  </div>
-                ) : (
-                  <div className="pp-status-aviso">
-                    <AlertTriangle size={12} /> Fora do domínio da empresa — o colaborador verá um
-                    aviso para pedir o código direto ao dono do e-mail de login.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="pp-fieldset">
             <div className="pp-fieldset-titulo">Quem pode acessar</div>
             <SeletorColaboradores
               colaboradores={colaboradores}
@@ -414,7 +299,7 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
             <button type="button" className="btn-ghost" onClick={onFechar}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={salvar.isPending || secretInvalido}>
+            <button type="submit" className="btn-primary" disabled={salvar.isPending}>
               {salvar.isPending ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar serviço"}
             </button>
           </div>
@@ -461,7 +346,6 @@ function ConfirmarExclusao({ servico, onFechar }) {
 }
 
 function ServicoCard({ servico, onEditar, onExcluir }) {
-  const mfa = MFA[servico.mfa_tipo] || MFA.nenhum;
   return (
     <article className={`pp-servico ${servico.ativo ? "" : "is-inativo"}`}>
       <div className="pp-servico-topo">
@@ -487,12 +371,6 @@ function ServicoCard({ servico, onEditar, onExcluir }) {
       <div className="pp-servico-login">{servico.usuario}</div>
 
       <div className="pp-tags">
-        <span className="pp-tag"><mfa.Icon size={11} /> {mfa.label}</span>
-        {servico.mfa_tipo === "email" && !ehEmailCorporativo(servico.usuario) && (
-          <span className="pp-tag is-aviso" title="Fora do domínio da empresa — busca automática desativada">
-            <AlertTriangle size={11} /> Pedir ao dono
-          </span>
-        )}
         <span className="pp-tag">
           <Users size={11} />
           {servico.restrito_a?.length ? `${servico.restrito_a.length} pessoa(s)` : "Toda a equipe"}
@@ -634,7 +512,7 @@ export function AdminPanPass({ currentUserId }) {
                 key={s.id}
                 servico={s}
                 onEditar={(sv) =>
-                  setModal({ ...VAZIO, ...sv, senha: "", totp_secret: "", restrito_a: sv.restrito_a || [] })
+                  setModal({ ...VAZIO, ...sv, senha: "", restrito_a: sv.restrito_a || [] })
                 }
                 onExcluir={setExcluindo}
               />
