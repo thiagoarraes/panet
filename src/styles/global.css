@@ -4015,13 +4015,51 @@
   .panet-datepicker .react-datepicker__header {
     background: color-mix(in srgb, var(--accent) 10%, var(--surface)) !important;
     border-bottom: 1px solid var(--border) !important;
+    padding: 12px 10px 10px !important;
   }
+  .panet-datepicker .react-datepicker__header__dropdown:empty { display: none; }
   .panet-datepicker .react-datepicker__current-month,
   .panet-datepicker .react-datepicker-time__header,
-  .panet-datepicker .react-datepicker-year-header,
-  .panet-datepicker .react-datepicker__day-name {
+  .panet-datepicker .react-datepicker-year-header {
     color: var(--text) !important;
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+    margin-bottom: 10px !important;
+  }
+  .panet-datepicker .react-datepicker__day-name {
+    color: var(--muted) !important;
     font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .panet-datepicker .react-datepicker__navigation {
+    top: 12px !important;
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 50% !important;
+    transition: background 0.14s ease !important;
+  }
+  .panet-datepicker .react-datepicker__navigation:hover {
+    background: color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  }
+  .panet-datepicker .react-datepicker__navigation--previous { left: 10px !important; }
+  .panet-datepicker .react-datepicker__navigation--next { right: 10px !important; }
+  .panet-datepicker .react-datepicker__navigation-icon::before {
+    border-width: 2px 2px 0 0 !important;
+    width: 6px !important;
+    height: 6px !important;
+  }
+  .panet-datepicker .react-datepicker__navigation:disabled,
+  .panet-datepicker .react-datepicker__navigation--previous:disabled,
+  .panet-datepicker .react-datepicker__navigation--next:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .panet-datepicker .react-datepicker__navigation:disabled:hover {
+    background: transparent !important;
   }
   .panet-datepicker .react-datepicker__day {
     color: var(--text) !important;
@@ -4096,6 +4134,9 @@
   .theme-light .panet-datepicker .react-datepicker__header {
     background: color-mix(in srgb, #00a09d 10%, #ffffff) !important;
     border-bottom-color: color-mix(in srgb, #00a09d 28%, #c7d6e4) !important;
+  }
+  .theme-light .panet-datepicker .react-datepicker__navigation:hover {
+    background: color-mix(in srgb, #00a09d 20%, transparent) !important;
   }
   .theme-light .panet-datepicker .react-datepicker__day:hover {
     background: color-mix(in srgb, #00a09d 22%, #ffffff) !important;
