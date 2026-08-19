@@ -4016,7 +4016,7 @@
     position: relative !important;
     background: var(--surface) !important;
     border-bottom: 1px solid var(--border) !important;
-    padding: 7px 30px 5px !important;
+    padding: 6px 30px 6px !important;
     min-height: 22px;
   }
   .panet-datepicker .react-datepicker__header__dropdown:empty { display: none; }
