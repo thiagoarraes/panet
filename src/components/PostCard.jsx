@@ -31,7 +31,7 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
   const imagePerformanceProps = {
     loading: "lazy",
     decoding: "async",
-    fetchpriority: "low",
+    fetchPriority: "low",
   };
 
   return (
