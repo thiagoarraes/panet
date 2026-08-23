@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Car, Upload, Loader2, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "@heroui/react";
+import { Car, Upload, Loader2, AlertTriangle, FileText } from "lucide-react";
 import { useCorridas } from "../../hooks/queries/useCorridas";
 import { useEnviarCorrida } from "../../hooks/mutations/useCorridasMutations";
 
@@ -14,34 +15,28 @@ export function CorridasAside({ currentUserId }) {
   const corridasQuery = useCorridas(currentUserId, { limit: 5 });
   const enviarCorrida = useEnviarCorrida(currentUserId);
   const fileInputRef = useRef(null);
-  const sucessoTimer = useRef(null);
   const [file, setFile] = useState(null);
   const [motivo, setMotivo] = useState("");
-  const [erro, setErro] = useState("");
-  const [sucesso, setSucesso] = useState(false);
 
   const corridas = corridasQuery.data || [];
 
-  useEffect(() => () => clearTimeout(sucessoTimer.current), []);
-
   const handlePickFile = (e) => {
-    const picked = e.target.files?.[0] || null;
-    setErro("");
-    setFile(picked);
+    setFile(e.target.files?.[0] || null);
   };
 
   const handleEnviar = async () => {
-    setErro("");
     try {
       await enviarCorrida.mutateAsync({ file, motivo });
       setFile(null);
       setMotivo("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setSucesso(true);
-      clearTimeout(sucessoTimer.current);
-      sucessoTimer.current = setTimeout(() => setSucesso(false), 5000);
+      toast.success("Recibo enviado", { description: "Corrida registrada com sucesso." });
     } catch (err) {
-      setErro(err?.message || "Não foi possível enviar a corrida.");
+      // Resultado de operacao assincrona vira toast; validacao de campo
+      // continua inline, junto do input.
+      toast.danger("Não foi possível enviar", {
+        description: err?.message || "Não foi possível enviar a corrida.",
+      });
     }
   };
 
@@ -73,16 +68,6 @@ export function CorridasAside({ currentUserId }) {
           style={{ fontSize: 12, resize: "vertical" }}
         />
 
-        {erro && (
-          <div className="corrida-feedback is-erro">
-            <span className="corrida-feedback-icone"><AlertTriangle size={15} /></span>
-            <div className="corrida-feedback-textos">
-              <span className="corrida-feedback-titulo">Não foi possível enviar</span>
-              <span className="corrida-feedback-msg">{erro}</span>
-            </div>
-          </div>
-        )}
-
         <button
           className="btn-primary"
           onClick={handleEnviar}
@@ -93,15 +78,6 @@ export function CorridasAside({ currentUserId }) {
           {enviarCorrida.isPending ? "Enviando..." : "Registrar corrida"}
         </button>
 
-        {sucesso && (
-          <div className="corrida-feedback is-ok">
-            <span className="corrida-feedback-icone"><CheckCircle2 size={15} /></span>
-            <div className="corrida-feedback-textos">
-              <span className="corrida-feedback-titulo">Recibo enviado</span>
-              <span className="corrida-feedback-msg">Corrida registrada com sucesso.</span>
-            </div>
-          </div>
-        )}
 
         {corridas.some((c) => c.status_extracao !== "ok") && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>

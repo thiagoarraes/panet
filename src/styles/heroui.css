@@ -41,6 +41,8 @@
 @import "@heroui/styles/components/button.css" layer(components);
 @import "@heroui/styles/components/close-button.css" layer(components);
 @import "@heroui/styles/components/modal.css" layer(components);
+@import "@heroui/styles/components/spinner.css" layer(components);
+@import "@heroui/styles/components/toast.css" layer(components);
 
 /*
  * Sem layer() nestes dois: eles usam as diretivas @utility/@variant do

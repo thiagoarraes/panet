@@ -5,6 +5,7 @@ import "./styles/global.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Toast } from "@heroui/react";
 import { queryClient } from "./lib/queryClient";
 import { initQueryPersistence } from "./lib/queryPersistence";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -27,6 +28,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ErrorBoundary mensagem="Não foi possível carregar o Panet. Recarregue a página.">
         <App />
       </ErrorBoundary>
+      {/* Fila unica de toasts. Fica na raiz, fora do ErrorBoundary e do
+          AuthProvider, para continuar de pe mesmo se uma pagina quebrar.
+          O HeroUI nao monta nenhum provider por conta propria. */}
+      <Toast.Provider placement="bottom end" />
       {Devtools ? (
         <React.Suspense fallback={null}>
           <Devtools initialIsOpen={false} />
