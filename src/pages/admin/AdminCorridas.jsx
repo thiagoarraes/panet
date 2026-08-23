@@ -1,6 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Button, Modal } from "@heroui/react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { Button, ListBox, Modal, Popover, Select } from "@heroui/react";
 import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, MapPin, Briefcase, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
@@ -41,56 +40,21 @@ const StatusBadge = ({ status }) => {
 
 // Select custom de colaborador com avatar (option nativa não renderiza imagem).
 // A lista abre num portal com posição fixed para não ser cortada pelo overflow do card.
+// Filtro de colaborador. Antes era um listbox feito a mao: posicionamento por
+// getBoundingClientRect, portal manual e tres listeners (pointerdown, resize e
+// scroll com capture, este ultimo precisando ignorar a rolagem da propria
+// lista). O Select do HeroUI cobre tudo e ainda da teclado e busca por
+// digitacao, que nao existiam. O id "" representa "todos".
 function ColaboradorSelect({ colaboradores, value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState(null);
-  const triggerRef = useRef(null);
-  const listaRef = useRef(null);
   const selecionado = colaboradores.find((c) => c.id === value) || null;
 
-  const abrir = () => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
-    setOpen(true);
-  };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const fechar = (event) => {
-      if (triggerRef.current?.contains(event.target) || listaRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onResize = () => setOpen(false);
-    const onScroll = (event) => {
-      // Rolar dentro da própria lista não deve fechar o dropdown.
-      if (listaRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", fechar);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
-    return () => {
-      document.removeEventListener("pointerdown", fechar);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll, true);
-    };
-  }, [open]);
-
-  const escolher = (id) => {
-    onChange(id);
-    setOpen(false);
-  };
-
   return (
-    <div className="corridas-colab-select">
-      <button
-        ref={triggerRef}
-        type="button"
-        className="form-input corridas-colab-trigger"
-        onClick={() => (open ? setOpen(false) : abrir())}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
+    <Select
+      className="corridas-colab-select"
+      value={value || "todos"}
+      onChange={(chave) => onChange(chave === "todos" ? "" : chave)}
+    >
+      <Select.Trigger className="form-input corridas-colab-trigger">
         <span className="corridas-colab-atual">
           {selecionado ? (
             <>
@@ -104,44 +68,25 @@ function ColaboradorSelect({ colaboradores, value, onChange }) {
             </>
           )}
         </span>
-        <ChevronDown size={14} className={`corridas-colab-chevron ${open ? "is-open" : ""}`} />
-      </button>
-
-      {open && pos &&
-        createPortal(
-          <div
-            ref={listaRef}
-            className="corridas-colab-lista"
-            role="listbox"
-            style={{ top: pos.top, left: pos.left, width: pos.width }}
-          >
-            <button
-              type="button"
-              role="option"
-              aria-selected={value === ""}
-              className={`corridas-colab-opcao ${value === "" ? "active" : ""}`}
-              onClick={() => escolher("")}
-            >
-              <span className="corridas-colab-todos-icone"><Users size={13} /></span>
-              <span className="corridas-colab-nome">Todos os colaboradores</span>
-            </button>
-            {colaboradores.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                role="option"
-                aria-selected={value === c.id}
-                className={`corridas-colab-opcao ${value === c.id ? "active" : ""}`}
-                onClick={() => escolher(c.id)}
-              >
-                <Avatar col={c} size={22} />
-                <span className="corridas-colab-nome">{c.nome}</span>
-              </button>
-            ))}
-          </div>,
-          document.body
-        )}
-    </div>
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          <ListBox.Item id="todos" textValue="Todos os colaboradores">
+            <span className="corridas-colab-todos-icone"><Users size={13} /></span>
+            <span className="corridas-colab-nome">Todos os colaboradores</span>
+            <ListBox.ItemIndicator />
+          </ListBox.Item>
+          {colaboradores.map((c) => (
+            <ListBox.Item key={c.id} id={c.id} textValue={c.nome}>
+              <Avatar col={c} size={22} />
+              <span className="corridas-colab-nome">{c.nome}</span>
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+    </Select>
   );
 }
 
@@ -149,110 +94,94 @@ const MESES_ABREV = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "se
 const MESES_LONGO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 // Filtro de mês custom (input type=month não deixa customizar o popup do browser).
+// Month-picker proprio: grade de 12 meses com navegacao de ano. Nao vira
+// Select porque a grade 3x4 e a troca de ano fazem parte da UX; o que muda e
+// so a mecanica de abrir/fechar, que era getBoundingClientRect + portal manual
+// + pointerdown/resize/scroll a mao. O Popover cuida disso e ainda traz foco
+// gerenciado e Escape.
 function MesSelect({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState(null);
+  const [aberto, setAberto] = useState(false);
   const [ano, setAno] = useState(() => (value ? Number(value.split("-")[0]) : new Date().getFullYear()));
-  const triggerRef = useRef(null);
-  const popRef = useRef(null);
 
   const selAno = value ? Number(value.split("-")[0]) : null;
   const selMes = value ? Number(value.split("-")[1]) - 1 : null;
   const label = value ? `${MESES_LONGO[selMes]} de ${selAno}` : "Todos os meses";
 
-  const abrir = () => {
-    const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
-    setAno(value ? Number(value.split("-")[0]) : new Date().getFullYear());
-    setOpen(true);
-  };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const fechar = (event) => {
-      if (triggerRef.current?.contains(event.target) || popRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onScroll = (event) => {
-      if (popRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    document.addEventListener("pointerdown", fechar);
-    window.addEventListener("resize", () => setOpen(false));
-    window.addEventListener("scroll", onScroll, true);
-    return () => {
-      document.removeEventListener("pointerdown", fechar);
-      window.removeEventListener("scroll", onScroll, true);
-    };
-  }, [open]);
-
   const escolher = (mesIdx) => {
     onChange(`${ano}-${String(mesIdx + 1).padStart(2, "0")}`);
-    setOpen(false);
+    setAberto(false);
   };
 
   return (
-    <div className="corridas-mes-select">
-      <button
-        ref={triggerRef}
-        type="button"
-        className="form-input corridas-mes-trigger"
-        onClick={() => (open ? setOpen(false) : abrir())}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-      >
-        <span className="corridas-mes-atual">
-          <span className="corridas-mes-icone"><Calendar size={13} /></span>
-          <span className="corridas-mes-textos">
-            <span className="corridas-mes-caption">Mês</span>
-            <span className="corridas-mes-valor">{label}</span>
+    <Popover
+      isOpen={aberto}
+      onOpenChange={(v) => {
+        // Ao abrir, volta para o ano do filtro atual.
+        if (v) setAno(value ? Number(value.split("-")[0]) : new Date().getFullYear());
+        setAberto(v);
+      }}
+    >
+      <Popover.Trigger>
+        <button type="button" className="form-input corridas-mes-trigger">
+          <span className="corridas-mes-atual">
+            <span className="corridas-mes-icone"><Calendar size={13} /></span>
+            <span className="corridas-mes-textos">
+              <span className="corridas-mes-caption">Mês</span>
+              <span className="corridas-mes-valor">{label}</span>
+            </span>
           </span>
-        </span>
-        <ChevronDown size={14} className={`corridas-colab-chevron ${open ? "is-open" : ""}`} />
-      </button>
+          <ChevronDown size={14} className={`corridas-colab-chevron ${aberto ? "is-open" : ""}`} />
+        </button>
+      </Popover.Trigger>
 
-      {open && pos &&
-        createPortal(
-          <div ref={popRef} className="corridas-mes-pop" role="dialog" style={{ top: pos.top, right: pos.right }}>
-            <div className="corridas-mes-pop-head">
-              <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
-                <ChevronLeft size={16} />
-              </button>
-              <span className="corridas-mes-ano">{ano}</span>
-              <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-            <div className="corridas-mes-grid">
-              {MESES_ABREV.map((m, i) => {
-                const ativo = selAno === ano && selMes === i;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    className={`corridas-mes-cel ${ativo ? "active" : ""}`}
-                    onClick={() => escolher(i)}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              className="corridas-mes-limpar"
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-              disabled={!value}
-            >
-              Limpar filtro
+      <Popover.Content>
+        {/* O .corridas-mes-pop legado era posicionado a mao com position:fixed
+            e right calculado. Dentro do Popover quem posiciona e o HeroUI, e
+            aquele fixed fazia o painel vazar da viewport -- por isso o inline
+            neutraliza so o posicionamento, preservando o visual da classe. */}
+        <Popover.Dialog
+          aria-label="Filtrar por mês"
+          className="corridas-mes-pop"
+          style={{ position: "static", inset: "auto" }}
+        >
+          <div className="corridas-mes-pop-head">
+            <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a - 1)} aria-label="Ano anterior">
+              <ChevronLeft size={16} />
             </button>
-          </div>,
-          document.body
-        )}
-    </div>
+            <span className="corridas-mes-ano">{ano}</span>
+            <button type="button" className="corridas-mes-nav" onClick={() => setAno((a) => a + 1)} aria-label="Próximo ano">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <div className="corridas-mes-grid">
+            {MESES_ABREV.map((m, i) => {
+              const ativo = selAno === ano && selMes === i;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  className={`corridas-mes-cel ${ativo ? "active" : ""}`}
+                  onClick={() => escolher(i)}
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="corridas-mes-limpar"
+            onClick={() => {
+              onChange("");
+              setAberto(false);
+            }}
+            disabled={!value}
+          >
+            Limpar filtro
+          </button>
+        </Popover.Dialog>
+      </Popover.Content>
+    </Popover>
   );
 }
 
