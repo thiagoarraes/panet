@@ -323,7 +323,7 @@ export function AdminPresencial({ currentUserId }) {
 
       {totalItems > PAGE_SIZE && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}><div style={{ fontSize: 12, color: "var(--muted)" }}>Pagina {uiPage} de {totalPages} · {totalItems} item(ns)</div><div style={{ display: "flex", gap: 8 }}><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={uiPage <= 1}>Anterior</button><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={uiPage >= totalPages}>Proxima</button></div></div>}
 
-      {modal !== null && <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={closeAgendaModal}><div className="pan-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}><div className="modal-header"><div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>{modal === "novo" ? "Novo evento" : "Editar evento"}</div><button className="modal-close" onClick={closeAgendaModal}>x</button></div><div className="modal-body">
+      {modal !== null && <Modal.Backdrop isOpen variant="blur" onOpenChange={(aberto) => { if (!aberto) closeAgendaModal(); }}><Modal.Container scroll="inside"><Modal.Dialog style={{ maxWidth: 620, border: "1px solid var(--border)" }}><Modal.CloseTrigger /><Modal.Header><Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>{modal === "novo" ? "Novo evento" : "Editar evento"}</Modal.Heading></Modal.Header><Modal.Body>
         <div className="form-group"><label className="form-label">TITULO *</label><input className="form-input" value={form.titulo || ""} onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))} /></div>
         <div className="grid-2"><div className="form-group"><label className="form-label">DATA *</label><PanDatePicker value={form.dataIso} onChange={(iso) => setForm((prev) => ({ ...prev, dataIso: iso }))} /></div><div className="form-group"><label className="form-label">HORA</label><input className="form-input" type="text" inputMode="numeric" placeholder="HH:MM" maxLength={5} value={form.horaIso || ""} onChange={(e) => setForm((prev) => ({ ...prev, horaIso: normalizeTimeInput(e.target.value) }))} /></div></div>
         <div className="form-group"><label className="form-label">VAGAS</label><input className="form-input" type="number" min="0" value={form.vagas ?? 0} onChange={(e) => setForm((prev) => ({ ...prev, vagas: e.target.value }))} /></div>
@@ -342,8 +342,8 @@ export function AdminPresencial({ currentUserId }) {
         {form.amigoSecretoAtivo && <div className="form-group"><label className="form-label">REGRAS DO SORTEIO</label><textarea className="form-input" rows="4" value={form.amigoSecretoRegras || ""} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoRegras: e.target.value }))} /></div>}
         <div className="form-group"><label className="form-label">OBSERVACAO</label><textarea className="form-input" rows="4" value={form.observacao || ""} onChange={(e) => setForm((prev) => ({ ...prev, observacao: e.target.value }))} /></div>
         {formError && <div className="admin-presencial-form-error">{formError}</div>}
-        <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn-ghost" onClick={closeAgendaModal}>Cancelar</button><button className="btn-primary" onClick={saveAgenda} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</button></div>
-      </div></div></div>}
+        </Modal.Body><Modal.Footer><Button variant="tertiary" slot="close">Cancelar</Button><Button onPress={saveAgenda} isDisabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button></Modal.Footer>
+      </Modal.Dialog></Modal.Container></Modal.Backdrop>}
 
       {confirmarExcluir !== null && (
         <Modal.Backdrop

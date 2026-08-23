@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Button, Modal } from "@heroui/react";
 import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import {
   AUSENCIA_TIME_OPTIONS,
@@ -30,22 +30,23 @@ export function AdminAusenciaModal({
   } = getAusenciaFormComputed(form);
 
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onClose}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
     >
-      <div className="pan-modal admin-ausencia-modal" style={{ maxWidth: 560 }} onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-            {modal === "novo" ? "Registrar ausência" : "Editar ausência"}
-          </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
+      <Modal.Container scroll="inside">
+        <Modal.Dialog className="admin-ausencia-modal" style={{ maxWidth: 560, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+              {modal === "novo" ? "Registrar ausência" : "Editar ausência"}
+            </Modal.Heading>
+          </Modal.Header>
 
-        <div className="modal-body">
+          <Modal.Body>
           <div className="form-group">
             <label className="form-label">COLABORADOR *</label>
             <select
@@ -258,20 +259,15 @@ export function AdminAusenciaModal({
             )}
           </div>
 
-          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button className="btn-ghost" onClick={onClose}>
-              Cancelar
-            </button>
-            <button
-              className="btn-primary"
-              onClick={onSave}
-              disabled={saving || retornoObrigatorio || retornoInvalido}
-            >
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={onSave} isDisabled={saving || retornoObrigatorio || retornoInvalido}>
               Salvar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

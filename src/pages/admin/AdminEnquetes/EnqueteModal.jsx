@@ -1,4 +1,5 @@
-import { Trash2, X } from "lucide-react";
+import { Button, Modal } from "@heroui/react";
+import { Trash2 } from "lucide-react";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 
 /**
@@ -35,25 +36,22 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
   };
 
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onClose}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
     >
-      <div
-        className="pan-modal admin-enquete-modal"
-        style={{ maxWidth: 620 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-            {modal === "novo" ? "Criar enquete" : "Editar enquete"}
-          </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="modal-body">
+      <Modal.Container scroll="inside">
+        <Modal.Dialog className="admin-enquete-modal" style={{ maxWidth: 620, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+              {modal === "novo" ? "Criar enquete" : "Editar enquete"}
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
           <div className="form-group">
             <label className="form-label">PERGUNTA *</label>
             <textarea
@@ -149,12 +147,13 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
             </div>
           )}
 
-          <div className="admin-modal-actions" style={{ justifyContent: "flex-end" }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" onClick={onSave} disabled={saving}>Salvar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={onSave} isDisabled={saving}>Salvar</Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

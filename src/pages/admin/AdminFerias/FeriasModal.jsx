@@ -1,17 +1,25 @@
+import { Button, Modal } from "@heroui/react";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 
 export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOpts, onClose, onSalvar }) {
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="pan-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-            {modal === "novo" ? `Adicionar ${sub === "ferias" ? "Férias" : "Day Off"}` : "Editar registro"}
-          </div>
-          <button className="modal-close" onClick={onClose}>x</button>
-        </div>
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <Modal.Container scroll="inside">
+        <Modal.Dialog style={{ maxWidth: 480, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+              {modal === "novo" ? `Adicionar ${sub === "ferias" ? "Férias" : "Day Off"}` : "Editar registro"}
+            </Modal.Heading>
+          </Modal.Header>
 
-        <div className="modal-body">
+          <Modal.Body>
           <div className="form-group">
             <label className="form-label">COLABORADOR *</label>
             <select
@@ -83,12 +91,13 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
             </div>
           )}
 
-          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" onClick={onSalvar} disabled={saving}>Salvar</button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={onSalvar} isDisabled={saving}>Salvar</Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

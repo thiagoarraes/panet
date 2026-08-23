@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Button, Modal } from "@heroui/react";
 import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import { PostImageUploadCrop } from "../../components/PostImageUploadCrop";
 import { RichTextEditor } from "../../components/RichTextEditor";
@@ -9,17 +9,22 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
   if (modal === null) return null;
 
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
-      <div className="pan-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-            {modal === "novo" ? "Nova postagem" : "Editar postagem"}
-          </div>
-          <button className="modal-close" onClick={() => setModal(null)}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className="modal-body">
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) setModal(null);
+      }}
+    >
+      <Modal.Container scroll="inside">
+        <Modal.Dialog style={{ maxWidth: 600, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+              {modal === "novo" ? "Nova postagem" : "Editar postagem"}
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
           <div className="form-group">
             <label className="form-label">IMAGEM DE DESTAQUE</label>
             <PostImageUploadCrop value={form.imagem} onChange={(v) => setForm((p) => ({ ...p, imagem: v }))} />
@@ -64,16 +69,15 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
               {errorMsg}
             </div>
           )}
-          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button className="btn-ghost" onClick={() => setModal(null)}>
-              Cancelar
-            </button>
-            <button className="btn-primary" onClick={onSalvar} disabled={saving}>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={onSalvar} isDisabled={saving}>
               {modal === "novo" ? "Publicar" : "Salvar"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
