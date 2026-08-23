@@ -304,32 +304,32 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
   };
 
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onFechar}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onFechar();
+      }}
     >
-      <div
-        className="pan-modal pp-modal"
-        style={{ maxWidth: 660, width: "min(660px, calc(100vw - 40px))", margin: "0 auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="pp-modal-icone"><KeyRound size={16} /></span>
-            <div>
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-                {editando ? "Editar serviço" : "Novo serviço"}
-              </div>
-              <div className="section-sub" style={{ fontSize: 11 }}>
-                A senha é cifrada no servidor e nunca volta para o navegador
+      <Modal.Container scroll="inside">
+        <Modal.Dialog className="pp-modal" style={{ maxWidth: 660, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span className="pp-modal-icone"><KeyRound size={16} /></span>
+              <div>
+                <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+                  {editando ? "Editar serviço" : "Novo serviço"}
+                </Modal.Heading>
+                <div className="section-sub" style={{ fontSize: 11 }}>
+                  A senha é cifrada no servidor e nunca volta para o navegador
+                </div>
               </div>
             </div>
-          </div>
-          <button className="modal-close" onClick={onFechar}>×</button>
-        </div>
+          </Modal.Header>
 
-        <form className="modal-body" onSubmit={submeter}>
+          <form onSubmit={submeter}>
+            <Modal.Body>
           <div className="pp-fieldset">
             <div className="pp-fieldset-titulo">Identificação</div>
             <div className="grid-2">
@@ -398,16 +398,20 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
               <span>{erro}</span>
             </div>
           )}
+            </Modal.Body>
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-            <button type="button" className="btn-ghost" onClick={onFechar}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={salvar.isPending}>
-              {salvar.isPending ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar serviço"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <Modal.Footer>
+              <Button type="button" variant="tertiary" onPress={onFechar}>
+                Cancelar
+              </Button>
+              <Button type="submit" isDisabled={salvar.isPending}>
+                {salvar.isPending ? "Salvando..." : editando ? "Salvar alterações" : "Cadastrar serviço"}
+              </Button>
+            </Modal.Footer>
+          </form>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 

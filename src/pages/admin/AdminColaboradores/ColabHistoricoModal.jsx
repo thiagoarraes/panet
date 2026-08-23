@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Modal } from "@heroui/react";
 import { CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { useColabHistorico } from "../../../hooks/queries/admin/useColabHistorico.js";
@@ -398,26 +399,30 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
         }
       `}</style>
 
-      <div
-        className="modal-overlay"
-        style={{ alignItems: "center" }}
-        onClick={onClose}
+      <Modal.Backdrop
+        isOpen
+        variant="blur"
+        onOpenChange={(aberto) => {
+          if (!aberto) onClose();
+        }}
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 18,
-            width: "min(660px, calc(100vw - 32px))",
-            maxHeight: "88vh",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            animation: "modalIn 0.25s cubic-bezier(.4,0,.2,1)",
-            boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
-          }}
-        >
+        <Modal.Container>
+          <Modal.Dialog
+            aria-label="Histórico do colaborador"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 18,
+              width: "min(660px, calc(100vw - 32px))",
+              maxWidth: 660,
+              maxHeight: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              padding: 0,
+              boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
+            }}
+          >
           {/* ── Hero header ─────────────────────────────────────────────── */}
           <div
             style={{
@@ -642,8 +647,9 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
               </>
             )}
           </div>
-        </div>
-      </div>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </>
   );
 }
