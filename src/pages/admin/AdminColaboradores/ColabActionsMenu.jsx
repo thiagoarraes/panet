@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Dropdown, Label } from "@heroui/react";
 import {
   History,
   KeyRound,
@@ -10,9 +9,14 @@ import {
   UserMinus,
 } from "lucide-react";
 
-// Menu de ações por colaborador (kebab). Agrupa todas as ações num único
-// dropdown rotulado, mantendo a coluna limpa. Renderiza em portal com posição
-// fixed para não ser cortado pelo overflow da tabela.
+// Menu de acoes por colaborador (kebab). Agrupa todas as acoes num unico
+// dropdown rotulado, mantendo a coluna limpa.
+//
+// Antes isto era feito a mao: getBoundingClientRect para posicionar, portal
+// manual, e quatro listeners (mousedown, Escape, scroll com capture, resize)
+// so para fechar na hora certa. O Dropdown do HeroUI cobre tudo isso e ainda
+// traz o que faltava: navegacao por setas, Home/End, busca por digitacao e
+// reposicionamento automatico quando nao cabe na viewport.
 export function ColabActionsMenu({
   col,
   loading,
@@ -23,111 +27,71 @@ export function ColabActionsMenu({
   onDesativar,
   onReativar,
 }) {
-  const [aberto, setAberto] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef(null);
-  const menuRef = useRef(null);
   const isExPanner = col.ativo === false;
 
-  const posicionar = () => {
-    const r = btnRef.current?.getBoundingClientRect();
-    if (!r) return;
-    const largura = 200;
-    setPos({
-      top: r.bottom + 6,
-      left: Math.max(8, r.right - largura),
-    });
-  };
-
-  useLayoutEffect(() => {
-    if (aberto) posicionar();
-  }, [aberto]);
-
-  useEffect(() => {
-    if (!aberto) return undefined;
-    const fechar = (e) => {
-      if (
-        !menuRef.current?.contains(e.target) &&
-        !btnRef.current?.contains(e.target)
-      ) {
-        setAberto(false);
-      }
-    };
-    const onKey = (e) => e.key === "Escape" && setAberto(false);
-    const onScroll = () => setAberto(false);
-    document.addEventListener("mousedown", fechar);
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onScroll);
-    return () => {
-      document.removeEventListener("mousedown", fechar);
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, [aberto]);
-
-  const acao = (fn) => () => {
-    setAberto(false);
-    fn?.(col);
+  const acoes = {
+    senha: onAlterarSenha,
+    editar: onAbrirEditar,
+    historico: onVerHistorico,
+    reativar: onReativar,
+    desativar: onDesativar,
+    excluir: onConfirmarExcluir,
   };
 
   return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        className={`admin-action-icon ${aberto ? "is-active" : ""}`}
-        onClick={() => setAberto((v) => !v)}
-        aria-label={`Ações de ${col.nome}`}
-        aria-haspopup="menu"
-        aria-expanded={aberto}
-        disabled={loading}
-        title="Ações"
-      >
-        <MoreVertical />
-      </button>
+    <Dropdown>
+      {/* Dropdown.Trigger e obrigatorio para um <button> nativo: sem ele o
+          HeroUI nao injeta os handlers e o menu simplesmente nao abre. */}
+      <Dropdown.Trigger>
+        <button
+          type="button"
+          className="admin-action-icon"
+          aria-label={`Ações de ${col.nome}`}
+          disabled={loading}
+          title="Ações"
+        >
+          <MoreVertical />
+        </button>
+      </Dropdown.Trigger>
 
-      {aberto &&
-        createPortal(
-          <div
-            ref={menuRef}
-            className="colab-menu"
-            role="menu"
-            style={{ top: pos.top, left: pos.left }}
-          >
-            {!isExPanner && (
-              <button className="colab-menu-item" role="menuitem" onClick={acao(onAlterarSenha)}>
-                <KeyRound size={15} /> Alterar senha
-              </button>
-            )}
-            <button className="colab-menu-item" role="menuitem" onClick={acao(onAbrirEditar)}>
-              <Pencil size={15} /> Editar
-            </button>
-            <button className="colab-menu-item" role="menuitem" onClick={acao(onVerHistorico)}>
-              <History size={15} /> Histórico PanOff
-            </button>
+      <Dropdown.Popover>
+        <Dropdown.Menu onAction={(chave) => acoes[chave]?.(col)}>
+          {!isExPanner && (
+            <Dropdown.Item id="senha" textValue="Alterar senha">
+              <KeyRound size={15} />
+              <Label>Alterar senha</Label>
+            </Dropdown.Item>
+          )}
+          <Dropdown.Item id="editar" textValue="Editar">
+            <Pencil size={15} />
+            <Label>Editar</Label>
+          </Dropdown.Item>
+          <Dropdown.Item id="historico" textValue="Histórico PanOff">
+            <History size={15} />
+            <Label>Histórico PanOff</Label>
+          </Dropdown.Item>
 
-            {!col.isMe && (
-              <>
-                <div className="colab-menu-sep" />
-                {isExPanner ? (
-                  <button className="colab-menu-item" role="menuitem" onClick={acao(onReativar)}>
-                    <UserCheck size={15} /> Reativar acesso
-                  </button>
-                ) : (
-                  <button className="colab-menu-item is-warn" role="menuitem" onClick={acao(onDesativar)}>
-                    <UserMinus size={15} /> Tornar Ex Panner
-                  </button>
-                )}
-                <button className="colab-menu-item is-danger" role="menuitem" onClick={acao(onConfirmarExcluir)}>
-                  <Trash2 size={15} /> Excluir permanentemente
-                </button>
-              </>
-            )}
-          </div>,
-          document.body
-        )}
-    </>
+          {!col.isMe && (
+            <Dropdown.Section>
+              {isExPanner ? (
+                <Dropdown.Item id="reativar" textValue="Reativar acesso">
+                  <UserCheck size={15} />
+                  <Label>Reativar acesso</Label>
+                </Dropdown.Item>
+              ) : (
+                <Dropdown.Item id="desativar" textValue="Tornar Ex Panner">
+                  <UserMinus size={15} />
+                  <Label>Tornar Ex Panner</Label>
+                </Dropdown.Item>
+              )}
+              <Dropdown.Item id="excluir" textValue="Excluir permanentemente" variant="danger">
+                <Trash2 size={15} />
+                <Label>Excluir permanentemente</Label>
+              </Dropdown.Item>
+            </Dropdown.Section>
+          )}
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
   );
 }

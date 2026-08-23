@@ -51,6 +51,12 @@
 @import "@heroui/styles/components/calendar-year-picker.css" layer(components);
 @import "@heroui/styles/components/date-picker.css" layer(components);
 @import "@heroui/styles/components/tabs.css" layer(components);
+@import "@heroui/styles/components/description.css" layer(components);
+@import "@heroui/styles/components/separator.css" layer(components);
+@import "@heroui/styles/components/menu.css" layer(components);
+@import "@heroui/styles/components/menu-item.css" layer(components);
+@import "@heroui/styles/components/menu-section.css" layer(components);
+@import "@heroui/styles/components/dropdown.css" layer(components);
 @import "@heroui/styles/components/toast.css" layer(components);
 
 /*
