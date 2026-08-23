@@ -1,10 +1,8 @@
-import DatePicker from "react-datepicker";
 import { X } from "lucide-react";
-import { ptBR } from "date-fns/locale";
+import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import {
   AUSENCIA_TIME_OPTIONS,
   combineLocalDateAndTime,
-  formatDateForStore,
   getAusenciaFormComputed,
   getLocalDatePart,
   getLocalTimePart,
@@ -23,8 +21,6 @@ export function AdminAusenciaModal({
   if (modal === null) return null;
 
   const {
-    inicioDate,
-    retornoDate,
     inicioDatePart,
     inicioTimePart,
     retornoDatePart,
@@ -107,40 +103,23 @@ export function AdminAusenciaModal({
             {form.diaTodo ? (
               <div className="admin-ausencia-inline-field">
                 <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
-                <DatePicker
-                  selected={inicioDate}
-                  onChange={(date) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      inicio: formatDateForStore(date),
-                    }))
-                  }
-                  locale={ptBR}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/aaaa"
-                  className="form-input datepicker-input"
-                  calendarClassName="panet-datepicker panet-datepicker--datetime"
-                  popperClassName="panet-datepicker-popper"
+                <PanDatePicker
+                  value={form.inicio}
+                  onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso }))}
                 />
               </div>
             ) : (
               <div className="admin-ausencia-date-time-row">
                 <div className="admin-ausencia-inline-field">
                   <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
-                  <DatePicker
-                    selected={inicioDate}
-                    onChange={(date) =>
+                  <PanDatePicker
+                    value={form.inicio}
+                    onChange={(iso) =>
                       setForm((prev) => ({
                         ...prev,
-                        inicio: combineLocalDateAndTime(formatDateForStore(date), getLocalTimePart(prev.inicio) || "00:00"),
+                        inicio: combineLocalDateAndTime(iso, getLocalTimePart(prev.inicio) || "00:00"),
                       }))
                     }
-                    locale={ptBR}
-                    dateFormat="dd/MM/yyyy"
-                    placeholderText="dd/mm/aaaa"
-                    className="form-input datepicker-input"
-                    calendarClassName="panet-datepicker panet-datepicker--datetime"
-                    popperClassName="panet-datepicker-popper"
                   />
                 </div>
                 <div className="admin-ausencia-inline-field is-time">
@@ -205,21 +184,10 @@ export function AdminAusenciaModal({
                     <label className="form-label" style={{ marginBottom: 6 }}>
                       DATA DE RETORNO
                     </label>
-                    <DatePicker
-                      selected={retornoDate}
-                      onChange={(date) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          fim: formatDateForStore(date),
-                        }))
-                      }
-                      locale={ptBR}
-                      dateFormat="dd/MM/yyyy"
-                      placeholderText="dd/mm/aaaa"
-                      className="form-input datepicker-input"
-                      calendarClassName="panet-datepicker panet-datepicker--datetime"
-                      popperClassName="panet-datepicker-popper"
-                      minDate={inicioDate}
+                    <PanDatePicker
+                      value={form.fim}
+                      onChange={(iso) => setForm((prev) => ({ ...prev, fim: iso }))}
+                      minValue={form.inicio}
                     />
                   </>
                 ) : (
@@ -230,24 +198,18 @@ export function AdminAusenciaModal({
                     </div>
                     <div className="admin-ausencia-date-time-row">
                       <div className="admin-ausencia-inline-field">
-                        <DatePicker
-                          selected={retornoDate}
-                          onChange={(date) =>
+                        <PanDatePicker
+                          value={form.fim}
+                          onChange={(iso) =>
                             setForm((prev) => ({
                               ...prev,
                               fim: combineLocalDateAndTime(
-                                formatDateForStore(date),
+                                iso,
                                 getLocalTimePart(prev.fim) || getLocalTimePart(prev.inicio) || "00:00"
                               ),
                             }))
                           }
-                          locale={ptBR}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="dd/mm/aaaa"
-                          className="form-input datepicker-input"
-                          calendarClassName="panet-datepicker panet-datepicker--datetime"
-                          popperClassName="panet-datepicker-popper"
-                          minDate={inicioDate}
+                          minValue={form.inicio}
                         />
                       </div>
                       <div className="admin-ausencia-inline-field is-time">

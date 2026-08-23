@@ -1,7 +1,16 @@
-import DatePicker from "react-datepicker";
-import { ptBR } from "date-fns/locale";
-import "react-datepicker/dist/react-datepicker.css";
 import { Trash2, X } from "lucide-react";
+import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
+
+/**
+ * O form guarda endsAtDate como Date (o pai faz toISOString no salvar), mas o
+ * PanDatePicker fala ISO local. A conversao e feita a mao, campo a campo, de
+ * proposito: toISOString() converteria para UTC e deslocaria a hora escolhida.
+ */
+const dateParaIsoLocal = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+};
 
 export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, onSave }) {
   const setOptionText = (index, value) => {
@@ -104,19 +113,12 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">ENCERRAR AUTOMATICAMENTE</label>
-              <DatePicker
-                selected={form.endsAtDate}
-                onChange={(date) => setForm((prev) => ({ ...prev, endsAtDate: date || null }))}
-                locale={ptBR}
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeCaption="Hora"
-                dateFormat="dd/MM/yyyy HH:mm"
-                placeholderText="dd/mm/aaaa --:--"
-                className="form-input datepicker-input"
-                calendarClassName="panet-datepicker panet-datepicker--datetime"
-                popperClassName="panet-datepicker-popper"
-                isClearable
+              <PanDatePicker
+                comHora
+                value={dateParaIsoLocal(form.endsAtDate)}
+                onChange={(iso) =>
+                  setForm((prev) => ({ ...prev, endsAtDate: iso ? new Date(iso) : null }))
+                }
               />
               <div className="admin-enquete-form-note">Deixe vazio para encerrar manualmente.</div>
             </div>

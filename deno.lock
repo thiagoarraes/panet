@@ -16,6 +16,7 @@
         "npm:@eslint/js@^10.0.1",
         "npm:@heroui/react@^3.2.4",
         "npm:@heroui/styles@^3.2.4",
+        "npm:@internationalized/date@^3.12.3",
         "npm:@react-aria/i18n@^3.13.1",
         "npm:@react-aria/ssr@^3.10.1",
         "npm:@react-aria/utils@^3.34.1",

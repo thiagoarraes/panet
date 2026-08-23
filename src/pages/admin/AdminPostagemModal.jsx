@@ -1,25 +1,8 @@
-import DatePicker from "react-datepicker";
 import { X } from "lucide-react";
-import { ptBR } from "date-fns/locale";
-import "react-datepicker/dist/react-datepicker.css";
+import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import { PostImageUploadCrop } from "../../components/PostImageUploadCrop";
 import { RichTextEditor } from "../../components/RichTextEditor";
 import { useColaboradores } from "../../hooks/queries/useColaboradores";
-
-const parseIsoToDate = (isoDate) => {
-  if (!isoDate) return null;
-  const [y, m, d] = String(isoDate).split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d, 12, 0, 0);
-};
-
-const formatDateForStore = (date) => {
-  if (!date || Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, saving, errorMsg, categorias, currentUserId }) {
   const { data: colaboradores = [] } = useColaboradores(currentUserId, { summaryOnly: true });
@@ -61,15 +44,9 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
             </div>
             <div className="form-group">
               <label className="form-label">DATA</label>
-              <DatePicker
-                selected={parseIsoToDate(form.data)}
-                onChange={(date) => setForm((p) => ({ ...p, data: formatDateForStore(date) }))}
-                locale={ptBR}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/aaaa"
-                className="form-input datepicker-input"
-                calendarClassName="panet-datepicker"
-                popperClassName="panet-datepicker-popper"
+              <PanDatePicker
+                value={form.data}
+                onChange={(iso) => setForm((p) => ({ ...p, data: iso }))}
               />
             </div>
           </div>

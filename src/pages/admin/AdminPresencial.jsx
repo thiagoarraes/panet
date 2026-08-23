@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Modal } from "@heroui/react";
 import { AlertTriangle, CalendarDays, Clock3, Gift, LockKeyhole, MapPin, Pencil, ShieldCheck, Trash2, Users } from "lucide-react";
-import DatePicker from "react-datepicker";
-import { ptBR } from "date-fns/locale";
-import "react-datepicker/dist/react-datepicker.css";
 import { Avatar } from "../../components/Avatar";
+import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import { useAdminPresencial } from "../../hooks/queries/admin/useAdminPresencial.js";
 import { useColaboradores } from "../../hooks/queries/useColaboradores.js";
 import {
@@ -23,19 +21,6 @@ const sameIds = (left, right) => {
   if (a.length !== b.length) return false;
   const bSet = new Set(b);
   return a.every((id) => bSet.has(id));
-};
-const parseIsoToDate = (isoDate) => {
-  if (!isoDate) return null;
-  const [y, m, d] = String(isoDate).split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d, 12, 0, 0);
-};
-const formatDateForStore = (date) => {
-  if (!date || Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 };
 const formatDateLabel = (isoDate) => new Date(`${isoDate}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 const formatDateTimeLabel = (isoDateTime) => isoDateTime ? new Date(isoDateTime).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
@@ -340,7 +325,7 @@ export function AdminPresencial({ currentUserId }) {
 
       {modal !== null && <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={closeAgendaModal}><div className="pan-modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()}><div className="modal-header"><div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>{modal === "novo" ? "Novo evento" : "Editar evento"}</div><button className="modal-close" onClick={closeAgendaModal}>x</button></div><div className="modal-body">
         <div className="form-group"><label className="form-label">TITULO *</label><input className="form-input" value={form.titulo || ""} onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))} /></div>
-        <div className="grid-2"><div className="form-group"><label className="form-label">DATA *</label><DatePicker selected={parseIsoToDate(form.dataIso)} onChange={(date) => setForm((prev) => ({ ...prev, dataIso: formatDateForStore(date) }))} locale={ptBR} dateFormat="dd/MM/yyyy" placeholderText="dd/mm/aaaa" className="form-input datepicker-input" calendarClassName="panet-datepicker" popperClassName="panet-datepicker-popper" /></div><div className="form-group"><label className="form-label">HORA</label><input className="form-input" type="text" inputMode="numeric" placeholder="HH:MM" maxLength={5} value={form.horaIso || ""} onChange={(e) => setForm((prev) => ({ ...prev, horaIso: normalizeTimeInput(e.target.value) }))} /></div></div>
+        <div className="grid-2"><div className="form-group"><label className="form-label">DATA *</label><PanDatePicker value={form.dataIso} onChange={(iso) => setForm((prev) => ({ ...prev, dataIso: iso }))} /></div><div className="form-group"><label className="form-label">HORA</label><input className="form-input" type="text" inputMode="numeric" placeholder="HH:MM" maxLength={5} value={form.horaIso || ""} onChange={(e) => setForm((prev) => ({ ...prev, horaIso: normalizeTimeInput(e.target.value) }))} /></div></div>
         <div className="form-group"><label className="form-label">VAGAS</label><input className="form-input" type="number" min="0" value={form.vagas ?? 0} onChange={(e) => setForm((prev) => ({ ...prev, vagas: e.target.value }))} /></div>
         <div className="form-group"><label className="form-label">LOCAL</label><input className="form-input" value={form.local || ""} onChange={(e) => setForm((prev) => ({ ...prev, local: e.target.value }))} /></div>
         <div className="form-group"><label className="form-label">LINK DO GOOGLE MAPS</label><input className="form-input" type="url" placeholder="https://maps.google.com/..." value={form.mapsUrl || ""} onChange={(e) => setForm((prev) => ({ ...prev, mapsUrl: e.target.value }))} /></div>

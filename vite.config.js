@@ -15,9 +15,6 @@ export default defineConfig(({ mode }) => {
     if (id.includes("/@tiptap/")) {
       return "vendor-tiptap";
     }
-    if (id.includes("/react-datepicker/") || id.includes("/date-fns/")) {
-      return "vendor-datepicker";
-    }
     // HeroUI arrasta a arvore do React Aria junto; agrupar evita espalhar
     // esses pacotes por todos os chunks de pagina.
     if (
