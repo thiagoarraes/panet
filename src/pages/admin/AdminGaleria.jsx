@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "@heroui/react";
 import { Pencil, Trash2 } from "lucide-react";
 import { useAdminGaleria } from "../../hooks/queries/admin/useAdminGaleria.js";
 import {
@@ -66,8 +67,13 @@ export function AdminGaleria() {
     try {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
       await deleteEvento.mutateAsync(id);
+      toast.success("Evento excluído", { description: "As fotos vinculadas foram removidas." });
     } catch (error) {
-      console.error(error);
+      // Antes so ia para o console: o evento continuava na tela sem
+      // nenhuma indicacao de que a exclusao falhou.
+      toast.danger("Não foi possível excluir o evento", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }

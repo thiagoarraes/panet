@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import { toast } from "@heroui/react";
 import { CalendarDays, Plane, UserMinus } from "lucide-react";
 import { useAdminFerias } from "../../hooks/queries/admin/useAdminFerias.js";
 import { useAdminAusencias } from "../../hooks/queries/admin/useAdminAusencias.js";
@@ -284,8 +285,13 @@ export function AdminFerias({ currentUserId }) {
       setPendingDeleteIds((prev) => new Set(prev).add(id));
       await deleteFerias.mutateAsync(id);
       setConfirmarExcluir(null);
+      toast.success("Registro removido");
     } catch (error) {
-      console.error(error);
+      // Antes so ia para o console: a falha era invisivel e o modal de
+      // confirmacao continuava aberto sem explicacao.
+      toast.danger("Não foi possível remover", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
@@ -345,8 +351,11 @@ export function AdminFerias({ currentUserId }) {
       setAusenciaPendingDelete((prev) => new Set(prev).add(id));
       await deleteAusencia.mutateAsync(id);
       setAusenciaConfirmarExcluir(null);
+      toast.success("Ausência removida");
     } catch (error) {
-      console.error(error);
+      toast.danger("Não foi possível remover", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setAusenciaPendingDelete((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }

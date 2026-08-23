@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { Button, Modal } from "@heroui/react";
+import { Button, Modal, toast } from "@heroui/react";
 import { AlertTriangle, Heart, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "../../components/Badge";
 import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
@@ -107,8 +107,13 @@ export function AdminPostagens({ currentUserId }) {
       setPendingDeleteIds((prev) => new Set(prev).add(post.id));
       await deletePost.mutateAsync({ postId: post.id, previousImageUrl: post.imagem || null });
       setConfirmarExcluir(null);
+      toast.success("Postagem excluída");
     } catch (error) {
-      console.error(error);
+      // Antes so ia para o console: o modal de confirmacao ficava aberto
+      // sem dizer que a exclusao nao aconteceu.
+      toast.danger("Não foi possível excluir", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setPendingDeleteIds((prev) => {
         const next = new Set(prev);
