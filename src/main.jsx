@@ -5,7 +5,7 @@ import "./styles/global.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toast } from "@heroui/react";
+import { I18nProvider, Toast } from "@heroui/react";
 import { queryClient } from "./lib/queryClient";
 import { initQueryPersistence } from "./lib/queryPersistence";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -24,6 +24,9 @@ initQueryPersistence(queryClient);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    {/* Locale do React Aria: define formato de data (dd/mm/aaaa), nomes de
+        mes e dia da semana nos componentes de data do HeroUI. */}
+    <I18nProvider locale="pt-BR">
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary mensagem="Não foi possível carregar o Panet. Recarregue a página.">
         <App />
@@ -38,5 +41,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </React.Suspense>
       ) : null}
     </QueryClientProvider>
+    </I18nProvider>
   </React.StrictMode>
 );

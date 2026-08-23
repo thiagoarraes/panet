@@ -1,14 +1,4 @@
-import DatePicker from "react-datepicker";
-import { ptBR } from "date-fns/locale";
-import "react-datepicker/dist/react-datepicker.css";
-import { formatDateForStore } from "../../../lib/adminAusenciaForm.js";
-
-const parseIsoToDate = (isoDate) => {
-  if (!isoDate) return null;
-  const [year, month, day] = String(isoDate).split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day, 12, 0, 0);
-};
+import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 
 export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOpts, onClose, onSalvar }) {
   return (
@@ -39,47 +29,26 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
           {sub === "dayoff" ? (
             <div className="form-group">
               <label className="form-label">DAY OFF *</label>
-              <DatePicker
-                selected={parseIsoToDate(form.inicio)}
-                onChange={(date) => {
-                  const next = formatDateForStore(date);
-                  setForm((prev) => ({ ...prev, inicio: next, fim: next }));
-                }}
-                locale={ptBR}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/aaaa"
-                className="form-input datepicker-input"
-                calendarClassName="panet-datepicker"
-                popperClassName="panet-datepicker-popper"
+              <PanDatePicker
+                value={form.inicio}
+                onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso, fim: iso }))}
               />
             </div>
           ) : (
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">INÍCIO *</label>
-                <DatePicker
-                  selected={parseIsoToDate(form.inicio)}
-                  onChange={(date) => setForm((prev) => ({ ...prev, inicio: formatDateForStore(date) }))}
-                  locale={ptBR}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/aaaa"
-                  className="form-input datepicker-input"
-                  calendarClassName="panet-datepicker"
-                  popperClassName="panet-datepicker-popper"
+                <PanDatePicker
+                  value={form.inicio}
+                  onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso }))}
                 />
               </div>
               <div className="form-group">
                 <label className="form-label">FIM *</label>
-                <DatePicker
-                  selected={parseIsoToDate(form.fim)}
-                  onChange={(date) => setForm((prev) => ({ ...prev, fim: formatDateForStore(date) }))}
-                  locale={ptBR}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/aaaa"
-                  className="form-input datepicker-input"
-                  calendarClassName="panet-datepicker"
-                  popperClassName="panet-datepicker-popper"
-                  minDate={parseIsoToDate(form.inicio)}
+                <PanDatePicker
+                  value={form.fim}
+                  onChange={(iso) => setForm((prev) => ({ ...prev, fim: iso }))}
+                  minValue={form.inicio}
                 />
               </div>
             </div>
