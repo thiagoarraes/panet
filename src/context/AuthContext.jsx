@@ -388,18 +388,6 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfileAndRoute, queryClient]);
 
-  // ─── Sessão expirada (token rejeitado pelo Supabase em pleno uso) ─────────
-  useEffect(() => {
-    if (!isSupabaseEnabled) return;
-    const onSessionExpired = () => {
-      if (telaRef.current === "app" || telaRef.current === "primeiro_acesso") {
-        handleLogout("Sua sessão expirou. Faça login novamente.");
-      }
-    };
-    window.addEventListener("panet:session-expired", onSessionExpired);
-    return () => window.removeEventListener("panet:session-expired", onSessionExpired);
-  }, []);
-
   // ─── Route resolution ──────────────────────────────────────────────────────
   useEffect(() => {
     if (tela !== "app" || typeof window === "undefined") return;
@@ -656,6 +644,20 @@ export function AuthProvider({ children }) {
     }
     if (USE_SECURE_COOKIES) apiLogout();
   };
+
+  // ─── Sessão expirada (token rejeitado pelo Supabase em pleno uso) ─────────
+  // Fica depois de handleLogout de proposito: o listener monta uma unica vez e
+  // handleLogout so usa setters e refs estaveis, entao a closure inicial serve.
+  useEffect(() => {
+    if (!isSupabaseEnabled) return;
+    const onSessionExpired = () => {
+      if (telaRef.current === "app" || telaRef.current === "primeiro_acesso") {
+        handleLogout("Sua sessão expirou. Faça login novamente.");
+      }
+    };
+    window.addEventListener("panet:session-expired", onSessionExpired);
+    return () => window.removeEventListener("panet:session-expired", onSessionExpired);
+  }, []);
 
   const handleToggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 

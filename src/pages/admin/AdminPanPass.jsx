@@ -502,7 +502,7 @@ export function AdminPanPass({ currentUserId }) {
   // e invalida os useMemo abaixo.
   const servicosTodos = useMemo(() => servicosQuery.data || [], [servicosQuery.data]);
   const acessos = useMemo(() => acessosQuery.data || [], [acessosQuery.data]);
-  const colaboradores = colaboradoresQuery.data || [];
+  const colaboradores = useMemo(() => colaboradoresQuery.data || [], [colaboradoresQuery.data]);
   const colaboradoresPorId = useMemo(
     () => new Map(colaboradores.map((c) => [c.id, c])),
     [colaboradores],
