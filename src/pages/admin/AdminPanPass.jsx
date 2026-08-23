@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal, toast } from "@heroui/react";
+import { useMemo, useState } from "react";
+import { Button, ListBox, Modal, Select, toast } from "@heroui/react";
 import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import {
-  Activity, AlertTriangle, Check, ChevronDown, Clock, Download, Eye, Globe2, KeyRound,
+  Activity, AlertTriangle, Check, Clock, Download, Eye, Globe2, KeyRound,
   Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
@@ -197,35 +197,29 @@ function SeletorColaboradores({ colaboradores, selecionados, onChange }) {
 // selecionado no gatilho, painel com busca reaproveita o mesmo padrão de
 // SeletorColaboradores (lista com avatar+nome+cargo).
 function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
-  const [aberto, setAberto] = useState(false);
-  const [busca, setBusca] = useState("");
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    if (!aberto) return undefined;
-    const onClickFora = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setAberto(false);
-    };
-    document.addEventListener("mousedown", onClickFora);
-    return () => document.removeEventListener("mousedown", onClickFora);
-  }, [aberto]);
+  // O painel antigo era renderizado inline, sem portal: dentro da toolbar da
+  // auditoria ficava sujeito ao overflow do conteiner. O Select usa popover em
+  // portal, o que resolve o clipping, e traz navegacao por setas, Escape e
+  // busca por digitacao -- antes so havia um listener de mousedown.
+  //
+  // Ficou Select e nao ComboBox: o ComboBox exige controlar selectedKey e
+  // inputValue separadamente, e a busca explicita nao compensa essa
+  // complexidade para uma lista deste tamanho, onde o typeahead do React Aria
+  // ja resolve. O campo de busca dedicado saiu.
+  const itens = useMemo(
+    () => [{ id: "todos", nome: "Todos os colaboradores" }, ...colaboradores],
+    [colaboradores],
+  );
 
   const selecionado = colaboradores.find((c) => c.id === selecionadoId) || null;
 
-  const sugestoes = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return colaboradores.filter((c) => (termo ? c.nome.toLowerCase().includes(termo) : true)).slice(0, 30);
-  }, [colaboradores, busca]);
-
-  const selecionar = (id) => {
-    onChange(id);
-    setAberto(false);
-    setBusca("");
-  };
-
   return (
-    <div className="pp-filtro-colab" ref={wrapRef}>
-      <button type="button" className="pp-filtro-colab-trigger" onClick={() => setAberto((v) => !v)}>
+    <Select
+      className="pp-filtro-colab"
+      value={selecionadoId ?? "todos"}
+      onChange={(chave) => onChange(chave === "todos" ? null : chave)}
+    >
+      <Select.Trigger className="pp-filtro-colab-trigger">
         {selecionado ? (
           <>
             <Avatar col={selecionado} size={18} />
@@ -237,41 +231,26 @@ function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
             <span>Todos os colaboradores</span>
           </>
         )}
-        <ChevronDown size={13} />
-      </button>
+        <Select.Indicator />
+      </Select.Trigger>
 
-      {aberto && (
-        <div className="pp-filtro-colab-painel pp-mfa-painel">
-          <div className="pp-busca pp-busca-pessoas">
-            <Search size={13} />
-            <input
-              autoFocus
-              placeholder="Buscar colaborador..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          </div>
-
-          <ul className="pp-sugestoes">
-            <li>
-              <button type="button" onClick={() => selecionar(null)}>
+      <Select.Popover>
+        <ListBox items={itens}>
+          {(c) => (
+            <ListBox.Item id={c.id} textValue={c.nome}>
+              {c.id === "todos" ? (
                 <span className="pp-filtro-colab-todos-icone"><Users size={14} /></span>
-                <span className="pp-sugestao-nome">Todos os colaboradores</span>
-              </button>
-            </li>
-            {sugestoes.map((c) => (
-              <li key={c.id}>
-                <button type="button" onClick={() => selecionar(c.id)}>
-                  <Avatar col={c} size={22} />
-                  <span className="pp-sugestao-nome">{c.nome}</span>
-                  {c.cargo && <span className="pp-sugestao-cargo">{c.cargo}</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+              ) : (
+                <Avatar col={c} size={22} />
+              )}
+              <span className="pp-sugestao-nome">{c.nome}</span>
+              {c.cargo && <span className="pp-sugestao-cargo">{c.cargo}</span>}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          )}
+        </ListBox>
+      </Select.Popover>
+    </Select>
   );
 }
 
