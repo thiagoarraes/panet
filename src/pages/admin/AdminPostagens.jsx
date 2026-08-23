@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
+import { Button, Modal } from "@heroui/react";
 import { AlertTriangle, Heart, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "../../components/Badge";
 import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
@@ -235,38 +236,48 @@ export function AdminPostagens({ currentUserId }) {
       )}
 
       {confirmarExcluir && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setConfirmarExcluir(null)}>
-          <div className="pan-modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
-              <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
-                <AlertTriangle size={36} />
-              </div>
-              <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Excluir postagem?</div>
-              <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>Esta ação não pode ser desfeita.</div>
-              <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                <button className="btn-ghost" onClick={() => setConfirmarExcluir(null)}>
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => excluir(confirmarExcluir)}
+        <Modal.Backdrop
+          isOpen
+          variant="blur"
+          onOpenChange={(aberto) => {
+            if (!aberto) setConfirmarExcluir(null);
+          }}
+        >
+          <Modal.Container>
+            <Modal.Dialog
+              aria-label="Excluir postagem"
+              style={{ maxWidth: 400, border: "1px solid var(--border)" }}
+            >
+              <Modal.Body style={{ textAlign: "center", padding: 8 }}>
+                <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
+                  <AlertTriangle size={36} />
+                </div>
+                <div
                   style={{
-                    background: "var(--danger)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "10px 20px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontSize: 13,
+                    fontFamily: "'Sora', sans-serif",
+                    fontWeight: 700,
+                    fontSize: 17,
+                    marginBottom: 8,
+                    color: "var(--text)",
                   }}
-                  disabled={pendingDeleteIds.has(confirmarExcluir.id)}
+                >
+                  Excluir postagem?
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: 14 }}>Esta ação não pode ser desfeita.</div>
+              </Modal.Body>
+              <Modal.Footer style={{ justifyContent: "center" }}>
+                <Button variant="tertiary" slot="close">Cancelar</Button>
+                <Button
+                  variant="danger"
+                  onPress={() => excluir(confirmarExcluir)}
+                  isDisabled={pendingDeleteIds.has(confirmarExcluir.id)}
                 >
                   Excluir
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       )}
     </div>
   );

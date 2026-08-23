@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+import { Modal } from "@heroui/react";
 import { ArrowUpRight } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { SkeletonCollabCard } from "../components/Skeleton";
@@ -82,8 +83,19 @@ export function ColaboradoresPage({ currentUserId }) {
       )}
 
       {selected && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setSelected(null)}>
-          <div className="pan-modal collab-modal" onClick={(e) => e.stopPropagation()}>
+        <Modal.Backdrop
+          isOpen
+          variant="blur"
+          onOpenChange={(aberto) => {
+            if (!aberto) setSelected(null);
+          }}
+        >
+          <Modal.Container scroll="inside">
+            <Modal.Dialog
+              aria-label={`Perfil de ${selected.nome}`}
+              className="collab-modal"
+              style={{ border: "1px solid var(--border)", padding: 0 }}
+            >
             <div className="profile-hero">
               <Avatar col={selected} size={72} />
               <div>
@@ -176,8 +188,9 @@ export function ColaboradoresPage({ currentUserId }) {
                 Fechar
               </button>
             </div>
-          </div>
-        </div>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
       )}
     </div>
   );

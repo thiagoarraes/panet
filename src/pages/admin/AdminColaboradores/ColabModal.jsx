@@ -1,24 +1,24 @@
+import { Button, Modal } from "@heroui/react";
 import { MODULES, MONTH_OPTIONS } from "../../../lib/adminColabUtils.js";
 
 export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdmin, onClose, onSalvar }) {
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onClose}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
     >
-      <div
-        className="pan-modal"
-        style={{ maxWidth: 640, width: "min(640px, calc(100vw - 40px))", margin: "0 auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
-            {modal === "novo" ? "Novo colaborador" : "Editar colaborador"}
-          </div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
+      <Modal.Container scroll="inside">
+        <Modal.Dialog style={{ maxWidth: 640, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+              {modal === "novo" ? "Novo colaborador" : "Editar colaborador"}
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
           {errorMsg && (
             <div
               style={{
@@ -171,14 +171,15 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" onClick={onSalvar} disabled={loading}>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={onSalvar} isDisabled={loading}>
               {modal === "novo" ? "Cadastrar" : "Salvar"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
