@@ -1,45 +1,49 @@
-import { Button } from "@heroui/react";
+import { Button, Modal } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 
 export function ConfirmarExcluirModal({ colaborador, loading, onClose, onConfirm }) {
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onClose}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
     >
-      <div className="pan-modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
-          <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
-            <AlertTriangle size={36} />
-          </div>
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17, marginBottom: 8 }}>
-            Excluir colaborador?
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>
-            <strong>{colaborador.nome}</strong> será removido(a) da Panet.
-          </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <Button variant="tertiary" onPress={onClose}>Cancelar</Button>
-            <button
-              onClick={onConfirm}
+      <Modal.Container>
+        <Modal.Dialog
+          aria-label="Excluir colaborador"
+          style={{ maxWidth: 400, border: "1px solid var(--border)" }}
+        >
+          <Modal.Body style={{ textAlign: "center", padding: 8 }}>
+            <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
+              <AlertTriangle size={36} />
+            </div>
+            <div
               style={{
-                background: "var(--danger)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 20px",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: 13,
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 700,
+                fontSize: 17,
+                marginBottom: 8,
+                color: "var(--text)",
               }}
-              disabled={loading}
             >
+              Excluir colaborador?
+            </div>
+            <div style={{ color: "var(--muted)", fontSize: 14 }}>
+              <strong>{colaborador.nome}</strong> será removido(a) da Panet.
+            </div>
+          </Modal.Body>
+          <Modal.Footer style={{ justifyContent: "center" }}>
+            <Button variant="tertiary" slot="close" isDisabled={loading}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onPress={onConfirm} isDisabled={loading}>
               Excluir
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

@@ -6,7 +6,7 @@
  * independente de especificidade. E exatamente o que queremos: o CSS
  * legado da Panet continua mandando, sem precisar de nenhum ajuste.
  */
-@layer theme, base, components, utilities;
+@layer panet-reset, theme, base, components, utilities;
 
 /*
  * Tailwind v4 SEM preflight, de proposito.
@@ -21,8 +21,16 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/*
+ * Utilities de animacao (animate-in, fade-in-0, zoom-in-*, slide-in-from-*).
+ * Nao fazem parte do Tailwind v4 core, mas os componentes do HeroUI usam via
+ * @apply -- sem isto o build falha com "Cannot apply unknown utility class".
+ */
+@import "tw-animate-css";
+
 /* HeroUI: base + tema. */
 @import "@heroui/styles/base" layer(base);
+@import "@heroui/styles/base/scrollbar.css" layer(base);
 @import "@heroui/styles/themes/shared/theme.css" layer(theme);
 @import "@heroui/styles/themes/default" layer(theme);
 
@@ -31,6 +39,8 @@
  * Evita mandar para producao o CSS de 70 componentes que nao usamos.
  */
 @import "@heroui/styles/components/button.css" layer(components);
+@import "@heroui/styles/components/close-button.css" layer(components);
+@import "@heroui/styles/components/modal.css" layer(components);
 
 /*
  * Sem layer() nestes dois: eles usam as diretivas @utility/@variant do
@@ -43,6 +53,19 @@
 
 /* Tema da Panet: depois do default para vencer por ordem na mesma layer. */
 @import "./panet-theme.css" layer(theme);
+
+@layer components {
+  /*
+   * O HeroUI empilha overlays em z-50, mas a Panet ja usa z-index 100 na
+   * sidebar e 500 nos modais legados. Sem isto o backdrop passa por baixo
+   * da sidebar. Alinhado com o .modal-overlay legado para os dois
+   * conviverem enquanto a migracao dos 23 modais nao termina.
+   */
+  .modal__backdrop,
+  .alert-dialog__backdrop {
+    z-index: 500;
+  }
+}
 
 /*
  * Unica parte do preflight que faz falta: sem ela os controles do HeroUI

@@ -1,5 +1,12 @@
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* O reset universal fica na layer panet-reset (declarada antes de todas em
+     heroui.css) de proposito: fora de layer ele venceria o padding/margin dos
+     componentes do HeroUI, que vivem em @layer components, e zeraria o espaco
+     interno de modais, botoes e afins. Dentro da layer ele continua valendo
+     para o markup da Panet, que e todo unlayered e portanto ganha dele. */
+  @layer panet-reset {
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  }
   :root {
     --bg: #152132; --surface: #1a2a3e; --surface2: #1f3149; --border: #243d57;
     --accent: #00a09d; --accent2: #008684; --text: #E6EDF3; --muted: #7a9ab8;
