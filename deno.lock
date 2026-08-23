@@ -38,7 +38,7 @@
         "npm:eslint-plugin-react@^7.37.5",
         "npm:eslint@^10.7.0",
         "npm:globals@^17.7.0",
-        "npm:lucide-react@0.577",
+        "npm:lucide-react@^1.33.0",
         "npm:react-datepicker@^9.1.0",
         "npm:react-dom@^19.2.7",
         "npm:react-easy-crop@^6.2.2",
