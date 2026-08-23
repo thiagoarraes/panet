@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal } from "@heroui/react";
+import { Button, Modal, toast } from "@heroui/react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -300,7 +300,16 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
   const submeter = (e) => {
     e.preventDefault();
     setErro("");
-    salvar.mutate(form, { onSuccess: onFechar, onError: (err) => setErro(err.message) });
+    salvar.mutate(form, {
+      onSuccess: () => {
+        toast.success(editando ? "Serviço atualizado" : "Serviço cadastrado", {
+          description: form.nome,
+        });
+        onFechar();
+      },
+      // Erro fica inline: o modal continua aberto e a correcao e feita aqui.
+      onError: (err) => setErro(err.message),
+    });
   };
 
   return (
@@ -446,7 +455,20 @@ function ConfirmarExclusao({ servico, onFechar }) {
             <Button
               variant="danger"
               isDisabled={excluir.isPending}
-              onPress={() => excluir.mutate(servico.id, { onSuccess: onFechar })}
+              onPress={() =>
+                excluir.mutate(servico.id, {
+                  onSuccess: () => {
+                    toast.success("Serviço excluído", { description: servico.nome });
+                    onFechar();
+                  },
+                  // Antes a falha era silenciosa: o modal ficava aberto sem
+                  // nenhuma indicacao de que a exclusao nao aconteceu.
+                  onError: (err) =>
+                    toast.danger("Não foi possível excluir", {
+                      description: err?.message || "Tente novamente em instantes.",
+                    }),
+                })
+              }
             >
               {excluir.isPending ? "Excluindo..." : "Excluir"}
             </Button>
