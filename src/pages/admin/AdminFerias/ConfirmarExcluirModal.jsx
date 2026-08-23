@@ -1,44 +1,44 @@
+import { Button, Modal } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 
 export function ConfirmarExcluirModal({ title, onClose, onConfirm, disabled }) {
   return (
-    <div
-      className="modal-overlay"
-      style={{ alignItems: "center", justifyItems: "center" }}
-      onClick={onClose}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
     >
-      <div className="pan-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
-          <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
-            <AlertTriangle size={36} />
-          </div>
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-            {title}
-          </div>
-          <div style={{ color: "var(--muted)", fontSize: 13, marginBottom: 24 }}>
-            Essa ação não pode ser desfeita.
-          </div>
-          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button
-              onClick={onConfirm}
+      <Modal.Container>
+        <Modal.Dialog aria-label={title} style={{ maxWidth: 360, border: "1px solid var(--border)" }}>
+          <Modal.Body style={{ textAlign: "center", padding: 8 }}>
+            <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
+              <AlertTriangle size={36} />
+            </div>
+            <div
               style={{
-                background: "var(--danger)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 20px",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: 13,
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 700,
+                fontSize: 16,
+                marginBottom: 8,
+                color: "var(--text)",
               }}
-              disabled={disabled}
             >
+              {title}
+            </div>
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>Essa ação não pode ser desfeita.</div>
+          </Modal.Body>
+          <Modal.Footer style={{ justifyContent: "center" }}>
+            <Button variant="tertiary" slot="close" isDisabled={disabled}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onPress={onConfirm} isDisabled={disabled}>
               Remover
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
