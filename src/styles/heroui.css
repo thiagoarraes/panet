@@ -50,6 +50,7 @@
 @import "@heroui/styles/components/calendar.css" layer(components);
 @import "@heroui/styles/components/calendar-year-picker.css" layer(components);
 @import "@heroui/styles/components/date-picker.css" layer(components);
+@import "@heroui/styles/components/tabs.css" layer(components);
 @import "@heroui/styles/components/toast.css" layer(components);
 
 /*

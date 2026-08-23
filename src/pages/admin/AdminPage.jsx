@@ -62,13 +62,53 @@ export function AdminPage({
           <div className="section-sub">Gestão de conteúdo e colaboradores da Panet</div>
         </div>
       </div>
-      <div className="filter-tabs admin-tabs" style={{ marginBottom: 24 }}>
+      {/*
+        Semantica de abas no markup proprio, em vez do Tabs do HeroUI: o
+        visual e o roteamento (abaAtiva vive no AuthContext e alimenta a URL)
+        ja funcionam, e trocar o componente exigiria sobrescrever todo o
+        estilo do HeroUI sem ganho alem do que estes atributos dao.
+        Setas/Home/End navegam entre as abas, como manda o padrao WAI-ARIA.
+      */}
+      <div
+        className="filter-tabs admin-tabs"
+        style={{ marginBottom: 24 }}
+        role="tablist"
+        aria-label="Seções do painel administrativo"
+        onKeyDown={(e) => {
+          const passo = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+          if (!passo && e.key !== "Home" && e.key !== "End") return;
+          e.preventDefault();
+          const i = ABAS.findIndex((a) => a.id === abaAtiva);
+          const proximo =
+            e.key === "Home" ? 0
+            : e.key === "End" ? ABAS.length - 1
+            : (i + passo + ABAS.length) % ABAS.length;
+          onChangeAba?.(ABAS[proximo].id);
+        }}
+      >
         {ABAS.map((a) => (
-          <button key={a.id} className={`filter-tab ${abaAtiva === a.id ? "active" : ""}`} onClick={() => onChangeAba?.(a.id)}>
+          <button
+            key={a.id}
+            id={`admin-aba-${a.id}`}
+            role="tab"
+            aria-selected={abaAtiva === a.id}
+            aria-controls={`admin-painel-${a.id}`}
+            tabIndex={abaAtiva === a.id ? 0 : -1}
+            className={`filter-tab ${abaAtiva === a.id ? "active" : ""}`}
+            onClick={() => onChangeAba?.(a.id)}
+          >
             <a.icon size={14} style={{ marginRight: 6, verticalAlign: "text-bottom" }} /> {a.label}
           </button>
         ))}
       </div>
+      {/* Um unico tabpanel: so uma aba renderiza por vez, entao o id e o
+          aria-labelledby acompanham a aba ativa. */}
+      <div
+        role="tabpanel"
+        id={`admin-painel-${abaAtiva}`}
+        aria-labelledby={`admin-aba-${abaAtiva}`}
+        tabIndex={0}
+      >
       {abaAtiva === "colaboradores" && (
         <Suspense fallback={<AdminTabFallback />}>
           <AdminColaboradores
@@ -112,6 +152,7 @@ export function AdminPage({
           <AdminPanPass currentUserId={currentUserId} />
         </Suspense>
       )}
+      </div>
     </div>
   );
 }
