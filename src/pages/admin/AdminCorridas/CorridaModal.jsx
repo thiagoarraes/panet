@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Modal } from "@heroui/react";
 import { AlertTriangle, CarFront, Clock3, FileText, Gauge, Loader2, MapPin, Route, UserRound, Wallet } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { supabase, isSupabaseEnabled } from "../../../lib/supabase.js";
@@ -33,8 +34,19 @@ export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null,
   }, [corrida.recibo_path]);
 
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="pan-modal collab-modal corrida-modal" onClick={(e) => e.stopPropagation()}>
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <Modal.Container scroll="inside">
+        <Modal.Dialog
+          aria-label="Detalhe da corrida"
+          className="collab-modal corrida-modal"
+          style={{ border: "1px solid var(--border)", padding: 0 }}
+        >
         {/* ── Cabeçalho: quem + valor ─────────────────────────────────────── */}
         <div className="corrida-modal-hero">
           <button className="modal-close corrida-modal-close" onClick={onClose} aria-label="Fechar">×</button>
@@ -128,7 +140,8 @@ export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null,
             )}
           </div>
         </div>
-      </div>
-    </div>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

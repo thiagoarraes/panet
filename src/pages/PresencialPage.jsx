@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Button, Modal } from "@heroui/react";
 import { CalendarDays, CheckCircle2, Gift, Info, MapPin, Users } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { usePresencial } from "../hooks/queries/usePresencial";
@@ -54,23 +55,29 @@ function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSavi
   if (!state.open) return null;
 
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="pan-modal presencial-suggestion-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div>
-            <div className="section-title" style={{ fontSize: 18 }}>
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <Modal.Container scroll="inside">
+        <Modal.Dialog
+          className="presencial-suggestion-modal"
+          style={{ maxWidth: 560, border: "1px solid var(--border)" }}
+        >
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading className="section-title" style={{ fontSize: 18 }}>
               {state.mode === "edit" ? "Atualizar sugestão" : "Participar do amigo secreto"}
-            </div>
+            </Modal.Heading>
             <div className="section-sub" style={{ marginTop: 4 }}>
               {state.agendaTitle}
             </div>
-          </div>
-          <button className="modal-close" onClick={onClose} disabled={isSaving} aria-label="Fechar modal">
-            x
-          </button>
-        </div>
+          </Modal.Header>
 
-        <div className="modal-body">
+          <Modal.Body>
           <div className="presencial-suggestion-intro">
             <span className="presencial-suggestion-pill">Opcional e privado</span>
             <div className="presencial-suggestion-title">Tem alguma sugestão do que gostaria de ganhar?</div>
@@ -102,18 +109,19 @@ function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSavi
           </div>
 
           {state.error && <div className="presencial-suggestion-error">{state.error}</div>}
+          </Modal.Body>
 
-          <div className="admin-modal-actions presencial-suggestion-actions">
-            <button className="btn-ghost" onClick={onClose} disabled={isSaving}>
+          <Modal.Footer className="presencial-suggestion-actions">
+            <Button variant="tertiary" slot="close" isDisabled={isSaving}>
               Cancelar
-            </button>
-            <button className="btn-primary" onClick={onSubmit} disabled={isSaving}>
+            </Button>
+            <Button onPress={onSubmit} isDisabled={isSaving}>
               {isSaving ? "Salvando..." : state.mode === "edit" ? "Salvar sugestão" : "Entrar no sorteio"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 

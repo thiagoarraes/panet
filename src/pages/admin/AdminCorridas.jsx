@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Button, Modal } from "@heroui/react";
 import { Car, CheckCircle2, Loader2, AlertTriangle, Wallet, MapPin, Briefcase, ChevronDown, Users, Calendar, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { Avatar } from "../../components/Avatar";
 import { useAdminCorridas } from "../../hooks/queries/admin/useAdminCorridas.js";
@@ -272,15 +273,24 @@ function ClienteModal({ endereco, clienteAtual, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="pan-modal collab-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>
-            <Briefcase size={16} /> Vincular cliente ao destino
-          </div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-body">
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <Modal.Container>
+        <Modal.Dialog style={{ maxWidth: 420, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}
+            >
+              <Briefcase size={16} /> Vincular cliente ao destino
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
           <div className="corrida-cliente-endereco">
             <MapPin size={13} /> {endereco}
           </div>
@@ -299,15 +309,16 @@ function ClienteModal({ endereco, clienteAtual, onClose }) {
             Próximas corridas para este destino já vão mostrar o cliente automaticamente.
           </div>
           {erro && <div style={{ fontSize: 11, color: "var(--danger)", marginTop: 8 }}>{erro}</div>}
-          <div className="admin-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-            <button className="btn-primary" onClick={handleSalvar} disabled={definirCliente.isPending || !nome.trim()}>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button onPress={handleSalvar} isDisabled={definirCliente.isPending || !nome.trim()}>
               {definirCliente.isPending ? "Salvando..." : "Salvar"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 

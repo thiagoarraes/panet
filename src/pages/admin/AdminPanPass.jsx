@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Modal } from "@heroui/react";
 import DatePicker from "react-datepicker";
 import { ptBR } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
@@ -413,36 +414,42 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
 function ConfirmarExclusao({ servico, onFechar }) {
   const excluir = useExcluirServicoPanPass();
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onFechar}>
-      <div
-        className="pan-modal"
-        style={{ maxWidth: 420, width: "min(420px, calc(100vw - 40px))", margin: "0 auto" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-header">
-          <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>Excluir serviço</div>
-          <button className="modal-close" onClick={onFechar}>×</button>
-        </div>
-        <div className="modal-body">
-          <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>
-            Excluir <strong>{servico.nome}</strong>? A credencial é apagada em definitivo.
-          </p>
-          <p className="section-sub" style={{ fontSize: 12 }}>
-            O histórico de acessos é preservado para auditoria.
-          </p>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-            <button className="btn-ghost" onClick={onFechar}>Cancelar</button>
-            <button
-              className="btn-primary pp-btn-perigo"
-              disabled={excluir.isPending}
-              onClick={() => excluir.mutate(servico.id, { onSuccess: onFechar })}
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onFechar();
+      }}
+    >
+      <Modal.Container>
+        <Modal.Dialog style={{ maxWidth: 420, border: "1px solid var(--border)" }}>
+          <Modal.CloseTrigger />
+          <Modal.Header>
+            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>
+              Excluir serviço
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
+            <p style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 4 }}>
+              Excluir <strong>{servico.nome}</strong>? A credencial é apagada em definitivo.
+            </p>
+            <p className="section-sub" style={{ fontSize: 12 }}>
+              O histórico de acessos é preservado para auditoria.
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" slot="close">Cancelar</Button>
+            <Button
+              variant="danger"
+              isDisabled={excluir.isPending}
+              onPress={() => excluir.mutate(servico.id, { onSuccess: onFechar })}
             >
               {excluir.isPending ? "Excluindo..." : "Excluir"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
 
