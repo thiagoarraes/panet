@@ -34,7 +34,7 @@ export function PostagensPage({ onOpen, currentUserId }) {
   return (
     <div className="fade-up postagens-page">
       {postagensQuery.isError && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar PanNews</div>
             <div className="section-sub">{postagensQuery.error?.message || "Não foi possível carregar as postagens agora."}</div>

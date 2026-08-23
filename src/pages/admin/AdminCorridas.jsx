@@ -273,7 +273,7 @@ function ClienteModal({ endereco, clienteAtual, onClose }) {
 
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="modal collab-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal collab-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16 }}>
             <Briefcase size={16} /> Vincular cliente ao destino
@@ -367,7 +367,7 @@ export function AdminCorridas({ currentUserId }) {
       </div>
 
       {/* ── Filtros ──────────────────────────────────────────────────────── */}
-      <div className="card">
+      <div className="pan-card">
         <div className="card-header corridas-filtros">
           <ColaboradorSelect colaboradores={colaboradores} value={colaboradorId} onChange={setColaboradorId} />
           <MesSelect value={mes} onChange={setMes} />

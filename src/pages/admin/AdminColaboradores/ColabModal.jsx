@@ -8,7 +8,7 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
       onClick={onClose}
     >
       <div
-        className="modal"
+        className="pan-modal"
         style={{ maxWidth: 640, width: "min(640px, calc(100vw - 40px))", margin: "0 auto" }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -8,7 +8,7 @@ const toTotalVotesLabel = (totalVotes) => {
 
 export function EnqueteCard({ row, pendingEndIds, pendingDeleteIds, onEditar, onConfirmEnd, onConfirmDelete }) {
   return (
-    <div className="card admin-enquete-card" style={{ padding: 16 }}>
+    <div className="pan-card admin-enquete-card" style={{ padding: 16 }}>
       <div className="admin-enquete-head">
         <div className="admin-enquete-main">
           <div className="admin-enquete-title-row">

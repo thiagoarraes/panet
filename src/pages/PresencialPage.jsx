@@ -55,7 +55,7 @@ function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSavi
 
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="modal presencial-suggestion-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal presencial-suggestion-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <div className="section-title" style={{ fontSize: 18 }}>
@@ -212,7 +212,7 @@ export function PresencialPage({ currentUserId }) {
   return (
     <div className="fade-up presencial-page">
       {presencialQuery.isError && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar eventos</div>
             <div className="section-sub">{presencialQuery.error?.message || "Não foi possível carregar os eventos da Pan."}</div>
@@ -267,7 +267,7 @@ export function PresencialPage({ currentUserId }) {
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {presencialQuery.isLoading && proximasAgendas.length === 0 && (
-          <div className="card">
+          <div className="pan-card">
             <div className="card-body">
               <div className="empty-state">Carregando eventos...</div>
             </div>
@@ -517,7 +517,7 @@ export function PresencialPage({ currentUserId }) {
         })}
 
         {proximasAgendas.length === 0 && (
-          <div className="card">
+          <div className="pan-card">
             <div className="card-body">
               <div className="empty-state">Nenhum evento aberto no momento.</div>
             </div>

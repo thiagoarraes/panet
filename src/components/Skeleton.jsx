@@ -1,5 +1,5 @@
 function Sk({ w, h, r, style }) {
-  return <div className="skeleton" style={{ width: w, height: h, borderRadius: r, ...style }} />;
+  return <div className="pan-skeleton" style={{ width: w, height: h, borderRadius: r, ...style }} />;
 }
 
 export function SkeletonPostCard() {
@@ -44,7 +44,7 @@ export function SkeletonCollabCard() {
 export function SkeletonGaleriaCard() {
   return (
     <div className="skeleton-galeria-card">
-      <div className="skeleton" style={{ width: "100%", height: "100%", borderRadius: 0 }} />
+      <div className="pan-skeleton" style={{ width: "100%", height: "100%", borderRadius: 0 }} />
     </div>
   );
 }

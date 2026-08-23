@@ -309,7 +309,7 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
       onClick={onFechar}
     >
       <div
-        className="modal pp-modal"
+        className="pan-modal pp-modal"
         style={{ maxWidth: 660, width: "min(660px, calc(100vw - 40px))", margin: "0 auto" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -415,7 +415,7 @@ function ConfirmarExclusao({ servico, onFechar }) {
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onFechar}>
       <div
-        className="modal"
+        className="pan-modal"
         style={{ maxWidth: 420, width: "min(420px, calc(100vw - 40px))", margin: "0 auto" }}
         onClick={(e) => e.stopPropagation()}
       >

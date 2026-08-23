@@ -36,7 +36,7 @@ export function ChatPalpites({ jogadores, meuJogador, isDesenhista, rodada, palp
   };
 
   return (
-    <div className="card gartic-chat">
+    <div className="pan-card gartic-chat">
       <div className="card-header" style={{ padding: "10px 14px", fontWeight: 700 }}>
         Palpites
       </div>

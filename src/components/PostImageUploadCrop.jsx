@@ -134,7 +134,7 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
 
       {cropModalOpen && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setCropModalOpen(false)}>
-          <div className="modal" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
+          <div className="pan-modal" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Ajustar imagem de destaque</div>
               <button className="modal-close" onClick={() => setCropModalOpen(false)}>

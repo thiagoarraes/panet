@@ -6,7 +6,7 @@ export function JogadoresPanel({ jogadores, meuJogador, mostrarPontos = true, on
   const ordenados = [...jogadores].sort((a, b) => (b.pontosTotal || 0) - (a.pontosTotal || 0));
   const usaPresenca = onlineIds instanceof Set;
   return (
-    <div className="card">
+    <div className="pan-card">
       <div className="card-header" style={{ padding: "10px 14px", fontWeight: 700 }}>
         Jogadores ({jogadores.length})
       </div>

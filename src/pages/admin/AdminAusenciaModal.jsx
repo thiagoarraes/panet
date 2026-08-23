@@ -39,7 +39,7 @@ export function AdminAusenciaModal({
       style={{ alignItems: "center", justifyItems: "center" }}
       onClick={onClose}
     >
-      <div className="modal admin-ausencia-modal" style={{ maxWidth: 560 }} onClick={(event) => event.stopPropagation()}>
+      <div className="pan-modal admin-ausencia-modal" style={{ maxWidth: 560 }} onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
             {modal === "novo" ? "Registrar ausência" : "Editar ausência"}

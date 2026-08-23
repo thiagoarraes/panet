@@ -7,7 +7,7 @@ export function ConfirmarEncerrarModal({ confirmEnd, pendingEndIds, onClose, onC
       style={{ alignItems: "center", justifyItems: "center" }}
       onClick={onClose}
     >
-      <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-body" style={{ textAlign: "center", padding: 28 }}>
           <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--accent)" }}>
             <BarChart3 size={36} />
@@ -41,7 +41,7 @@ export function ConfirmarExcluirModal({ confirmDelete, pendingDeleteIds, onClose
       style={{ alignItems: "center", justifyItems: "center" }}
       onClick={onClose}
     >
-      <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-body" style={{ textAlign: "center", padding: 28 }}>
           <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
             <AlertTriangle size={36} />

@@ -17,7 +17,7 @@ export function SalaEspera({ sala, jogadores, meuJogador, onlineIds, onSair }) {
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body" style={{ padding: 32, textAlign: "center" }}>
             <h3 style={{ marginBottom: 8 }}>Aguardando o host iniciar…</h3>
             <p className="section-sub">

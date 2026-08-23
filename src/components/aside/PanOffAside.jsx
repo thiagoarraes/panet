@@ -5,7 +5,7 @@ import { getAusenciaMeta, getPeriodoFolgaLabel } from "../../lib/panoff.js";
 
 export function PanOffAside({ ausentesAgora, proximasFolgas, isLoading, onVerTodos }) {
   return (
-    <div className="card">
+    <div className="pan-card">
       <div className="card-header">
         <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <Plane size={14} /> PanOff

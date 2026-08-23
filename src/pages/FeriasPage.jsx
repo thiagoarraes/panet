@@ -128,7 +128,7 @@ export function FeriasPage({ currentUserId }) {
   return (
     <div className="fade-up panoff-page">
       {(feriasQuery.isError || ausenciasQuery.isError) && (
-        <div className="card" style={{ marginBottom: 4 }}>
+        <div className="pan-card" style={{ marginBottom: 4 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>
               Falha ao carregar PanOff

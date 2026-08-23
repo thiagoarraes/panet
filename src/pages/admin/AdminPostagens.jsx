@@ -133,7 +133,7 @@ export function AdminPostagens({ currentUserId }) {
       </div>
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {rows.map((post) => (
-          <div key={post.id} className="card" style={{ padding: 16, transition: "border-color 0.2s" }}>
+          <div key={post.id} className="pan-card" style={{ padding: 16, transition: "border-color 0.2s" }}>
             <div className="admin-post-row" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <img src={post.imagem} alt={post.titulo} style={{ width: 72, height: 36, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
               <div className="admin-post-main" style={{ flex: 1 }}>
@@ -212,7 +212,7 @@ export function AdminPostagens({ currentUserId }) {
         <Suspense
           fallback={
             <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }}>
-              <div className="modal">
+              <div className="pan-modal">
                 <div className="modal-body">
                   <div className="section-sub">Carregando editor...</div>
                 </div>
@@ -236,7 +236,7 @@ export function AdminPostagens({ currentUserId }) {
 
       {confirmarExcluir && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setConfirmarExcluir(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+          <div className="pan-modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
               <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
                 <AlertTriangle size={36} />

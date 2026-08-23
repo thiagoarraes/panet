@@ -173,7 +173,7 @@ export function PerfilPage({ profile, onSalvar }) {
         <div className="section-title" style={{ marginBottom: 20 }}>
           Meu Perfil
         </div>
-        <div className="card" style={{ padding: 24 }}>
+        <div className="pan-card" style={{ padding: 24 }}>
           Carregando perfil...
         </div>
       </div>
@@ -185,7 +185,7 @@ export function PerfilPage({ profile, onSalvar }) {
       <div className="section-title" style={{ marginBottom: 20 }}>
         Meu Perfil
       </div>
-      <div className="card">
+      <div className="pan-card">
         <div style={{ padding: 24, display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid var(--border)" }}>
           <div>
             <Avatar col={eu} size={72} />
@@ -282,7 +282,7 @@ export function PerfilPage({ profile, onSalvar }) {
         <Suspense
           fallback={
             <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }}>
-              <div className="modal" style={{ maxWidth: 560 }}>
+              <div className="pan-modal" style={{ maxWidth: 560 }}>
                 <div className="modal-body">
                   <div className="section-sub">Carregando editor de avatar...</div>
                 </div>

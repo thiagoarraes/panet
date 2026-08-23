@@ -138,7 +138,7 @@ export function AdminGaleria() {
 
       <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {rows.map((evento) => (
-          <div key={evento.id} className="card" style={{ padding: 14 }}>
+          <div key={evento.id} className="pan-card" style={{ padding: 14 }}>
             <div className="admin-galeria-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <img
                 src={evento.capa || evento.fotos?.[0]?.src || "https://picsum.photos/seed/galeria-empty/120/80"}

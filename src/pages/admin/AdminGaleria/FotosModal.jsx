@@ -3,7 +3,7 @@ import { ImageIcon, Trash2, X } from "lucide-react";
 export function FotosModal({ eventoAtual, saving, inputFotosMaisRef, onClose, onUploadMais, onSetCapa, onDeleteFoto }) {
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="modal" style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" style={{ maxWidth: 760 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17, display: "inline-flex", gap: 8, alignItems: "center" }}>
             <ImageIcon size={16} /> Fotos de {eventoAtual.evento}
@@ -28,7 +28,7 @@ export function FotosModal({ eventoAtual, saving, inputFotosMaisRef, onClose, on
           </div>
           <div className="admin-galeria-fotos-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
             {(eventoAtual.fotos || []).map((foto) => (
-              <div key={foto.id} className="card admin-galeria-foto-card" style={{ padding: 8 }}>
+              <div key={foto.id} className="pan-card admin-galeria-foto-card" style={{ padding: 8 }}>
                 {eventoAtual.capa === foto.src && (
                   <div style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", marginBottom: 6, letterSpacing: 0.4 }}>
                     CAPA ATUAL

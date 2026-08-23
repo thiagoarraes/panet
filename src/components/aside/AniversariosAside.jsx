@@ -4,7 +4,7 @@ import { SkeletonAnivItem } from "../Skeleton";
 
 export function AniversariosAside({ proximos, isLoading, onVerTodos, formatDiasRestantes }) {
   return (
-    <div className="card">
+    <div className="pan-card">
       <div className="card-header">
         <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <Cake size={14} /> Próximos aniversariantes

@@ -67,7 +67,7 @@ function ServicoCard({ servico }) {
   const carregando = revelar.isPending;
 
   return (
-    <div className="card panpass-card">
+    <div className="pan-card panpass-card">
       <div className="panpass-card-glow" aria-hidden="true" />
       <div className="card-body">
         <div className="panpass-card-head">
@@ -163,7 +163,7 @@ export function PanPassPage() {
       </div>
 
       {servicosQuery.isError && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar o PanPass</div>
             <div className="section-sub">{servicosQuery.error?.message}</div>
@@ -172,7 +172,7 @@ export function PanPassPage() {
       )}
 
       {!servicosQuery.isLoading && servicos.length === 0 && (
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body">
             <div className="section-sub">
               {busca ? "Nenhum serviço encontrado." : "Nenhum serviço liberado para você ainda."}

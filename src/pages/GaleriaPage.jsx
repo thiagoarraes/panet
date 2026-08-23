@@ -92,7 +92,7 @@ export function GaleriaPage({ currentUserId }) {
   return (
     <div className="fade-up">
       {galeriasQuery.isError && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar galeria</div>
             <div className="section-sub">{galeriasQuery.error?.message || "Não foi possível carregar os eventos de galeria."}</div>

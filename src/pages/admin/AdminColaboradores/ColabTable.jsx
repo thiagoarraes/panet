@@ -10,7 +10,7 @@ export function ColabTable({
 }) {
   return (
     <>
-      <div className="card">
+      <div className="pan-card">
         <div className="admin-table-wrap">
           <table className="admin-users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -143,7 +143,7 @@ export function ColabTable({
       </div>
 
       {totalPages > 1 && (
-        <div className="pagination">
+        <div className="pan-pagination">
           <button
             className="page-btn"
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}

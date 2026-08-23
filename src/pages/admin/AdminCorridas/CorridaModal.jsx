@@ -34,7 +34,7 @@ export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null,
 
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="modal collab-modal corrida-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal collab-modal corrida-modal" onClick={(e) => e.stopPropagation()}>
         {/* ── Cabeçalho: quem + valor ─────────────────────────────────────── */}
         <div className="corrida-modal-hero">
           <button className="modal-close corrida-modal-close" onClick={onClose} aria-label="Fechar">×</button>

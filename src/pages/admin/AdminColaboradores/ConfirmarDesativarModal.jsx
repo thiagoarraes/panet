@@ -15,7 +15,7 @@ export function ConfirmarDesativarModal({ colaborador, action = "desativar", loa
       onClick={onClose}
     >
       <div
-        className="modal"
+        className="pan-modal"
         style={{ maxWidth: 420 }}
         onClick={(e) => e.stopPropagation()}
       >

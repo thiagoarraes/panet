@@ -5,7 +5,7 @@ export function SenhaModal({ senhaGerada, senhaCopiada, onCopiar, onClose }) {
       style={{ alignItems: "center", justifyItems: "center" }}
       onClick={onClose}
     >
-      <div className="modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
             Senha temporária gerada

@@ -41,7 +41,7 @@ export function ColaboradoresPage({ currentUserId }) {
   return (
     <div className="fade-up">
       {colaboradoresQuery.isError && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar colaboradores</div>
             <div className="section-sub">{colaboradoresQuery.error?.message || "Não foi possível carregar os dados agora."}</div>
@@ -83,7 +83,7 @@ export function ColaboradoresPage({ currentUserId }) {
 
       {selected && (
         <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setSelected(null)}>
-          <div className="modal collab-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="pan-modal collab-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-hero">
               <Avatar col={selected} size={72} />
               <div>

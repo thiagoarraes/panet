@@ -7,7 +7,7 @@ export function ConfirmarExcluirModal({ title, onClose, onConfirm, disabled }) {
       style={{ alignItems: "center", justifyItems: "center" }}
       onClick={onClose}
     >
-      <div className="modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" style={{ maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-body" style={{ textAlign: "center", padding: 32 }}>
           <div style={{ fontSize: 40, marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
             <AlertTriangle size={36} />

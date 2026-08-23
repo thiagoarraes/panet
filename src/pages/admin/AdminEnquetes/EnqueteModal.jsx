@@ -32,7 +32,7 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
       onClick={onClose}
     >
       <div
-        className="modal admin-enquete-modal"
+        className="pan-modal admin-enquete-modal"
         style={{ maxWidth: 620 }}
         onClick={(e) => e.stopPropagation()}
       >

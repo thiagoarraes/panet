@@ -17,7 +17,7 @@ export function AusenciaList({
           const ausenciaMobileMeta = getAusenciaMobileMeta(item, ausenciaMeta);
 
           return (
-            <div key={item.id} className="card admin-ausencia-card" style={{ padding: 16 }}>
+            <div key={item.id} className="pan-card admin-ausencia-card" style={{ padding: 16 }}>
               <div className="admin-ferias-row admin-ausencia-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Avatar col={item.colaborador} size={40} />
 

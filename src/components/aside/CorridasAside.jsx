@@ -46,7 +46,7 @@ export function CorridasAside({ currentUserId }) {
   };
 
   return (
-    <div className="card">
+    <div className="pan-card">
       <div className="card-header">
         <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
           <Car size={14} /> PanUber

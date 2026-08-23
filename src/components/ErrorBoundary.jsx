@@ -29,7 +29,7 @@ export class ErrorBoundary extends Component {
     }
 
     return (
-      <div className="card" style={{ margin: "24px auto", maxWidth: 520 }}>
+      <div className="pan-card" style={{ margin: "24px auto", maxWidth: 520 }}>
         <div className="card-body" style={{ padding: 24, textAlign: "center" }}>
           <h2 className="section-title" style={{ marginBottom: 8 }}>Algo deu errado</h2>
           <p className="section-sub" style={{ marginBottom: 16 }}>

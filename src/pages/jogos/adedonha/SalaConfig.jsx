@@ -85,7 +85,7 @@ export function SalaConfig({ sala, jogadores, meuJogador, mut, onlineIds, onSair
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} mostrarPontos={false} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 18 }}>
             <div className="ade-config-grid">
               <div className="ade-field">

@@ -38,7 +38,7 @@ export function Revelacao({ jogadores, meuJogador, rodada, palavra, palpites, fi
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body gartic-revelacao" style={{ padding: 28 }}>
             {finalizado ? (
               <div className="gartic-campeao">

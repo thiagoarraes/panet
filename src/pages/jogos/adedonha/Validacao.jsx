@@ -53,7 +53,7 @@ export function Validacao({ sala, rodada, respostas, validacoes, jogadores, meuJ
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body" style={{ padding: 18 }}>
             <div className="ade-valida-cat">
               <h4 className="ade-valida-titulo">{categoriaAtual}</h4>

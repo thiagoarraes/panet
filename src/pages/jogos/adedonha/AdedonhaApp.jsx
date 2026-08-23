@@ -205,7 +205,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
 
   if (isLoading || !sala) {
     return (
-      <div className="card">
+      <div className="pan-card">
         <div className="card-body" style={{ padding: 24 }}>
           <button className="btn-ghost" onClick={onSair} style={{ marginBottom: 12 }}>
             <ArrowLeft size={16} /> Voltar
@@ -219,7 +219,7 @@ export function AdedonhaApp({ currentUser, currentUserId, onSair }) {
   // Sala encerrada e fase != fim: voltar ao lobby.
   if (sala.status === "encerrada" && sala.fase !== "fim") {
     return (
-      <div className="card">
+      <div className="pan-card">
         <div className="card-body" style={{ padding: 24, textAlign: "center" }}>
           <p className="section-sub" style={{ marginBottom: 12 }}>Esta sala foi encerrada.</p>
           <button className="btn-primary" onClick={handleSairSala}>Voltar ao lobby</button>

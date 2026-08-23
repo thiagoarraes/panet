@@ -27,7 +27,7 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
 
   return (
     <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setModal(null)}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="pan-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
             {modal === "novo" ? "Nova postagem" : "Editar postagem"}

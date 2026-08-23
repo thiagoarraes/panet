@@ -21,7 +21,7 @@ const PanPassPage       = lazy(() => import("../pages/PanPassPage").then((m) => 
 const AdminPage         = lazy(() => import("../pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 
 const PageFallback = () => (
-  <div className="card">
+  <div className="pan-card">
     <div className="card-body" style={{ padding: 24 }}>
       <div className="section-sub">Carregando página...</div>
     </div>

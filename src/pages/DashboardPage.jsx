@@ -41,7 +41,7 @@ const scheduleIdleTask = (callback, timeoutMs = 1800) => {
 };
 
 const MoodBoardFallback = () => (
-  <section className="card mood-check-card" style={{ marginBottom: 14 }}>
+  <section className="pan-card mood-check-card" style={{ marginBottom: 14 }}>
     <div className="card-body" style={{ padding: 16 }}>
       <div className="section-sub">Carregando painel de vibes...</div>
     </div>
@@ -295,7 +295,7 @@ export function DashboardPage({
     <div className="fade-up">
       <canvas ref={canvasRef} className="confetti-canvas" />
       {dashboardIssues.length > 0 && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar parte dos dados</div>
             <div className="section-sub">
@@ -419,7 +419,7 @@ export function DashboardPage({
             ))}
           </div>
           {totalPags > 1 && (
-            <div className="pagination">
+            <div className="pan-pagination">
               <button className="page-btn" onClick={() => setPagina((p) => Math.max(1, p - 1))} disabled={pagina === 1}>
                 ‹
               </button>
@@ -436,7 +436,7 @@ export function DashboardPage({
         </div>
         <div className="dash-aside">
           {(enqueteQuery.isLoading || enqueteQuery.data) && (
-            <div className="card dashboard-enquete-card">
+            <div className="pan-card dashboard-enquete-card">
               <div className="card-header">
                 <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                   <BarChart3 size={14} /> Enquete

@@ -339,7 +339,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
 
   if (isMoodBoardLoading) {
     return (
-      <section className="card mood-check-card">
+      <section className="pan-card mood-check-card">
         <div className="mood-check-shell is-single">
           <div className="mood-check-main mood-check-main--team">
             <div className="mood-loading-head" aria-hidden="true">
@@ -358,7 +358,7 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
   }
 
   return (
-    <section className="card mood-check-card">
+    <section className="pan-card mood-check-card">
       {celebration && (
         <div className="mood-celebration" aria-hidden="true">
           {Array.from({ length: 24 }, (_, index) => (

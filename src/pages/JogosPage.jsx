@@ -41,7 +41,7 @@ export function JogosPage({ currentUser, currentUserId }) {
       >
         <Suspense
           fallback={
-            <div className="card">
+            <div className="pan-card">
               <div className="card-body" style={{ padding: 24 }}>
                 <div className="section-sub">Carregando jogo…</div>
               </div>

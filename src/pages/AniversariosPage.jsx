@@ -214,7 +214,7 @@ export function AniversariosPage({ currentUserId }) {
   return (
     <div className="fade-up">
       {(aniversariosQuery.isError || colaboradoresQuery.isError) && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar aniversários</div>
             <div className="section-sub">
@@ -282,7 +282,7 @@ export function AniversariosPage({ currentUserId }) {
       </section>
 
       <div className="grid-2" style={{ marginBottom: 16 }}>
-        <div className="card">
+        <div className="pan-card">
           <div className="card-header">
             <span className="card-title" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <CalendarDays size={14} /> Aniversariantes do mês
@@ -298,7 +298,7 @@ export function AniversariosPage({ currentUserId }) {
           </div>
         </div>
 
-        <div className="card">
+        <div className="pan-card">
           <div className="card-header aniv-all-header">
             <span className="card-title aniv-all-title">
               <CalendarDays size={14} /> Todos os aniversariantes ({aniversariantesFiltrados.length})

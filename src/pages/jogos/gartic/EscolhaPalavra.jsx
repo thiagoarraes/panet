@@ -43,7 +43,7 @@ export function EscolhaPalavra({ sala, jogadores, meuJogador, isDesenhista, roda
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body gartic-escolha" style={{ padding: 28, textAlign: "center" }}>
             <div className="gartic-timer-badge" aria-hidden="true">{restante}s</div>
             {isDesenhista ? (

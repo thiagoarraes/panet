@@ -59,7 +59,7 @@ export function Ranking({ sala, jogadores, pontuacoes, rodada, meuJogador, mut, 
         )}
       </div>
 
-      <div className="card">
+      <div className="pan-card">
         <div className="card-body" style={{ padding: 18 }}>
           {ordenados.map((j, idx) => {
             const delta = deltaPorJogador.get(j.id) || 0;

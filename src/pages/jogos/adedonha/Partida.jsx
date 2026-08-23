@@ -64,7 +64,7 @@ export function Partida({ sala, rodada, respostas, jogadores, meuJogador, mut, o
 
       <div className="ade-grid">
         <JogadoresPanel jogadores={jogadores} meuJogador={meuJogador} onlineIds={onlineIds} />
-        <div className="card">
+        <div className="pan-card">
           <div className="card-body" style={{ padding: 18 }}>
             <div className="ade-categorias">
               {categorias.map((cat) => (

@@ -7,6 +7,7 @@
     "dev": "vite",
     "prepare": "node scripts/setup-git-hooks.mjs",
     "check:encoding": "node scripts/check-encoding.mjs",
+    "check:classes": "node scripts/check-legacy-classes.mjs --check",
     "check:functions": "node scripts/run-deno.mjs task check:functions",
     "build:app": "vite build",
     "build:analyze": "vite build --mode analyze",

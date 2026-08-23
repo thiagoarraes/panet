@@ -207,7 +207,7 @@ export function PostDetalhePage({
   return (
     <div className="fade-up">
       {sideIssues.length > 0 && (
-        <div className="card" style={{ marginBottom: 14 }}>
+        <div className="pan-card" style={{ marginBottom: 14 }}>
           <div className="card-body">
             <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar dados auxiliares</div>
             <div className="section-sub">
@@ -219,28 +219,28 @@ export function PostDetalhePage({
       <div className="dash-layout">
         <div>
           {postEmCarregamento ? (
-            <div className="card">
+            <div className="pan-card">
               <div className="card-body" style={{ padding: 24 }}>
                 <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Carregando post...</div>
                 <div className="section-sub">Buscando conteúdo da publicação selecionada.</div>
               </div>
             </div>
           ) : postLookupError ? (
-            <div className="card">
+            <div className="pan-card">
               <div className="card-body" style={{ padding: 24 }}>
                 <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Falha ao carregar post</div>
                 <div className="section-sub">{postLookupError?.message || "Não foi possível carregar esta publicação agora."}</div>
               </div>
             </div>
           ) : postNaoEncontrado ? (
-            <div className="card">
+            <div className="pan-card">
               <div className="card-body" style={{ padding: 24 }}>
                 <div className="section-title" style={{ fontSize: 20, marginBottom: 6 }}>Post não encontrado</div>
                 <div className="section-sub">Esse conteúdo pode ter sido removido ou a URL está incorreta.</div>
               </div>
             </div>
           ) : (
-            <div className="card" style={{ overflow: "hidden" }}>
+            <div className="pan-card" style={{ overflow: "hidden" }}>
               <div style={{ width: "100%", aspectRatio: "2 / 1", overflow: "hidden" }}>
                 <img src={post.imagem} alt={post.titulo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>

@@ -15,7 +15,7 @@ export function FeriasDayoffList({
         style={sub === "dayoff" ? undefined : { display: "flex", flexDirection: "column", gap: 10 }}
       >
         {rows.map((item) => (
-          <div key={item.id} className={`card ${sub === "dayoff" ? "admin-dayoff-card" : ""}`} style={{ padding: 16 }}>
+          <div key={item.id} className={`pan-card ${sub === "dayoff" ? "admin-dayoff-card" : ""}`} style={{ padding: 16 }}>
             <div
               className={`admin-ferias-row ${sub === "dayoff" ? "admin-dayoff-row" : ""}`}
               style={{ display: "flex", alignItems: "center", gap: 12 }}

@@ -11,7 +11,7 @@ const AdminCorridas = lazy(() => import("./AdminCorridas").then((m) => ({ defaul
 const AdminPanPass = lazy(() => import("./AdminPanPass").then((m) => ({ default: m.AdminPanPass })));
 
 const AdminTabFallback = () => (
-  <div className="card">
+  <div className="pan-card">
     <div className="card-body" style={{ padding: 20 }}>
       <div className="section-sub">Carregando módulo...</div>
     </div>
