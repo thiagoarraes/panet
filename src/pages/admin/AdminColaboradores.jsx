@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@heroui/react";
 import { COLABORADORES } from "../../data/mockData.js";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import {
@@ -328,7 +329,9 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       setLista(previousLista);
       setTotalItems(previousTotal);
       await onDeleteColaborador?.(null, { rollback: true });
-      setErrorMsg(err?.message || "Não foi possível excluir o colaborador.");
+      toast.danger("Não foi possível excluir", {
+        description: err?.message || "Não foi possível excluir o colaborador.",
+      });
     } finally {
       setLoading(false);
     }
@@ -345,7 +348,9 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       clearCachedAdminColaboradores();
       await carregarColaboradores({ force: true });
     } catch (err) {
-      setErrorMsg(err?.message || "Não foi possível alterar a senha.");
+      toast.danger("Não foi possível alterar a senha", {
+        description: err?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setLoading(false);
     }
@@ -367,7 +372,9 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
     } catch (err) {
       setLista(previousLista);
       setTotalItems(previousTotal);
-      setErrorMsg(err?.message || "Não foi possível alterar o status do colaborador.");
+      toast.danger("Não foi possível alterar o status", {
+        description: err?.message || "Não foi possível alterar o status do colaborador.",
+      });
     } finally {
       setLoading(false);
     }
@@ -392,7 +399,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
       setSenhaCopiada(true);
       setTimeout(() => setSenhaCopiada(false), 1800);
     } catch (_err) {
-      setErrorMsg("Não foi possível copiar a senha.");
+      toast.danger("Não foi possível copiar a senha");
     }
   };
 
