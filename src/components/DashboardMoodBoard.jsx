@@ -22,6 +22,7 @@ import {
   getMoodOption,
   normalizeMoodTags,
 } from "../lib/dashboardMood";
+import { PanTooltip } from "./ui/PanTooltip";
 
 const TEAM_WALL_CARD_MIN_WIDTH = 172;
 const TEAM_WALL_CARD_GAP = 10;
@@ -523,16 +524,17 @@ export function DashboardMoodBoard({ currentUser, currentUserId }) {
                 <h3 className="section-title mood-team-wall-title">Painel de vibes</h3>
                 <p className="section-sub mood-team-wall-subtitle">Vibes registradas no ciclo atual do time</p>
               </div>
-              <button
-                type="button"
-                className="btn-ghost mood-inline-button"
-                onClick={handleEditVibe}
-                disabled={!moodWindow.canEdit}
-                title={!moodWindow.canEdit ? moodWindowMessage : undefined}
-              >
-                <RefreshCw size={14} />
-                Atualizar minha vibe
-              </button>
+              <PanTooltip texto={moodWindow.canEdit ? undefined : moodWindowMessage}>
+                <button
+                  type="button"
+                  className="btn-ghost mood-inline-button"
+                  onClick={handleEditVibe}
+                  disabled={!moodWindow.canEdit}
+                >
+                  <RefreshCw size={14} />
+                  Atualizar minha vibe
+                </button>
+              </PanTooltip>
             </div>
 
             {!moodWindow.canSubmit && (

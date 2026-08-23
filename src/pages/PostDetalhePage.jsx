@@ -15,6 +15,7 @@ import { useToggleCurtida, useComentar, useEditarComentario, useDeletarComentari
 import { getAusenciaEffectiveEnd } from "../lib/ausencias.js";
 import { getFeriasStatusByDate, parseBrDate } from "../lib/panoff.js";
 import { toPostSlug } from "../lib/postRouting.js";
+import { PanTooltip } from "../components/ui/PanTooltip";
 
 const getDateBoxParts = (iso) => {
   const date = new Date(`${iso}T12:00:00`);
@@ -286,12 +287,16 @@ export function PostDetalhePage({
                               <div className="comment-time">{c.hora}</div>
                               {isAuthor && !isEditing && (
                                 <div className="comment-actions">
-                                  <button className="comment-action-btn" onClick={() => iniciarEdicao(c)} title="Editar">
-                                    <Pencil size={11} />
-                                  </button>
-                                  <button className="comment-action-btn comment-action-del" onClick={() => deletarComentario(c.id)} title="Excluir">
-                                    <Trash2 size={11} />
-                                  </button>
+                                  <PanTooltip texto="Editar">
+                                    <button className="comment-action-btn" onClick={() => iniciarEdicao(c)} aria-label="Editar">
+                                      <Pencil size={11} />
+                                    </button>
+                                  </PanTooltip>
+                                  <PanTooltip texto="Excluir">
+                                    <button className="comment-action-btn comment-action-del" onClick={() => deletarComentario(c.id)} aria-label="Excluir">
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </PanTooltip>
                                 </div>
                               )}
                             </div>

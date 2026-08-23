@@ -1,5 +1,6 @@
 import { CircleStop, Pencil, Trash2 } from "lucide-react";
 import { formatEnqueteDateTime } from "../../../lib/enquetes.js";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 const toTotalVotesLabel = (totalVotes) => {
   const n = Number(totalVotes || 0);
@@ -25,37 +26,40 @@ export function EnqueteCard({ row, pendingEndIds, pendingDeleteIds, onEditar, on
           </div>
         </div>
         <div className="admin-enquete-actions">
-          <button
-            className="admin-action-icon"
-            type="button"
-            onClick={() => onEditar(row)}
-            aria-label="Editar enquete"
-            title="Editar"
-          >
-            <Pencil />
-          </button>
-          {row.status === "ativa" ? (
+          <PanTooltip texto="Editar">
             <button
               className="admin-action-icon"
               type="button"
-              onClick={() => onConfirmEnd(row)}
-              disabled={pendingEndIds.has(row.id)}
-              aria-label="Encerrar agora"
-              title={pendingEndIds.has(row.id) ? "Encerrando..." : "Encerrar agora"}
+              onClick={() => onEditar(row)}
+              aria-label="Editar enquete"
             >
-              <CircleStop />
+              <Pencil />
             </button>
+          </PanTooltip>
+          {row.status === "ativa" ? (
+            <PanTooltip texto={pendingEndIds.has(row.id) ? "Encerrando..." : "Encerrar agora"}>
+              <button
+                className="admin-action-icon"
+                type="button"
+                onClick={() => onConfirmEnd(row)}
+                disabled={pendingEndIds.has(row.id)}
+                aria-label="Encerrar agora"
+              >
+                <CircleStop />
+              </button>
+            </PanTooltip>
           ) : null}
-          <button
-            className="admin-action-icon is-danger"
-            type="button"
-            onClick={() => onConfirmDelete(row)}
-            disabled={pendingDeleteIds.has(row.id)}
-            aria-label="Excluir enquete"
-            title={pendingDeleteIds.has(row.id) ? "Excluindo..." : "Excluir"}
-          >
-            <Trash2 />
-          </button>
+          <PanTooltip texto={pendingDeleteIds.has(row.id) ? "Excluindo..." : "Excluir"}>
+            <button
+              className="admin-action-icon is-danger"
+              type="button"
+              onClick={() => onConfirmDelete(row)}
+              disabled={pendingDeleteIds.has(row.id)}
+              aria-label="Excluir enquete"
+            >
+              <Trash2 />
+            </button>
+          </PanTooltip>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, ExternalLink, Eye, KeyRound } from "lucide-react";
 import { usePanPassServicos } from "../hooks/queries/usePanPassServicos";
 import { useRevelarCredencial } from "../hooks/mutations/usePanPassMutations";
+import { PanTooltip } from "../components/ui/PanTooltip";
 
 const SEGUNDOS_VISIVEL = 60;
 
@@ -15,17 +16,18 @@ function BotaoCopiar({ valor, titulo = "Copiar" }) {
   }, [copiado]);
 
   return (
-    <button
-      className="btn-ghost panpass-copy"
-      title={titulo}
-      aria-label={titulo}
-      onClick={async () => {
-        await navigator.clipboard.writeText(valor);
-        setCopiado(true);
-      }}
-    >
-      {copiado ? <Check size={14} /> : <Copy size={14} />}
-    </button>
+    <PanTooltip texto={titulo}>
+      <button
+        className="btn-ghost panpass-copy"
+        aria-label={titulo}
+        onClick={async () => {
+          await navigator.clipboard.writeText(valor);
+          setCopiado(true);
+        }}
+      >
+        {copiado ? <Check size={14} /> : <Copy size={14} />}
+      </button>
+    </PanTooltip>
   );
 }
 
@@ -83,15 +85,17 @@ function ServicoCard({ servico }) {
             {servico.categoria && <span className="panpass-categoria">{servico.categoria}</span>}
           </div>
           {servico.url_login && (
-            <a
-              className="panpass-abrir"
-              href={servico.url_login}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Abrir o site do serviço"
-            >
-              <ExternalLink size={13} />
-            </a>
+            <PanTooltip texto="Abrir o site do serviço">
+              <a
+                className="panpass-abrir"
+                href={servico.url_login}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Abrir o site do serviço"
+              >
+                <ExternalLink size={13} />
+              </a>
+            </PanTooltip>
           )}
         </div>
 
@@ -107,14 +111,12 @@ function ServicoCard({ servico }) {
               <span className="panpass-rotulo">Senha</span>
               <code className="panpass-valor panpass-segredo">{segredo.valor}</code>
               <BotaoCopiar valor={segredo.valor} titulo="Copiar senha" />
-              <span
-                className="panpass-contagem"
-                style={{ "--pct": percentRestante }}
-                title="Some automaticamente"
-              >
-                <span className="panpass-contagem-anel" aria-hidden="true" />
-                <span className="panpass-contagem-num">{restante}</span>
-              </span>
+              <PanTooltip texto="Some automaticamente">
+                <span className="panpass-contagem" style={{ "--pct": percentRestante }}>
+                  <span className="panpass-contagem-anel" aria-hidden="true" />
+                  <span className="panpass-contagem-num">{restante}</span>
+                </span>
+              </PanTooltip>
             </div>
           )}
         </div>

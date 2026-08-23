@@ -12,6 +12,7 @@ import {
   useDeletePresencialAgenda,
   useRunSecretSanta,
 } from "../../hooks/mutations/usePresencialMutations.js";
+import { PanTooltip } from "../../components/ui/PanTooltip";
 
 const PAGE_SIZE = 20;
 const normalizeIds = (value) => Array.from(new Set((Array.isArray(value) ? value : []).map((id) => String(id || "").trim()).filter(Boolean)));
@@ -285,25 +286,27 @@ export function AdminPresencial({ currentUserId }) {
                 <div className="admin-presencial-side">
                   <div className="admin-presencial-actions">
                     {agenda.amigoSecretoAtivo && <button className={`btn-ghost ${isDrawingThisAgenda ? "admin-presencial-draw-btn is-running" : "admin-presencial-draw-btn"}`} onClick={() => handleRunSecretSanta(agenda)} disabled={!canRunDraw}>{isDrawingThisAgenda ? "Sorteando..." : agenda.amigoSecretoSorteadoAt ? `Sorteio concluido (${participantesSorteio})` : participantesSorteio < 2 ? "Minimo 2 no sorteio" : "Iniciar sorteio"}</button>}
-                    <button
-                      className="admin-action-icon"
-                      type="button"
-                      onClick={() => openEdit(agenda)}
-                      aria-label={`Editar ${agenda.titulo}`}
-                      title="Editar"
-                    >
-                      <Pencil />
-                    </button>
-                    <button
-                      className="admin-action-icon is-danger"
-                      type="button"
-                      onClick={() => setConfirmarExcluir(agenda)}
-                      disabled={removingId === agenda.id}
-                      aria-label={removingId === agenda.id ? "Removendo evento" : `Remover ${agenda.titulo}`}
-                      title={removingId === agenda.id ? "Removendo..." : "Remover"}
-                    >
-                      <Trash2 />
-                    </button>
+                    <PanTooltip texto="Editar">
+                      <button
+                        className="admin-action-icon"
+                        type="button"
+                        onClick={() => openEdit(agenda)}
+                        aria-label={`Editar ${agenda.titulo}`}
+                      >
+                        <Pencil />
+                      </button>
+                    </PanTooltip>
+                    <PanTooltip texto={removingId === agenda.id ? "Removendo..." : "Remover"}>
+                      <button
+                        className="admin-action-icon is-danger"
+                        type="button"
+                        onClick={() => setConfirmarExcluir(agenda)}
+                        disabled={removingId === agenda.id}
+                        aria-label={removingId === agenda.id ? "Removendo evento" : `Remover ${agenda.titulo}`}
+                      >
+                        <Trash2 />
+                      </button>
+                    </PanTooltip>
                   </div>
                 </div>
               </div>

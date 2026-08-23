@@ -16,6 +16,7 @@ import {
 } from "../../hooks/mutations/usePanPassMutations";
 import { useColaboradores } from "../../hooks/queries/useColaboradores";
 import "../../styles/panpass.css";
+import { PanTooltip } from "../../components/ui/PanTooltip";
 
 const VAZIO = {
   id: null,
@@ -462,12 +463,16 @@ function ServicoCard({ servico, onEditar, onExcluir }) {
           {servico.categoria && <span className="pp-servico-cat">{servico.categoria}</span>}
         </div>
         <div className="pp-servico-acoes">
-          <button className="pp-icon-btn" title="Editar" onClick={() => onEditar(servico)}>
-            <Pencil size={14} />
-          </button>
-          <button className="pp-icon-btn is-perigo" title="Excluir" onClick={() => onExcluir(servico)}>
-            <Trash2 size={14} />
-          </button>
+          <PanTooltip texto="Editar">
+            <button className="pp-icon-btn" aria-label="Editar" onClick={() => onEditar(servico)}>
+              <Pencil size={14} />
+            </button>
+          </PanTooltip>
+          <PanTooltip texto="Excluir">
+            <button className="pp-icon-btn is-perigo" aria-label="Excluir" onClick={() => onExcluir(servico)}>
+              <Trash2 size={14} />
+            </button>
+          </PanTooltip>
         </div>
       </div>
 

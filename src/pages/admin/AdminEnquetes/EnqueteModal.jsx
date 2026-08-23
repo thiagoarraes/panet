@@ -1,6 +1,7 @@
 import { Button, Modal } from "@heroui/react";
 import { Trash2 } from "lucide-react";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 /**
  * O form guarda endsAtDate como Date (o pai faz toISOString no salvar), mas o
@@ -88,16 +89,17 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
                     placeholder={`Opção ${index + 1}`}
                     disabled={form.optionsLocked}
                   />
-                  <button
-                    className="admin-action-icon is-danger"
-                    type="button"
-                    onClick={() => removeOption(index)}
-                    disabled={form.optionsLocked || (form.options || []).length <= 2}
-                    aria-label="Remover opção"
-                    title="Remover opção"
-                  >
-                    <Trash2 />
-                  </button>
+                  <PanTooltip texto="Remover opção">
+                    <button
+                      className="admin-action-icon is-danger"
+                      type="button"
+                      onClick={() => removeOption(index)}
+                      disabled={form.optionsLocked || (form.options || []).length <= 2}
+                      aria-label="Remover opção"
+                    >
+                      <Trash2 />
+                    </button>
+                  </PanTooltip>
                 </div>
               ))}
             </div>

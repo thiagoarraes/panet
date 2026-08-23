@@ -12,6 +12,7 @@ import {
 } from "../../hooks/mutations/useGaleriaMutations.js";
 import { EventoModal, MESES } from "./AdminGaleria/EventoModal.jsx";
 import { FotosModal } from "./AdminGaleria/FotosModal.jsx";
+import { PanTooltip } from "../../components/ui/PanTooltip";
 
 const PAGE_SIZE = 20;
 
@@ -161,25 +162,27 @@ export function AdminGaleria() {
                 <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => setModalFotos(evento.id)}>
                   Fotos
                 </button>
-                <button
-                  className="admin-action-icon"
-                  type="button"
-                  onClick={() => abrirEditarEvento(evento)}
-                  aria-label={`Editar ${evento.evento}`}
-                  title="Editar"
-                >
-                  <Pencil />
-                </button>
-                <button
-                  className="admin-action-icon is-danger"
-                  type="button"
-                  onClick={() => excluirEvento(evento.id)}
-                  disabled={pendingDeleteIds.has(evento.id)}
-                  aria-label={pendingDeleteIds.has(evento.id) ? "Excluindo evento" : `Excluir ${evento.evento}`}
-                  title={pendingDeleteIds.has(evento.id) ? "Excluindo..." : "Excluir"}
-                >
-                  <Trash2 />
-                </button>
+                <PanTooltip texto="Editar">
+                  <button
+                    className="admin-action-icon"
+                    type="button"
+                    onClick={() => abrirEditarEvento(evento)}
+                    aria-label={`Editar ${evento.evento}`}
+                  >
+                    <Pencil />
+                  </button>
+                </PanTooltip>
+                <PanTooltip texto={pendingDeleteIds.has(evento.id) ? "Excluindo..." : "Excluir"}>
+                  <button
+                    className="admin-action-icon is-danger"
+                    type="button"
+                    onClick={() => excluirEvento(evento.id)}
+                    disabled={pendingDeleteIds.has(evento.id)}
+                    aria-label={pendingDeleteIds.has(evento.id) ? "Excluindo evento" : `Excluir ${evento.evento}`}
+                  >
+                    <Trash2 />
+                  </button>
+                </PanTooltip>
               </div>
             </div>
           </div>

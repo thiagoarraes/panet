@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eraser, Pencil, Trash2 } from "lucide-react";
 import { useCanvasBroadcast } from "../../../hooks/queries/useCanvasBroadcast.js";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 // Resolucao interna fixa do canvas (4:3). As coordenadas trafegam normalizadas
 // (0..1), entao cada cliente renderiza no seu proprio tamanho sem distorcer.
@@ -174,33 +175,36 @@ export function GarticCanvas({ salaId, isDesenhista, enabled = true }) {
                 <span style={{ width: w, height: w }} />
               </button>
             ))}
-            <button
-              type="button"
-              className={`gartic-tool ${borracha ? "on" : ""}`}
-              onClick={() => setBorracha((b) => !b)}
-              aria-label="Borracha"
-              title="Borracha"
-            >
-              <Eraser size={16} />
-            </button>
-            <button
-              type="button"
-              className={`gartic-tool ${!borracha ? "on" : ""}`}
-              onClick={() => setBorracha(false)}
-              aria-label="Lápis"
-              title="Lápis"
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              type="button"
-              className="gartic-tool"
-              onClick={limparTudo}
-              aria-label="Limpar"
-              title="Limpar tudo"
-            >
-              <Trash2 size={16} />
-            </button>
+            <PanTooltip texto="Borracha">
+              <button
+                type="button"
+                className={`gartic-tool ${borracha ? "on" : ""}`}
+                onClick={() => setBorracha((b) => !b)}
+                aria-label="Borracha"
+              >
+                <Eraser size={16} />
+              </button>
+            </PanTooltip>
+            <PanTooltip texto="Lápis">
+              <button
+                type="button"
+                className={`gartic-tool ${!borracha ? "on" : ""}`}
+                onClick={() => setBorracha(false)}
+                aria-label="Lápis"
+              >
+                <Pencil size={16} />
+              </button>
+            </PanTooltip>
+            <PanTooltip texto="Limpar tudo">
+              <button
+                type="button"
+                className="gartic-tool"
+                onClick={limparTudo}
+                aria-label="Limpar"
+              >
+                <Trash2 size={16} />
+              </button>
+            </PanTooltip>
           </div>
         </div>
       )}

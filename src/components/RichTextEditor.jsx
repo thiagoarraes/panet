@@ -8,6 +8,7 @@ import Mention from "@tiptap/extension-mention";
 import Image from "@tiptap/extension-image";
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Strikethrough, Undo2, Redo2, Smile, Film } from "lucide-react";
 import { MentionList } from "./MentionList";
+import { PanTooltip } from "./ui/PanTooltip";
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
@@ -224,27 +225,41 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
   return (
     <div className="rte-wrap">
       <div className="rte-toolbar">
-        <button type="button" className={`rte-btn ${editor.isActive("bold") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleBold().run()} title="Negrito">
-          <Bold size={14} />
-        </button>
-        <button type="button" className={`rte-btn ${editor.isActive("italic") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleItalic().run()} title="Itálico">
-          <Italic size={14} />
-        </button>
-        <button type="button" className={`rte-btn ${editor.isActive("strike") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleStrike().run()} title="Riscado">
-          <Strikethrough size={14} />
-        </button>
-        <button type="button" className={`rte-btn ${editor.isActive("bulletList") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista">
-          <List size={14} />
-        </button>
-        <button type="button" className={`rte-btn ${editor.isActive("orderedList") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Lista numerada">
-          <ListOrdered size={14} />
-        </button>
-        <button type="button" className={`rte-btn ${editor.isActive("link") ? "active" : ""}`} onClick={setLink} title="Link">
-          <LinkIcon size={14} />
-        </button>
-        <button ref={emojiBtnRef} type="button" className={`rte-btn ${emojiOpen ? "active" : ""}`} onClick={toggleEmoji} title="Emoji">
-          <Smile size={14} />
-        </button>
+        <PanTooltip texto="Negrito">
+          <button type="button" className={`rte-btn ${editor.isActive("bold") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Negrito">
+            <Bold size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Itálico">
+          <button type="button" className={`rte-btn ${editor.isActive("italic") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Itálico">
+            <Italic size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Riscado">
+          <button type="button" className={`rte-btn ${editor.isActive("strike") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleStrike().run()} aria-label="Riscado">
+            <Strikethrough size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Lista">
+          <button type="button" className={`rte-btn ${editor.isActive("bulletList") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleBulletList().run()} aria-label="Lista">
+            <List size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Lista numerada">
+          <button type="button" className={`rte-btn ${editor.isActive("orderedList") ? "active" : ""}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} aria-label="Lista numerada">
+            <ListOrdered size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Link">
+          <button type="button" className={`rte-btn ${editor.isActive("link") ? "active" : ""}`} onClick={setLink} aria-label="Link">
+            <LinkIcon size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Emoji">
+          <button ref={emojiBtnRef} type="button" className={`rte-btn ${emojiOpen ? "active" : ""}`} onClick={toggleEmoji} aria-label="Emoji">
+            <Smile size={14} />
+          </button>
+        </PanTooltip>
         {emojiOpen &&
           createPortal(
             <div ref={emojiPopRef} className="rte-emoji-popover" style={{ top: emojiPos.top, left: emojiPos.left }}>
@@ -264,9 +279,11 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
             </div>,
             document.body
           )}
-        <button ref={gifBtnRef} type="button" className={`rte-btn ${gifOpen ? "active" : ""}`} onClick={toggleGif} title="Inserir GIF por URL">
-          <Film size={14} />
-        </button>
+        <PanTooltip texto="Inserir GIF por URL">
+          <button ref={gifBtnRef} type="button" className={`rte-btn ${gifOpen ? "active" : ""}`} onClick={toggleGif} aria-label="Inserir GIF por URL">
+            <Film size={14} />
+          </button>
+        </PanTooltip>
         {gifOpen &&
           createPortal(
             <div ref={gifPopRef} className="rte-gif-popover" style={{ top: gifPos.top, left: gifPos.left, width: GIF_W }}>
@@ -295,12 +312,16 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
             document.body
           )}
         <div className="rte-spacer" />
-        <button type="button" className="rte-btn" onClick={() => editor.chain().focus().undo().run()} title="Desfazer">
-          <Undo2 size={14} />
-        </button>
-        <button type="button" className="rte-btn" onClick={() => editor.chain().focus().redo().run()} title="Refazer">
-          <Redo2 size={14} />
-        </button>
+        <PanTooltip texto="Desfazer">
+          <button type="button" className="rte-btn" onClick={() => editor.chain().focus().undo().run()} aria-label="Desfazer">
+            <Undo2 size={14} />
+          </button>
+        </PanTooltip>
+        <PanTooltip texto="Refazer">
+          <button type="button" className="rte-btn" onClick={() => editor.chain().focus().redo().run()} aria-label="Refazer">
+            <Redo2 size={14} />
+          </button>
+        </PanTooltip>
       </div>
       <EditorContent editor={editor} className="rte-editor" />
     </div>

@@ -1,5 +1,6 @@
 import { Button, Modal } from "@heroui/react";
 import { ImageIcon, Trash2 } from "lucide-react";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 export function FotosModal({ eventoAtual, saving, inputFotosMaisRef, onClose, onUploadMais, onSetCapa, onDeleteFoto }) {
   return (
@@ -79,15 +80,16 @@ export function FotosModal({ eventoAtual, saving, inputFotosMaisRef, onClose, on
                     >
                       Definir capa
                     </Button>
-                    <button
-                      className="admin-action-icon is-danger"
-                      type="button"
-                      onClick={() => onDeleteFoto(foto.id)}
-                      aria-label="Excluir foto"
-                      title="Excluir"
-                    >
-                      <Trash2 />
-                    </button>
+                    <PanTooltip texto="Excluir">
+                      <button
+                        className="admin-action-icon is-danger"
+                        type="button"
+                        onClick={() => onDeleteFoto(foto.id)}
+                        aria-label="Excluir foto"
+                      >
+                        <Trash2 />
+                      </button>
+                    </PanTooltip>
                   </div>
                 </div>
               ))}

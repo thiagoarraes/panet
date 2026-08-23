@@ -1,6 +1,7 @@
 import { CalendarDays, Clock, Pencil, Trash2 } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { getAusenciaMeta, getAusenciaMobileMeta } from "../../../lib/panoff.js";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 export function AusenciaList({
   ausenciaRows, ausenciaLoading,
@@ -88,25 +89,27 @@ export function AusenciaList({
                 </div>
 
                 <div className="admin-ferias-actions admin-ausencia-actions" style={{ display: "flex", gap: 6 }}>
-                  <button
-                    className="admin-action-icon"
-                    type="button"
-                    onClick={() => onEditarAusencia(item)}
-                    aria-label="Editar ausência"
-                    title="Editar"
-                  >
-                    <Pencil />
-                  </button>
-                  <button
-                    className="admin-action-icon is-danger"
-                    type="button"
-                    onClick={() => onConfirmarExcluirAusencia(item)}
-                    disabled={ausenciaPendingDelete.has(item.id)}
-                    aria-label={ausenciaPendingDelete.has(item.id) ? "Removendo ausência" : "Remover ausência"}
-                    title={ausenciaPendingDelete.has(item.id) ? "Removendo..." : "Remover"}
-                  >
-                    <Trash2 />
-                  </button>
+                  <PanTooltip texto="Editar">
+                    <button
+                      className="admin-action-icon"
+                      type="button"
+                      onClick={() => onEditarAusencia(item)}
+                      aria-label="Editar ausência"
+                    >
+                      <Pencil />
+                    </button>
+                  </PanTooltip>
+                  <PanTooltip texto={ausenciaPendingDelete.has(item.id) ? "Removendo..." : "Remover"}>
+                    <button
+                      className="admin-action-icon is-danger"
+                      type="button"
+                      onClick={() => onConfirmarExcluirAusencia(item)}
+                      disabled={ausenciaPendingDelete.has(item.id)}
+                      aria-label={ausenciaPendingDelete.has(item.id) ? "Removendo ausência" : "Remover ausência"}
+                    >
+                      <Trash2 />
+                    </button>
+                  </PanTooltip>
                 </div>
               </div>
             </div>

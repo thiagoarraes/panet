@@ -1,5 +1,6 @@
 import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 export function FeriasDayoffList({
   rows, feriasLoading, sub,
@@ -53,25 +54,27 @@ export function FeriasDayoffList({
                   </span>
                 )}
                 <div className="admin-ferias-actions" style={{ display: "flex", gap: 6 }}>
-                  <button
-                    className="admin-action-icon"
-                    type="button"
-                    onClick={() => onEditar(item)}
-                    aria-label="Editar registro"
-                    title="Editar"
-                  >
-                    <Pencil />
-                  </button>
-                  <button
-                    className="admin-action-icon is-danger"
-                    type="button"
-                    onClick={() => onConfirmarExcluir(item)}
-                    disabled={pendingDeleteIds.has(item.id)}
-                    aria-label={pendingDeleteIds.has(item.id) ? "Removendo registro" : "Remover registro"}
-                    title={pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}
-                  >
-                    <Trash2 />
-                  </button>
+                  <PanTooltip texto="Editar">
+                    <button
+                      className="admin-action-icon"
+                      type="button"
+                      onClick={() => onEditar(item)}
+                      aria-label="Editar registro"
+                    >
+                      <Pencil />
+                    </button>
+                  </PanTooltip>
+                  <PanTooltip texto={pendingDeleteIds.has(item.id) ? "Removendo..." : "Remover"}>
+                    <button
+                      className="admin-action-icon is-danger"
+                      type="button"
+                      onClick={() => onConfirmarExcluir(item)}
+                      disabled={pendingDeleteIds.has(item.id)}
+                      aria-label={pendingDeleteIds.has(item.id) ? "Removendo registro" : "Remover registro"}
+                    >
+                      <Trash2 />
+                    </button>
+                  </PanTooltip>
                 </div>
               </div>
 

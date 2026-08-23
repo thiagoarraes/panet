@@ -4,6 +4,7 @@ import { AlertTriangle, Heart, MessageCircle, Pencil, Trash2 } from "lucide-reac
 import { Badge } from "../../components/Badge";
 import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
 import { useCreatePost, useUpdatePost, useDeletePost } from "../../hooks/mutations/usePostMutations.js";
+import { PanTooltip } from "../../components/ui/PanTooltip";
 
 const loadAdminPostagemModal = () => import("./AdminPostagemModal");
 const AdminPostagemModal = lazy(() => loadAdminPostagemModal().then((m) => ({ default: m.AdminPostagemModal })));
@@ -167,25 +168,27 @@ export function AdminPostagens({ currentUserId }) {
                   <Heart size={12} /> {post.curtidas.length} · <MessageCircle size={12} /> {post.comentarios.length}
                 </span>
                 <div className="admin-post-action-buttons">
-                  <button
-                    className="admin-action-icon"
-                    type="button"
-                    onClick={() => abrirEditar(post)}
-                    aria-label={`Editar ${post.titulo}`}
-                    title="Editar"
-                  >
-                    <Pencil />
-                  </button>
-                  <button
-                    className="admin-action-icon is-danger"
-                    type="button"
-                    onClick={() => setConfirmarExcluir(post)}
-                    disabled={pendingDeleteIds.has(post.id)}
-                    aria-label={pendingDeleteIds.has(post.id) ? "Excluindo postagem" : `Excluir ${post.titulo}`}
-                    title={pendingDeleteIds.has(post.id) ? "Excluindo..." : "Excluir"}
-                  >
-                    <Trash2 />
-                  </button>
+                  <PanTooltip texto="Editar">
+                    <button
+                      className="admin-action-icon"
+                      type="button"
+                      onClick={() => abrirEditar(post)}
+                      aria-label={`Editar ${post.titulo}`}
+                    >
+                      <Pencil />
+                    </button>
+                  </PanTooltip>
+                  <PanTooltip texto={pendingDeleteIds.has(post.id) ? "Excluindo..." : "Excluir"}>
+                    <button
+                      className="admin-action-icon is-danger"
+                      type="button"
+                      onClick={() => setConfirmarExcluir(post)}
+                      disabled={pendingDeleteIds.has(post.id)}
+                      aria-label={pendingDeleteIds.has(post.id) ? "Excluindo postagem" : `Excluir ${post.titulo}`}
+                    >
+                      <Trash2 />
+                    </button>
+                  </PanTooltip>
                 </div>
               </div>
             </div>
