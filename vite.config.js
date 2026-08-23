@@ -1,6 +1,7 @@
 // vite.config.js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig(({ mode }) => {
@@ -17,12 +18,25 @@ export default defineConfig(({ mode }) => {
     if (id.includes("/react-datepicker/") || id.includes("/date-fns/")) {
       return "vendor-datepicker";
     }
+    // HeroUI arrasta a arvore do React Aria junto; agrupar evita espalhar
+    // esses pacotes por todos os chunks de pagina.
+    if (
+      id.includes("/@heroui/") ||
+      id.includes("/react-aria-components/") ||
+      id.includes("/@react-aria/") ||
+      id.includes("/@react-stately/") ||
+      id.includes("/@react-types/") ||
+      id.includes("/@internationalized/")
+    ) {
+      return "vendor-heroui";
+    }
     return undefined;
   };
 
   return {
     plugins: [
       react(),
+      tailwindcss(),
       shouldAnalyze
         ? visualizer({
             filename: "dist/stats.html",

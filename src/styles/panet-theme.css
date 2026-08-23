@@ -1,0 +1,97 @@
+/*
+ * Tema da Panet para o HeroUI v3.
+ *
+ * A Panet ja nomeia suas variaveis como o HeroUI: --surface, --border,
+ * --accent, --muted, --danger e --success existem nos dois com a mesma
+ * semantica. Como o :root do global.css fica FORA de @layer, ele vence
+ * este arquivo por precedencia de cascade -- entao esses seis tokens sao
+ * herdados de graca e nao devem ser declarados aqui.
+ *
+ * Consequencia pratica: o toggle de tema continua sendo so a classe
+ * .theme-light no <html> (AuthContext.jsx), sem nenhuma alteracao, e o
+ * HeroUI acompanha o tema claro automaticamente.
+ *
+ * Este arquivo declara apenas o DELTA: o que o HeroUI precisa e a Panet
+ * nao tem.
+ */
+@layer base {
+  [data-theme="panet"] {
+    color-scheme: dark;
+
+    /* Primitivas que o tema default do HeroUI referencia. */
+    --white: oklch(100% 0 0);
+    --black: oklch(0% 0 0);
+    --snow: oklch(0.9911 0 0);
+    --eclipse: oklch(0.2103 0.0059 285.89);
+
+    /* Layout e forma. --radius 12px espelha o raio do .pan-card; */
+    /* --field-radius 8px espelha .form-input / .search-input.    */
+    --spacing: 0.25rem;
+    --border-width: 1px;
+    --field-border-width: 1px;
+    --disabled-opacity: 0.5;
+    --ring-offset-width: 2px;
+    --radius: 0.75rem;
+    --field-radius: 0.5rem;
+
+    /* Superficies. */
+    --background: var(--bg);
+    --foreground: var(--text);
+    --surface-foreground: var(--text);
+    --overlay: var(--surface);
+    --overlay-foreground: var(--text);
+    --backdrop: rgba(0, 0, 0, 0.7);
+    --separator: var(--border);
+    --default: var(--surface2);
+    --default-foreground: var(--text);
+    --segment: var(--surface2);
+    --segment-foreground: var(--text);
+
+    /* Pares de contraste. #0a1929 e o mesmo texto que .btn-primary */
+    /* ja usa sobre o accent no tema escuro.                        */
+    --accent-foreground: #0a1929;
+    --success-foreground: #0a1929;
+    --danger-foreground: #ffffff;
+    --warning: oklch(0.8203 0.1388 76.34);
+    --warning-foreground: var(--eclipse);
+
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    /* Campos: espelha .form-input / .search-input. */
+    --field-background: var(--surface2);
+    --field-foreground: var(--text);
+    --field-placeholder: var(--muted);
+    --field-border: var(--border);
+
+    --scrollbar-thumb: color-mix(in srgb, var(--text) 15%, transparent);
+    --scrollbar-track: transparent;
+    --scrollbar-width: thin;
+    --scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    --scrollbar: var(--scrollbar-thumb);
+
+    /* No escuro a Panet separa superficies por borda, nao por sombra. */
+    --surface-shadow: 0 0 0 0 transparent;
+    --overlay-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    --field-shadow: 0 0 0 0 transparent;
+
+    --skeleton-animation: shimmer;
+    --tooltip-delay: 400ms;
+    --tooltip-close-delay: 200ms;
+  }
+
+  /* Tema claro: mesma classe que a Panet ja usa no <html>. */
+  /* Especificidade (0,2,0) vence [data-theme="panet"] (0,1,0). */
+  [data-theme="panet"].theme-light {
+    color-scheme: light;
+
+    --accent-foreground: #ffffff;
+    --success-foreground: #ffffff;
+    --field-background: #ffffff;
+    --backdrop: rgba(16, 36, 55, 0.45);
+
+    --surface-shadow: 0 6px 18px rgba(16, 36, 55, 0.06);
+    --overlay-shadow: 0 12px 32px rgba(16, 36, 55, 0.12);
+    --field-shadow: 0 0 0 0 transparent;
+  }
+}

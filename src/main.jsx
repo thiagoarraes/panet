@@ -1,3 +1,6 @@
+// heroui.css vem primeiro so por legibilidade: ele carrega tudo dentro de
+// @layer, e global.css fica fora de layer, entao vence independente da ordem.
+import "./styles/heroui.css";
 import "./styles/global.css";
 import React from "react";
 import ReactDOM from "react-dom/client";

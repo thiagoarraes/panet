@@ -1,3 +1,4 @@
+import { Button } from "@heroui/react";
 import { AlertTriangle } from "lucide-react";
 
 export function ConfirmarExcluirModal({ colaborador, loading, onClose, onConfirm }) {
@@ -19,7 +20,7 @@ export function ConfirmarExcluirModal({ colaborador, loading, onClose, onConfirm
             <strong>{colaborador.nome}</strong> será removido(a) da Panet.
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+            <Button variant="tertiary" onPress={onClose}>Cancelar</Button>
             <button
               onClick={onConfirm}
               style={{

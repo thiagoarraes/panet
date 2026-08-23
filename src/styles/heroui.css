@@ -1,0 +1,62 @@
+/*
+ * Infra do HeroUI v3 (Fase 2 da adocao).
+ *
+ * Ordem das cascade layers. Tudo o que NAO esta em layer -- global.css,
+ * adedonha.css, panpass.css, gartic.css -- vence de todas elas,
+ * independente de especificidade. E exatamente o que queremos: o CSS
+ * legado da Panet continua mandando, sem precisar de nenhum ajuste.
+ */
+@layer theme, base, components, utilities;
+
+/*
+ * Tailwind v4 SEM preflight, de proposito.
+ *
+ * Importar "tailwindcss" traria theme.css + preflight.css + utilities.css.
+ * O preflight quebraria coisas reais nas 5.9k linhas de CSS da Panet:
+ * headings sem classe (font-size: inherit), marcadores das listas do TipTap
+ * e do conteudo publicado (list-style: none), e o baseline dos <img> inline
+ * (display: block). A Panet ja tem reset proprio mais agressivo no topo do
+ * global.css, e o base do HeroUI nao depende do preflight.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* HeroUI: base + tema. */
+@import "@heroui/styles/base" layer(base);
+@import "@heroui/styles/themes/shared/theme.css" layer(theme);
+@import "@heroui/styles/themes/default" layer(theme);
+
+/*
+ * Componentes: import seletivo, a lista cresce a cada fase da migracao.
+ * Evita mandar para producao o CSS de 70 componentes que nao usamos.
+ */
+@import "@heroui/styles/components/button.css" layer(components);
+
+/*
+ * Sem layer() nestes dois: eles usam as diretivas @utility/@variant do
+ * Tailwind, que sao de topo e quebram com "@utility cannot be nested" se
+ * o import as envolver num @layer. O proprio @utility ja registra o que
+ * gera na layer utilities.
+ */
+@import "@heroui/styles/utilities";
+@import "@heroui/styles/variants";
+
+/* Tema da Panet: depois do default para vencer por ordem na mesma layer. */
+@import "./panet-theme.css" layer(theme);
+
+/*
+ * Unica parte do preflight que faz falta: sem ela os controles do HeroUI
+ * caem na fonte default do browser em vez da Sora, porque a Panet aplica
+ * font-family classe a classe e nunca em button/input/select/textarea.
+ */
+@layer base {
+  button,
+  input,
+  select,
+  textarea,
+  optgroup {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+}
