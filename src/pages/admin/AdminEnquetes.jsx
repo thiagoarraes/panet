@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { toast } from "@heroui/react";
 import { Plus } from "lucide-react";
 import { useAdminEnquetes } from "../../hooks/queries/admin/useAdminEnquetes.js";
 import {
@@ -102,8 +103,13 @@ export function AdminEnquetes({ currentUserId }) {
       setPendingEndIds((prev) => new Set(prev).add(pollId));
       await encerrarAgora.mutateAsync(pollId);
       setConfirmEnd(null);
+      toast.success("Enquete encerrada", { description: "Os votos foram interrompidos." });
     } catch (error) {
-      console.error(error);
+      // Antes so ia para o console: a falha era invisivel e o modal de
+      // confirmacao ficava aberto sem nenhuma explicacao.
+      toast.danger("Não foi possível encerrar", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setPendingEndIds((prev) => { const next = new Set(prev); next.delete(pollId); return next; });
     }
@@ -115,8 +121,12 @@ export function AdminEnquetes({ currentUserId }) {
       setPendingDeleteIds((prev) => new Set(prev).add(pollId));
       await deleteEnquete.mutateAsync(pollId);
       setConfirmDelete(null);
+      toast.success("Enquete excluída", { description: "Pergunta, opções e votos foram removidos." });
     } catch (error) {
-      console.error(error);
+      // Idem: antes a falha so aparecia no console.
+      toast.danger("Não foi possível excluir", {
+        description: error?.message || "Tente novamente em instantes.",
+      });
     } finally {
       setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(pollId); return next; });
     }
