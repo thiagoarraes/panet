@@ -40,6 +40,7 @@ export function Sidebar() {
         {NAV_ITEMS.map((n) => (
           <button
             key={n.id}
+            data-icon={n.id}
             className={`nav-item ${pagina === n.id || (n.id === "postagens" && pagina === "post_detalhe") ? "active" : ""}`}
             onClick={() => navigateTo(n.id)}
           >
@@ -53,6 +54,7 @@ export function Sidebar() {
         <div className="nav-section">
           <div className="nav-label">Administração</div>
           <button
+            data-icon="admin"
             className={`nav-item ${pagina === "admin" ? "active" : ""}`}
             onClick={() => navigateTo("admin", "colaboradores", { path: PAGE_PATHS.admin })}
           >

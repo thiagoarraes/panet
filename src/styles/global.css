@@ -297,7 +297,87 @@
   .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 400; color: var(--muted); transition: all 0.18s cubic-bezier(.4,0,.2,1); margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; }
   .nav-item:hover { background: var(--surface2); color: var(--text); padding-left: 16px; }
   .nav-item.active { background: rgba(17,231,231,0.1); color: var(--accent); font-weight: 500; }
-  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+  .nav-icon svg { transition: transform 0.2s cubic-bezier(.34,1.56,.64,1); transform: scale(1) rotate(0deg); transform-origin: 50% 50%; }
+  .nav-item.active .nav-icon svg { transform: scale(1.08); }
+
+  /* Loop de hover por ícone — roda enquanto o mouse permanece em cima */
+  @keyframes iconHomeBounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-3px) scale(1.12); }
+    55% { transform: translateY(0) scale(0.96); }
+    75% { transform: translateY(-1px) scale(1.05); }
+  }
+  @keyframes iconPageFlip {
+    0%, 100% { transform: rotate(0deg) scaleX(1); }
+    25% { transform: rotate(-10deg) scaleX(0.85); }
+    50% { transform: rotate(0deg) scaleX(1.08); }
+    75% { transform: rotate(6deg) scaleX(0.92); }
+  }
+  @keyframes iconUsersSway {
+    0%, 100% { transform: rotate(0deg) translateX(0); }
+    25% { transform: rotate(-9deg) translateX(-1px); }
+    50% { transform: rotate(0deg) translateX(0); }
+    75% { transform: rotate(9deg) translateX(1px); }
+  }
+  @keyframes iconCakeFlicker {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    20% { transform: rotate(-6deg) scale(1.05); }
+    40% { transform: rotate(5deg) scale(0.97); }
+    60% { transform: rotate(-4deg) scale(1.08); }
+    80% { transform: rotate(3deg) scale(1); }
+  }
+  @keyframes iconPlaneFly {
+    0% { transform: translate(0, 0) rotate(-6deg) scale(1); }
+    25% { transform: translate(3px, -3px) rotate(4deg) scale(1.08); }
+    50% { transform: translate(5px, -1px) rotate(-2deg) scale(1); }
+    75% { transform: translate(2px, 1px) rotate(-8deg) scale(0.96); }
+    100% { transform: translate(0, 0) rotate(-6deg) scale(1); }
+  }
+  @keyframes iconCalendarFlip {
+    0%, 100% { transform: scaleY(1) rotate(0deg); }
+    30% { transform: scaleY(0.75) rotate(-3deg); }
+    55% { transform: scaleY(1.1) rotate(2deg); }
+    80% { transform: scaleY(0.95) rotate(0deg); }
+  }
+  @keyframes iconShutterPop {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    20% { transform: scale(0.75) rotate(-4deg); }
+    45% { transform: scale(1.2) rotate(3deg); }
+    70% { transform: scale(0.9) rotate(-2deg); }
+  }
+  @keyframes iconGamepadWiggle {
+    0%, 100% { transform: rotate(0deg) translateX(0); }
+    20% { transform: rotate(-12deg) translateX(-2px); }
+    40% { transform: rotate(10deg) translateX(2px); }
+    60% { transform: rotate(-8deg) translateX(-1px); }
+    80% { transform: rotate(6deg) translateX(1px); }
+  }
+  @keyframes iconKeyTurn {
+    0%, 40% { transform: rotate(0deg) scale(1); }
+    55% { transform: rotate(-35deg) scale(1.1); }
+    70% { transform: rotate(-35deg) scale(0.95); }
+    85%, 100% { transform: rotate(0deg) scale(1); }
+  }
+  @keyframes iconGearSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .nav-item[data-icon="dashboard"]:hover .nav-icon svg { animation: iconHomeBounce 1.1s cubic-bezier(.34,1.56,.64,1) infinite; }
+  .nav-item[data-icon="postagens"]:hover .nav-icon svg { animation: iconPageFlip 1.3s ease-in-out infinite; }
+  .nav-item[data-icon="colaboradores"]:hover .nav-icon svg { animation: iconUsersSway 1.4s ease-in-out infinite; }
+  .nav-item[data-icon="aniversarios"]:hover .nav-icon svg { animation: iconCakeFlicker 0.9s ease-in-out infinite; }
+  .nav-item[data-icon="ferias"]:hover .nav-icon svg { animation: iconPlaneFly 1.6s cubic-bezier(.4,0,.2,1) infinite; }
+  .nav-item[data-icon="presencial"]:hover .nav-icon svg { animation: iconCalendarFlip 1.2s ease-in-out infinite; }
+  .nav-item[data-icon="galeria"]:hover .nav-icon svg { animation: iconShutterPop 1.1s ease-in-out infinite; }
+  .nav-item[data-icon="jogos"]:hover .nav-icon svg { animation: iconGamepadWiggle 1s ease-in-out infinite; }
+  .nav-item[data-icon="panpass"]:hover .nav-icon svg { animation: iconKeyTurn 1.5s ease-in-out infinite; }
+  .nav-item[data-icon="admin"]:hover .nav-icon svg { animation: iconGearSpin 1.6s linear infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-item:hover .nav-icon svg { animation: none !important; }
+  }
   .sidebar-user { margin-top: auto; padding: 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; cursor: pointer; transition: background 0.15s; }
   .sidebar-user:hover { background: var(--surface2); }
   .sidebar-user-wrap { margin-top: auto; position: relative; }
