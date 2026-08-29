@@ -1,0 +1,461 @@
+/* Camada de motion da area de vibes (passo 1 + passo 2 + celebracao).
+ *
+ * Personalidade: Playful — 150-300ms, cubic-bezier(.34,1.56,.64,1), ~12% de
+ * overshoot. Saidas usam ease-in a 0.7x da entrada, sem overshoot. A celebracao
+ * e a unica excecao, na faixa dramatic-reveal, por ser recompensa one-shot.
+ *
+ * Este arquivo e ADITIVO: nao remove regras de global.css. As regras de mood la
+ * compartilham seletores com o mural do time (.mood-tag-chip com .mood-mini-chip,
+ * .mood-energy-block com .mood-team-card), que e nao-objetivo desta mudanca.
+ * Separar aquilo quebraria o mural, entao aqui vencemos por especificidade —
+ * nunca por ordem de import, que o bundler nao garante.
+ */
+
+:root {
+  --vibe-ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --vibe-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vibe-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --vibe-ease-sine: cubic-bezier(0.37, 0, 0.63, 1);
+  --vibe-t-press: 140ms;
+  --vibe-t-hover: 220ms;
+  --vibe-t-card: 280ms;
+  --vibe-t-panel: 340ms;
+  --vibe-t-reveal: 780ms;
+}
+
+/* Definido aqui e nao via utilitario do Tailwind: e uma classe so, e depender
+   do scanner de conteudo para ela seria fragil. */
+.vibe-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------- passo 1: grid ---- */
+
+/* Entrada em duas ondas de 4 (370ms no total). Stagger por card colocaria os 8
+   em voo ao mesmo tempo — fura a regra de 1/3 de elementos — e fecharia ~490ms. */
+.mood-grid .mood-choice {
+  animation: vibeCardIn var(--vibe-t-card) var(--vibe-ease-back) both;
+  animation-delay: calc(var(--row, 0) * 90ms);
+  transition:
+    transform var(--vibe-t-hover) var(--vibe-ease-back),
+    border-color var(--vibe-t-hover) var(--vibe-ease-out),
+    box-shadow var(--vibe-t-hover) var(--vibe-ease-out),
+    opacity 150ms var(--vibe-ease-in);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ambiente: aura de cor derivando atras do card */
+.mood-grid .mood-choice::after {
+  content: "";
+  position: absolute;
+  inset: -30% -30% auto auto;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--mood-soft), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 300ms var(--vibe-ease-out);
+}
+
+.mood-grid .mood-choice:hover,
+.mood-grid .mood-choice:focus-visible {
+  transform: translateY(-4px) scale(1.03);
+  border-color: color-mix(in srgb, var(--mood-accent) 72%, var(--border));
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--mood-accent) 26%, transparent);
+}
+
+.mood-grid .mood-choice:hover::after,
+.mood-grid .mood-choice:focus-visible::after {
+  opacity: 1;
+  animation: vibeAura 6s var(--vibe-ease-sine) infinite alternate;
+}
+
+/* secundaria: o emoji sai 30ms depois do card (follow-through) */
+.mood-grid .mood-choice .mood-choice-emoji {
+  display: inline-block;
+  transform-origin: 50% 80%;
+  transition: transform 260ms var(--vibe-ease-back) 30ms;
+}
+
+.mood-grid .mood-choice:hover .mood-choice-emoji,
+.mood-grid .mood-choice:focus-visible .mood-choice-emoji {
+  transform: translateY(-2px) rotate(-6deg) scale(1.14);
+}
+
+.mood-grid .mood-choice:active {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+  transition-timing-function: var(--vibe-ease-in);
+}
+
+/* commit: o escolhido cresce, os outros 7 recuam irradiando a partir dele */
+.mood-grid.is-committing .mood-choice.is-selected {
+  transform: scale(1.06) translateY(-8px);
+  border-color: var(--mood-accent);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--mood-accent) 34%, transparent);
+}
+
+.mood-grid.is-committing .mood-choice:not(.is-selected) {
+  opacity: 0;
+  transform: scale(0.94);
+  transition-duration: 160ms;
+  transition-delay: calc(var(--dist, 0) * 15ms);
+}
+
+@keyframes vibeCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes vibeAura {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-4px, 4px); }
+}
+
+/* ----------------------------------------------------- passo 2: energia --- */
+
+.mood-energy-control {
+  position: relative;
+}
+
+/* Range nativo transparente por cima da trilha: entrega setas, Home/End,
+   PageUp/Down, arrasto e leitura de slider sem reimplementar nada. */
+.mood-energy-control .mood-energy-range {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.mood-energy-control .mood-energy-range:disabled {
+  cursor: not-allowed;
+}
+
+.mood-energy-control .mood-energy-track {
+  position: relative;
+  z-index: 1;
+  border-radius: 12px;
+  transition: box-shadow var(--vibe-t-hover) var(--vibe-ease-out);
+}
+
+.mood-energy-control .mood-energy-range:focus-visible ~ .mood-energy-track {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+/* Os segmentos viraram decoracao: quem responde a interacao e o range. */
+.mood-energy-track .mood-energy-segment {
+  pointer-events: none;
+  transform-origin: bottom;
+  transition:
+    background 200ms var(--vibe-ease-out),
+    border-color 200ms var(--vibe-ease-out),
+    box-shadow 200ms var(--vibe-ease-out);
+}
+
+.mood-energy-track .mood-energy-segment:hover {
+  transform: none;
+}
+
+.mood-energy-track .mood-energy-segment.is-on {
+  animation: vibeSegmentIn 160ms var(--vibe-ease-back) both;
+  animation-delay: calc(var(--seg-index, 0) * 20ms);
+}
+
+.mood-energy-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.mood-energy-title-glyph {
+  display: inline-block;
+  animation: vibeGlyphPop 180ms var(--vibe-ease-back) both;
+}
+
+@keyframes vibeSegmentIn {
+  from { transform: scaleY(0.4); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes vibeGlyphPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* -------------------------------------------------------- passo 2: tags --- */
+
+.mood-tag-list .mood-tag-chip {
+  transition:
+    transform var(--vibe-t-press) var(--vibe-ease-back),
+    border-color 180ms var(--vibe-ease-out),
+    background 180ms var(--vibe-ease-out),
+    color 180ms var(--vibe-ease-out),
+    opacity 260ms var(--vibe-ease-out),
+    filter 260ms var(--vibe-ease-out);
+}
+
+.mood-tag-list .mood-tag-chip:hover {
+  transform: translateY(-2px);
+}
+
+.mood-tag-list .mood-tag-chip.is-selected {
+  animation: vibeChipPop 200ms var(--vibe-ease-back);
+}
+
+/* ambiente: no limite de 4, os demais recuam — o teto vira motion, nao um
+   atributo disabled morto que tiraria os chips da ordem de tab. */
+.mood-tag-list.is-at-cap .mood-tag-chip.is-blocked {
+  opacity: 0.45;
+  filter: grayscale(0.4);
+  cursor: not-allowed;
+}
+
+.mood-tag-counter {
+  display: inline-block;
+  animation: vibeCounterRoll 220ms var(--vibe-ease-back);
+}
+
+@keyframes vibeChipPop {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.94); }
+  65% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes vibeCounterRoll {
+  from { transform: translateY(-70%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ------------------------------------------------------ passo 2: submit --- */
+
+.mood-actions .mood-submit-button {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 180ms var(--vibe-ease-back),
+    box-shadow 180ms var(--vibe-ease-out);
+}
+
+/* ambiente: brilho varrendo enquanto o botao esta pronto para ser usado */
+.mood-actions .mood-submit-button:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, #ffffff 26%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 240% 100%;
+  pointer-events: none;
+  animation: vibeSheen 3.2s var(--vibe-ease-sine) infinite;
+}
+
+.mood-actions .mood-submit-button:not(:disabled):hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.mood-actions .mood-submit-button:not(:disabled):active {
+  transform: scale(0.96);
+  transition-duration: 120ms;
+  transition-timing-function: var(--vibe-ease-in);
+}
+
+.mood-submit-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mood-submit-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.mood-submit-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: vibeDotBounce 600ms var(--vibe-ease-sine) infinite;
+}
+
+.mood-submit-dots i:nth-child(2) { animation-delay: 120ms; }
+.mood-submit-dots i:nth-child(3) { animation-delay: 240ms; }
+
+@keyframes vibeSheen {
+  from { background-position: 140% 0; }
+  to { background-position: -60% 0; }
+}
+
+@keyframes vibeDotBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* -------------------------------------------------------- painel/steps ---- */
+
+.mood-check-main--flow .mood-panel {
+  animation: vibePanelIn var(--vibe-t-panel) var(--vibe-ease-back) 60ms both;
+  width: 100%;
+}
+
+.mood-check-main--flow .mood-panel.is-leaving {
+  animation: vibePanelOut 180ms var(--vibe-ease-in) both;
+}
+
+@keyframes vibePanelIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vibePanelOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+
+.mood-stepper-dot {
+  transition: width 240ms var(--vibe-ease-back), background 240ms var(--vibe-ease-out);
+}
+
+/* -------------------------------------------------------- celebracao ------ */
+
+.mood-celebration .vibe-shockwave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  margin: -80px 0 0 -80px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--mood-accent, var(--accent)) 70%, transparent);
+  animation: vibeShockwave 700ms var(--vibe-ease-out) both;
+}
+
+/* O confete cai dentro do card (que ja tem overflow:hidden). O valor antigo,
+   118vh num keyframe so, furava a regra de 1/3 de distancia e ficava obvio em
+   monitor grande. Agora tem keyframe intermediario e deriva de lado.
+   A queda e medida em cqh (altura do container), NAO em %: porcentagem dentro
+   de translate() e relativa ao proprio elemento — com um confete de 13px isso
+   dava uma queda de 15px em vez da altura do card. */
+.mood-check-card .mood-celebration {
+  container-type: size;
+}
+
+.mood-celebration .mood-confetti {
+  animation: vibeConfettiArc 1.5s var(--confetti-delay, 0s) var(--vibe-ease-in) forwards;
+}
+
+.mood-celebration .mood-celebration-phrase {
+  animation: vibePhrasePop 2.16s var(--vibe-ease-out) both;
+}
+
+@keyframes vibeShockwave {
+  from { transform: scale(0.2); opacity: 0.5; }
+  to { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes vibeConfettiArc {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  45% {
+    transform: translate(calc(var(--confetti-drift, 0px) * 0.6), 50cqh)
+      rotate(calc(var(--confetti-spin, 360deg) * 0.45));
+  }
+  100% {
+    transform: translate(var(--confetti-drift, 0px), 112cqh)
+      rotate(var(--confetti-spin, 360deg));
+    opacity: 0;
+  }
+}
+
+@keyframes vibePhrasePop {
+  0% { transform: scale(0.5); opacity: 0; }
+  15% { transform: scale(1.14); opacity: 1; }
+  23% { transform: scale(1); }
+  88% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.96); opacity: 0; }
+}
+
+/* ------------------------------------------------------------ tema claro -- */
+
+.theme-light .mood-grid .mood-choice:hover,
+.theme-light .mood-grid .mood-choice:focus-visible {
+  box-shadow: 0 14px 26px color-mix(in srgb, var(--mood-accent) 22%, transparent);
+}
+
+/* ------------------------------------------------------------ responsivo -- */
+
+@media (max-width: 640px) {
+}
+
+/* -------------------------------------------------------- reduced motion -- */
+/* Cirurgico, nao bomba: mata o que fica em loop e o que desloca, mantem as
+   transicoes de cor/opacidade (nao sao gatilho vestibular e sao o feedback
+   de estado de verdade). */
+
+@media (prefers-reduced-motion: reduce) {
+  .mood-grid .mood-choice,
+  .mood-grid .mood-choice::after,
+  .mood-energy-track .mood-energy-segment.is-on,
+  .mood-energy-title-glyph,
+  .mood-tag-list .mood-tag-chip.is-selected,
+  .mood-tag-counter,
+  .mood-actions .mood-submit-button:not(:disabled)::after,
+  .mood-submit-dots i,
+  .mood-check-main--flow .mood-panel,
+  .mood-check-main--flow .mood-panel.is-leaving,
+  .mood-celebration .vibe-shockwave,
+  .mood-celebration .mood-celebration-phrase {
+    animation: none !important;
+  }
+
+  .mood-celebration .mood-confetti,
+  .mood-celebration .vibe-shockwave {
+    display: none;
+  }
+  .mood-energy-control .mood-energy-track,
+  .mood-stepper-dot {
+    transition-duration: 120ms;
+  }
+
+  .mood-grid .mood-choice,
+  .mood-grid .mood-choice .mood-choice-emoji,
+  .mood-tag-list .mood-tag-chip,
+  .mood-actions .mood-submit-button {
+    transition-property: opacity, background, border-color, color, box-shadow;
+    transition-duration: 120ms;
+  }
+
+  .mood-grid .mood-choice:hover,
+  .mood-grid .mood-choice:focus-visible,
+  .mood-grid .mood-choice:active,
+  .mood-grid.is-committing .mood-choice.is-selected,
+  .mood-grid .mood-choice:hover .mood-choice-emoji,
+  .mood-grid .mood-choice:focus-visible .mood-choice-emoji,
+  .mood-tag-list .mood-tag-chip:hover,
+  .mood-actions .mood-submit-button:not(:disabled):hover,
+  .mood-actions .mood-submit-button:not(:disabled):active {
+    transform: none;
+  }
+}
