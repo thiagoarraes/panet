@@ -65,6 +65,7 @@
 @import "@heroui/styles/components/combo-box.css" layer(components);
 @import "@heroui/styles/components/toast.css" layer(components);
 @import "@heroui/styles/components/tooltip.css" layer(components);
+@import "@heroui/styles/components/table.css" layer(components);
 
 /*
  * Sem layer() nestes dois: eles usam as diretivas @utility/@variant do
