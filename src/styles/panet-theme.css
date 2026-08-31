@@ -44,6 +44,11 @@
     --separator: var(--border);
     --default: var(--surface2);
     --default-foreground: var(--text);
+    /* Faltava no delta: sem ele o header do Table variant="secondary" caia no
+       default do tema CLARO do HeroUI (oklch(0.9524 ...)) e renderizava quase
+       branco sobre o card escuro. */
+    --surface-secondary: var(--surface2);
+    --surface-secondary-foreground: var(--muted);
     --segment: var(--surface2);
     --segment-foreground: var(--text);
 
@@ -89,6 +94,10 @@
     --success-foreground: #ffffff;
     --field-background: #ffffff;
     --backdrop: rgba(16, 36, 55, 0.45);
+
+    /* No claro o card ja e branco: basta um cinza levemente mais escuro para
+       o header se destacar. Misturas fortes deixavam a faixa pesada demais. */
+    --surface-secondary: color-mix(in srgb, var(--surface2) 92%, #0f2437);
 
     --surface-shadow: 0 6px 18px rgba(16, 36, 55, 0.06);
     --overlay-shadow: 0 12px 32px rgba(16, 36, 55, 0.12);

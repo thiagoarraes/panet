@@ -40,18 +40,17 @@ export function ColabActionsMenu({
 
   return (
     <Dropdown>
-      {/* Dropdown.Trigger e obrigatorio para um <button> nativo: sem ele o
-          HeroUI nao injeta os handlers e o menu simplesmente nao abre. */}
-      <Dropdown.Trigger>
-        <button
-          type="button"
-          className="admin-action-icon"
-          aria-label={`Ações de ${col.nome}`}
-          disabled={loading}
-          title="Ações"
-        >
-          <MoreVertical />
-        </button>
+      {/* O Trigger JA renderiza um <button> proprio. Envolver outro <button>
+          aqui dentro gerava HTML invalido e duas caixas com borda e fundo
+          aninhadas -- o "quadrado dentro do quadrado". A classe da Panet vai
+          no proprio Trigger. */}
+      <Dropdown.Trigger
+        className="admin-action-icon"
+        aria-label={`Ações de ${col.nome}`}
+        isDisabled={loading}
+        title="Ações"
+      >
+        <MoreVertical />
       </Dropdown.Trigger>
 
       <Dropdown.Popover>

@@ -3137,6 +3137,32 @@
   .admin-table-wrap table { min-width: 760px; }
   .admin-users-table th,
   .admin-users-table td { white-space: nowrap; }
+  /* O Table do HeroUI nao traz hover de linha nem peso de cabecalho por
+     padrao; sem isso a grade fica chapada e dificil de percorrer com os
+     olhos. Especificidade acima do .table__column/.table__cell do HeroUI. */
+  .admin-users-table .table__column {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .admin-users-table .table__row {
+    transition: background 0.15s ease;
+  }
+  .admin-users-table .table__row:hover {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+  .admin-users-table .table__cell { vertical-align: middle; }
+  /* O HeroUI desenha um divisor vertical de 1px por coluna via ::after. Com o
+     header ja destacado pelo proprio fundo, isso vira grade quadriculada. */
+  .admin-users-table .table__column::after { display: none; }
+
+  /* O Tooltip.Trigger do HeroUI envolve o filho numa <div> block-level, que
+     sobre os botoes de icone da Panet esticava e desalinhava as linhas de
+     acoes. inline-flex encolhe ao conteudo -- e NAO `display: contents`, que
+     apesar de resolver o layout apaga a caixa que o HeroUI mede para ancorar
+     o tooltip (ele ia parar no canto 0,0 da tela). */
+  .tooltip__trigger { display: inline-flex; }
   .admin-modal-actions { display: flex; gap: 8px; }
   .admin-action-icon {
     width: 34px;
@@ -5570,6 +5596,9 @@
 .corridas-mes-trigger {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   min-width: 190px; cursor: pointer; text-align: left; padding: 7px 10px;
+  /* O Popover.Trigger do HeroUI e uma <div> (block), nao um <button>: sem isto
+     o campo estica para 100% da linha em vez de encolher ao conteudo. */
+  width: fit-content;
 }
 .corridas-mes-atual { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
 .corridas-mes-icone {

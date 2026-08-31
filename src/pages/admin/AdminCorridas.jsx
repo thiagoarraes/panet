@@ -121,17 +121,17 @@ function MesSelect({ value, onChange }) {
         setAberto(v);
       }}
     >
-      <Popover.Trigger>
-        <button type="button" className="form-input corridas-mes-trigger">
-          <span className="corridas-mes-atual">
-            <span className="corridas-mes-icone"><Calendar size={13} /></span>
-            <span className="corridas-mes-textos">
-              <span className="corridas-mes-caption">Mês</span>
-              <span className="corridas-mes-valor">{label}</span>
-            </span>
+      {/* O Trigger ja renderiza o proprio <button>; aninhar outro dentro dava
+          HTML invalido e duas caixas de campo sobrepostas. */}
+      <Popover.Trigger className="form-input corridas-mes-trigger">
+        <span className="corridas-mes-atual">
+          <span className="corridas-mes-icone"><Calendar size={13} /></span>
+          <span className="corridas-mes-textos">
+            <span className="corridas-mes-caption">Mês</span>
+            <span className="corridas-mes-valor">{label}</span>
           </span>
-          <ChevronDown size={14} className={`corridas-colab-chevron ${aberto ? "is-open" : ""}`} />
-        </button>
+        </span>
+        <ChevronDown size={14} className={`corridas-colab-chevron ${aberto ? "is-open" : ""}`} />
       </Popover.Trigger>
 
       <Popover.Content>
