@@ -12,8 +12,9 @@ import { ColabActionsMenu } from "./ColabActionsMenu.jsx";
 export function ColabTable({
   lista, loading,
   totalPages, currentPage, setCurrentPage,
+  podeVerRh,
   onAlterarSenha, onAbrirEditar, onConfirmarExcluir, onVerHistorico,
-  onDesativar, onReativar,
+  onAbrirDadosRh, onDesativar, onReativar,
 }) {
   return (
     <>
@@ -104,10 +105,12 @@ export function ColabTable({
                           <ColabActionsMenu
                             col={col}
                             loading={loading}
+                            podeVerRh={podeVerRh}
                             onAlterarSenha={onAlterarSenha}
                             onAbrirEditar={onAbrirEditar}
                             onConfirmarExcluir={onConfirmarExcluir}
                             onVerHistorico={onVerHistorico}
+                            onAbrirDadosRh={onAbrirDadosRh}
                             onDesativar={onDesativar}
                             onReativar={onReativar}
                           />

@@ -1,6 +1,7 @@
 import { Dropdown, Label } from "@heroui/react";
 import {
   History,
+  IdCard,
   KeyRound,
   MoreVertical,
   Pencil,
@@ -20,10 +21,12 @@ import {
 export function ColabActionsMenu({
   col,
   loading,
+  podeVerRh,
   onAlterarSenha,
   onAbrirEditar,
   onConfirmarExcluir,
   onVerHistorico,
+  onAbrirDadosRh,
   onDesativar,
   onReativar,
 }) {
@@ -33,6 +36,7 @@ export function ColabActionsMenu({
     senha: onAlterarSenha,
     editar: onAbrirEditar,
     historico: onVerHistorico,
+    dadosRh: onAbrirDadosRh,
     reativar: onReativar,
     desativar: onDesativar,
     excluir: onConfirmarExcluir,
@@ -69,6 +73,12 @@ export function ColabActionsMenu({
             <History size={15} />
             <Label>Histórico PanOff</Label>
           </Dropdown.Item>
+          {podeVerRh && (
+            <Dropdown.Item id="dadosRh" textValue="Dados RH">
+              <IdCard size={15} />
+              <Label>Dados RH</Label>
+            </Dropdown.Item>
+          )}
 
           {!col.isMe && (
             <Dropdown.Section>

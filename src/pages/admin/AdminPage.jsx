@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect } from "react";
 import { BarChart3, CalendarDays, Car, FileText, Images, KeyRound, Plane, Settings, Users } from "lucide-react";
+import { isSuperAdmin as checarSuperAdmin, temModulo } from "../../lib/permissoes.js";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
 const AdminPostagens = lazy(() => import("./AdminPostagens").then((m) => ({ default: m.AdminPostagens })));
@@ -35,13 +36,17 @@ export function AdminPage({
   currentProfile,
   currentUserId,
 }) {
-  // null = super admin (acesso total); array = módulos permitidos
-  const adminModulos = currentProfile?.admin_modulos ?? null;
-  const isSuperAdmin = adminModulos === null;
+  // checarSuperAdmin (ao contrario do `admin_modulos === null` que estava aqui
+  // antes) exige perfil === "admin" e ativo !== false. Um colaborador comum
+  // tambem tem admin_modulos === null (o campo so existe para quem e admin),
+  // entao o check antigo o classificava como "super admin" -- inofensivo
+  // aqui porque o AdminPage so monta atras de um guard de isAdmin, mas o
+  // mesmo padrao numa tela sem esse guard vazaria acesso.
+  const isSuperAdmin = checarSuperAdmin(currentProfile);
 
   const ABAS = isSuperAdmin
     ? ALL_ABAS
-    : ALL_ABAS.filter((a) => (adminModulos || []).includes(a.id));
+    : ALL_ABAS.filter((a) => temModulo(currentProfile, a.id));
 
   // Redireciona para a primeira aba acessível se a atual não estiver disponível
   useEffect(() => {
@@ -114,6 +119,7 @@ export function AdminPage({
           <AdminColaboradores
             currentUserId={currentUserId}
             isSuperAdmin={isSuperAdmin}
+            podeVerRh={isSuperAdmin || temModulo(currentProfile, "colaboradores")}
           />
         </Suspense>
       )}

@@ -40,7 +40,6 @@
   .theme-light .user-role,
   .theme-light .comment-time,
   .theme-light .mural-time,
-  .theme-light .profile-val,
   .theme-light .empty-state {
     color: var(--muted);
   }
@@ -4254,10 +4253,6 @@
   .profile-hero { padding: 32px 24px; display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); }
   .profile-name { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 22px; }
   .profile-cargo { color: var(--muted); font-size: 14px; margin-top: 4px; }
-  .profile-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .profile-row:last-child { border-bottom: none; }
-  .profile-icon { width: 20px; text-align: center; font-size: 16px; }
-  .profile-val { color: var(--muted); }
   .collab-modal {
     border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
     box-shadow: 0 24px 44px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
@@ -4283,21 +4278,73 @@
     margin-top: 8px;
   }
   .collab-modal-body {
-    padding: 16px 20px;
+    padding: 20px 22px 4px;
     display: grid;
+    gap: 18px;
+  }
+  /* O dialog e flex column com altura limitada, mas este corpo e um grid --
+     min-height:auto o impede de encolher, entao o excedente era simplesmente
+     cortado pelo overflow:clip do dialog (a secao de saude sumia). O scroll
+     proprio do HeroUI so vale para Modal.Body, que nao e usado aqui. */
+  .collab-modal--perfil .collab-modal-body {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .collab-section {
+    display: grid;
+    gap: 10px;
+  }
+  /* Bloco de RH ganha painel proprio para o leitor perceber que aquilo ali e
+     restrito, e nao mais uma linha qualquer do perfil publico. */
+  .collab-section--restrito {
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    border-radius: 14px;
+    padding: 14px 14px 16px;
+  }
+  .collab-section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .collab-section--restrito .collab-section-title { color: var(--accent); }
+  .collab-section-tag {
+    border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    padding: 2px 7px;
+  }
+  /* auto-fit + minmax: 2 colunas em desktop, 1 no mobile, sem media query. */
+  .collab-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 8px;
   }
-  .collab-profile-row {
+  .collab-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
     border: 1px solid transparent;
     border-radius: 10px;
-    padding: 10px 10px;
+    padding: 8px 10px;
     transition: border-color 0.18s ease, background 0.18s ease;
   }
-  .collab-profile-row:hover {
+  .collab-info:hover {
     border-color: color-mix(in srgb, var(--accent) 26%, transparent);
     background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
-  .collab-profile-row .profile-icon {
+  .collab-info-icon {
     width: 28px;
     height: 28px;
     min-width: 28px;
@@ -4310,16 +4357,32 @@
     border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
     font-size: 14px;
   }
-  .collab-signo-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+  .collab-info-emoji { font-size: 15px; line-height: 1; }
+  .collab-info-text {
+    display: grid;
+    gap: 1px;
     min-width: 0;
   }
-  .collab-signo-link {
+  .collab-info-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* overflow-wrap: e-mail e chave Pix sao longos e sem espaco -- sem isto eles
+     esticam a coluna do grid e o modal volta a ficar torto. */
+  .collab-info-value {
+    font-size: 13.5px;
+    color: var(--text);
     line-height: 1.35;
-    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  a.collab-info-value { color: var(--accent); }
+  .collab-info-hint {
+    font-size: 11px;
+    line-height: 1.3;
+    margin-top: 2px;
   }
   .btn-collab-close {
     border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
@@ -4351,22 +4414,28 @@
     background: color-mix(in srgb, #00a09d 14%, #ffffff);
     color: #007d7b;
   }
-  .theme-light .collab-profile-row {
+  .theme-light .collab-info {
     background: color-mix(in srgb, #00a09d 4%, #ffffff);
     border-color: color-mix(in srgb, #00a09d 12%, #d7e4ef);
   }
-  .theme-light .collab-profile-row:hover {
+  .theme-light .collab-info:hover {
     background: color-mix(in srgb, #00a09d 10%, #ffffff);
     border-color: color-mix(in srgb, #00a09d 30%, #c7d6e4);
   }
-  .theme-light .collab-profile-row .profile-icon {
+  .theme-light .collab-info-icon {
     color: #007d7b;
     background: color-mix(in srgb, #00a09d 13%, #ffffff);
     border-color: color-mix(in srgb, #00a09d 28%, #c7d6e4);
   }
-  .theme-light .collab-modal .profile-val {
-    color: #37566f;
+  .theme-light .collab-info-value { color: #1d3b52; }
+  .theme-light .collab-info-label { color: #5c7a91; }
+  .theme-light a.collab-info-value { color: #007d7b; }
+  .theme-light .collab-section--restrito {
+    background: color-mix(in srgb, #00a09d 6%, #ffffff);
+    border-color: color-mix(in srgb, #00a09d 24%, #c7d6e4);
   }
+  .theme-light .collab-section--restrito .collab-section-title,
+  .theme-light .collab-section-tag { color: #007d7b; }
   .theme-light .btn-collab-close {
     color: #007d7b;
     background: color-mix(in srgb, #00a09d 10%, #ffffff);
@@ -5167,14 +5236,11 @@
     .post-card .post-meta {
       margin-bottom: 3px;
     }
-    .collab-signo-content {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
+    .collab-modal-body {
+      padding: 16px 14px 4px;
+      gap: 14px;
     }
-    .collab-signo-link {
-      font-size: 12px;
-    }
+    .collab-section--restrito { padding: 12px 10px 14px; }
     .perfil-aniversario-grid {
       grid-template-columns: minmax(84px, 108px) minmax(0, 1fr) !important;
       gap: 8px;

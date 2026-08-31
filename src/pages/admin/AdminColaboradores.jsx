@@ -21,8 +21,9 @@ import { SenhaModal } from "./AdminColaboradores/SenhaModal.jsx";
 import { ConfirmarExcluirModal } from "./AdminColaboradores/ConfirmarExcluirModal.jsx";
 import { ColabHistoricoModal } from "./AdminColaboradores/ColabHistoricoModal.jsx";
 import { ConfirmarDesativarModal } from "./AdminColaboradores/ConfirmarDesativarModal.jsx";
+import { DadosRhModal } from "./AdminColaboradores/DadosRhModal.jsx";
 
-export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, onDeleteColaborador }) {
+export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, podeVerRh = false, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
     if (!isSupabaseEnabled) return COLABORADORES;
     if (!Array.isArray(initialColaboradores) || initialColaboradores.length === 0) return [];
@@ -33,6 +34,7 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
   const [confirmarDesativar, setConfirmarDesativar] = useState(null); // { col, action: "desativar"|"reativar" }
   const [historicoColab, setHistoricoColab] = useState(null);
+  const [dadosRhColab, setDadosRhColab] = useState(null);
   const [ativoFiltro, setAtivoFiltro] = useState("ativo"); // "ativo" | "ex_panner" | "todos"
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -485,10 +487,12 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         totalPages={totalPages}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
+        podeVerRh={podeVerRh}
         onAlterarSenha={alterarSenha}
         onAbrirEditar={abrirEditar}
         onConfirmarExcluir={setConfirmarExcluir}
         onVerHistorico={setHistoricoColab}
+        onAbrirDadosRh={setDadosRhColab}
         onDesativar={(col) => setConfirmarDesativar({ col, action: "desativar" })}
         onReativar={(col) => setConfirmarDesativar({ col, action: "reativar" })}
       />
@@ -538,6 +542,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
         <ColabHistoricoModal
           colaborador={historicoColab}
           onClose={() => setHistoricoColab(null)}
+        />
+      )}
+
+      {dadosRhColab && podeVerRh && (
+        <DadosRhModal
+          colaborador={dadosRhColab}
+          onClose={() => setDadosRhColab(null)}
         />
       )}
     </div>

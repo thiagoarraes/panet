@@ -63,7 +63,7 @@ function AppContent() {
         onOpenFolgas={() => navigateTo("ferias")}
       />
     ),
-    colaboradores: <ColaboradoresPage currentUserId={effectiveUserId} />,
+    colaboradores: <ColaboradoresPage currentUserId={effectiveUserId} currentProfile={currentProfile} />,
     aniversarios:  <AniversariosPage currentUserId={effectiveUserId} />,
     ferias:        <FeriasPage currentUserId={effectiveUserId} />,
     presencial:    <PresencialPage currentUserId={effectiveUserId} />,
