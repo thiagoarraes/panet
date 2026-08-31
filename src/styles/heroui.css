@@ -107,4 +107,22 @@
     letter-spacing: inherit;
     color: inherit;
   }
+
+  /*
+   * Segunda parte do shim de preflight. Sem isto, todo <button> que o HeroUI
+   * renderiza SEM background proprio cai no estilo do user-agent: no Chrome
+   * isso e `background: buttonface` + `border: 2px outset`, que aparecia como
+   * um quadrado cinza (#6b6b6b) com borda grossa -- foi o caso do botao de
+   * calendario do DatePicker, cujo .date-picker__trigger so define
+   * `inline-flex p-1`, sem pintura nenhuma.
+   *
+   * Fica em @layer base de proposito: o CSS da Panet e unlayered e as classes
+   * do HeroUI vivem em @layer components, entao ambos continuam vencendo isto
+   * e nenhum botao ja estilizado muda de aparencia.
+   */
+  button {
+    background-color: transparent;
+    background-image: none;
+    border: 0 solid currentColor;
+  }
 }
