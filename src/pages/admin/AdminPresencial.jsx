@@ -220,18 +220,18 @@ export function AdminPresencial({ currentUserId }) {
 
   return (
     <div>
-      <div className="admin-toolbar" style={{ marginBottom: 12 }}>
+      <div className="admin-toolbar admin-presencial-toolbar">
         <div>
-          <div className="section-title" style={{ fontSize: 17 }}>Eventos</div>
+          <div className="section-title admin-presencial-heading">Eventos</div>
           <div className="section-sub">Crie eventos da Pan e defina se eles aparecem para todo o time ou para um grupo selecionado.</div>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input className="form-input" style={{ maxWidth: 320 }} placeholder="Buscar por titulo, local ou observacao" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+        <div className="admin-presencial-toolbar-acoes">
+          <input className="form-input admin-busca" placeholder="Buscar por titulo, local ou observacao" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
           <button className="btn-primary" onClick={openNew}>+ Novo evento</button>
         </div>
       </div>
 
-      <div className="filter-tabs" style={{ marginBottom: 16 }}>
+      <div className="filter-tabs admin-presencial-tabs">
         {[
           { id: "ativos",   label: "Ativos" },
           { id: "passados", label: "Passados" },
@@ -246,7 +246,7 @@ export function AdminPresencial({ currentUserId }) {
         ))}
       </div>
 
-      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="stagger admin-lista">
         {rows.map((agenda) => {
           const confirmados = (agenda.confirmacoes || []).filter((item) => item.status === "confirmado" || item.status === "talvez").length;
           const participantesSorteio = (agenda.confirmacoes || []).filter((item) => item.status === "talvez").length;
@@ -257,7 +257,7 @@ export function AdminPresencial({ currentUserId }) {
           const agendaStatusLabel = agenda.status === "encerrado" ? "Encerrado" : agenda.status === "cancelado" ? "Cancelado" : "Aberto";
           const agendaStatusClass = agenda.status === "encerrado" ? "status-andamento" : "status-marcado";
           return (
-            <div key={agenda.id} className="pan-card" style={{ padding: 16 }}>
+            <div key={agenda.id} className="pan-card admin-lista-card">
               <div className="admin-presencial-row">
                 <div className="admin-presencial-main">
                   <div className="admin-presencial-title-row">
@@ -277,9 +277,9 @@ export function AdminPresencial({ currentUserId }) {
                       <div className="admin-presencial-audience-text">Visivel para {agenda.selectedColaboradorIds?.length || 0} colaborador(es) selecionado(s). Todos os admins continuam vendo este evento.</div>
                       {(agenda.colaboradoresSelecionados || []).length > 0 && <div className="admin-presencial-audience-preview">{(agenda.colaboradoresSelecionados || []).slice(0, 4).map((colaborador) => <div key={colaborador.id} className="admin-presencial-audience-preview-item"><Avatar col={colaborador} size={28} /><span>{colaborador.nome}</span></div>)}{(agenda.colaboradoresSelecionados || []).length > 4 && <div className="admin-presencial-audience-more">+{(agenda.colaboradoresSelecionados || []).length - 4}</div>}</div>}
                     </div>
-                  ) : <div className="admin-presencial-note" style={{ marginTop: 10 }}>Evento visivel para todo o time em /eventos.</div>}
+                  ) : <div className="admin-presencial-note admin-presencial-note--espaco">Evento visivel para todo o time em /eventos.</div>}
                   {agenda.observacao && <div className="admin-presencial-note">{agenda.observacao}</div>}
-                  {agenda.amigoSecretoAtivo && agenda.amigoSecretoRegras && <div className="admin-presencial-note" style={{ marginTop: 8 }}><strong>Regras do amigo secreto:</strong> {agenda.amigoSecretoRegras}</div>}
+                  {agenda.amigoSecretoAtivo && agenda.amigoSecretoRegras && <div className="admin-presencial-note admin-presencial-note--regras"><strong>Regras do amigo secreto:</strong> {agenda.amigoSecretoRegras}</div>}
                   {agenda.amigoSecretoAtivo && agenda.amigoSecretoSorteadoAt && <div className="admin-presencial-draw-info"><strong>Sorteio concluido com {participantesSorteio} participante(s):</strong> {formatDateTimeLabel(agenda.amigoSecretoSorteadoAt)}. Novas inscricoes no amigo secreto estao bloqueadas.</div>}
                   {hasDrawFeedback && <div className={`admin-presencial-draw-feedback is-${drawState.status}`}><div className="admin-presencial-draw-feedback-title">{drawState.status === "pending" ? "Sorteando agora" : drawState.status === "success" ? "Sorteio concluido" : "Falha ao iniciar sorteio"}</div><div className="admin-presencial-draw-feedback-text">{drawState.message}</div></div>}
                 </div>
@@ -324,9 +324,9 @@ export function AdminPresencial({ currentUserId }) {
         )}
       </div>
 
-      {totalItems > PAGE_SIZE && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}><div style={{ fontSize: 12, color: "var(--muted)" }}>Pagina {uiPage} de {totalPages} · {totalItems} item(ns)</div><div style={{ display: "flex", gap: 8 }}><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={uiPage <= 1}>Anterior</button><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={uiPage >= totalPages}>Proxima</button></div></div>}
+      {totalItems > PAGE_SIZE && <div className="admin-paginacao"><div className="admin-paginacao-info">Pagina {uiPage} de {totalPages} · {totalItems} item(ns)</div><div className="admin-paginacao-botoes"><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={uiPage <= 1}>Anterior</button><button className="btn-ghost" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={uiPage >= totalPages}>Proxima</button></div></div>}
 
-      {modal !== null && <Modal.Backdrop isOpen variant="blur" onOpenChange={(aberto) => { if (!aberto) closeAgendaModal(); }}><Modal.Container scroll="inside"><Modal.Dialog style={{ maxWidth: 620, border: "1px solid var(--border)" }}><Modal.CloseTrigger /><Modal.Header><Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>{modal === "novo" ? "Novo evento" : "Editar evento"}</Modal.Heading></Modal.Header><Modal.Body>
+      {modal !== null && <Modal.Backdrop isOpen variant="blur" onOpenChange={(aberto) => { if (!aberto) closeAgendaModal(); }}><Modal.Container scroll="inside"><Modal.Dialog className="admin-presencial-dialog"><Modal.CloseTrigger /><Modal.Header><Modal.Heading className="admin-presencial-modal-heading">{modal === "novo" ? "Novo evento" : "Editar evento"}</Modal.Heading></Modal.Header><Modal.Body>
         <div className="form-group"><label className="form-label">TITULO *</label><input className="form-input" value={form.titulo || ""} onChange={(e) => setForm((prev) => ({ ...prev, titulo: e.target.value }))} /></div>
         <div className="grid-2"><div className="form-group"><label className="form-label">DATA *</label><PanDatePicker value={form.dataIso} onChange={(iso) => setForm((prev) => ({ ...prev, dataIso: iso }))} /></div><div className="form-group"><label className="form-label">HORA</label><input className="form-input" type="text" inputMode="numeric" placeholder="HH:MM" maxLength={5} value={form.horaIso || ""} onChange={(e) => setForm((prev) => ({ ...prev, horaIso: normalizeTimeInput(e.target.value) }))} /></div></div>
         <div className="form-group"><label className="form-label">VAGAS</label><input className="form-input" type="number" min="0" value={form.vagas ?? 0} onChange={(e) => setForm((prev) => ({ ...prev, vagas: e.target.value }))} /></div>
@@ -335,13 +335,13 @@ export function AdminPresencial({ currentUserId }) {
         <div className="form-group"><label className="form-label">STATUS</label><select className="form-input" value={form.status || "aberto"} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}><option value="aberto">Aberto</option><option value="encerrado">Encerrado</option><option value="cancelado">Cancelado</option></select></div>
         <div className="form-group"><div className="admin-presencial-audience-panel"><div className="admin-presencial-audience-panel-head"><div><label className="form-label">VISIBILIDADE</label><div className="admin-presencial-audience-note">Para tornar este evento restrito selecione o campo &quot;Restringir para convidados&quot; e selecione os convidados.</div></div><label className="admin-presencial-audience-switch"><input type="checkbox" checked={Boolean(form.visibilidadeRestrita)} disabled={audienceLocked} onChange={(e) => setForm((prev) => ({ ...prev, visibilidadeRestrita: e.target.checked }))} /> Restringir para convidados</label></div>
           {form.visibilidadeRestrita ? <>
-            <div className="admin-presencial-audience-toolbar"><div className="admin-presencial-audience-pill"><ShieldCheck size={14} /> {selectedColaboradorIds.length} colaborador(es) selecionado(s)</div><input className="form-input" style={{ maxWidth: 260 }} placeholder="Buscar colaborador" value={audienceSearch} onChange={(e) => setAudienceSearch(e.target.value)} disabled={audienceLocked} /></div>
+            <div className="admin-presencial-audience-toolbar"><div className="admin-presencial-audience-pill"><ShieldCheck size={14} /> {selectedColaboradorIds.length} colaborador(es) selecionado(s)</div><input className="form-input admin-busca--curta" placeholder="Buscar colaborador" value={audienceSearch} onChange={(e) => setAudienceSearch(e.target.value)} disabled={audienceLocked} /></div>
             {selectedColaboradores.length > 0 && <div className="admin-presencial-audience-preview is-modal">{selectedColaboradores.map((colaborador) => <div key={colaborador.id} className="admin-presencial-audience-preview-item"><Avatar col={colaborador} size={28} /><span>{colaborador.nome}</span></div>)}</div>}
             <div className="admin-presencial-audience-grid">{isLoadingColaboradores ? <div className="admin-presencial-audience-empty">Carregando colaboradores...</div> : filteredColaboradores.length === 0 ? <div className="admin-presencial-audience-empty">Nenhum colaborador encontrado.</div> : filteredColaboradores.map((colaborador) => { const isSelected = selectedSet.has(String(colaborador.id)); return <button key={colaborador.id} type="button" className={`admin-presencial-audience-card ${isSelected ? "is-selected" : ""}`} onClick={() => toggleAudienceColaborador(colaborador.id)} disabled={audienceLocked}><div className="admin-presencial-audience-card-head"><Avatar col={colaborador} size={34} /><div className="admin-presencial-audience-card-copy"><div className="admin-presencial-audience-card-name">{colaborador.nome}</div><div className="admin-presencial-audience-card-role">{colaborador.cargo || "Colaborador"}</div></div></div><span className={`admin-presencial-audience-card-state ${isSelected ? "is-selected" : ""}`}>{isSelected ? "Selecionado" : "Selecionar"}</span></button>; })}</div>
             {audienceLocked && <div className="admin-presencial-audience-lock">O publico deste evento foi travado porque o sorteio do amigo secreto ja foi iniciado.</div>}
           </> : <div className="admin-presencial-audience-public">Este evento vai aparecer para todo o time em /eventos.</div>}
         </div></div>
-        <div className="form-group"><label className="form-label" style={{ display: "flex", alignItems: "center", gap: 10 }}><input type="checkbox" checked={Boolean(form.amigoSecretoAtivo)} disabled={Boolean(form.amigoSecretoSorteadoAt)} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoAtivo: e.target.checked }))} /> Ativar amigo secreto neste evento</label></div>
+        <div className="form-group"><label className="form-label admin-presencial-check-label"><input type="checkbox" checked={Boolean(form.amigoSecretoAtivo)} disabled={Boolean(form.amigoSecretoSorteadoAt)} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoAtivo: e.target.checked }))} /> Ativar amigo secreto neste evento</label></div>
         {form.amigoSecretoAtivo && <div className="form-group"><label className="form-label">REGRAS DO SORTEIO</label><textarea className="form-input" rows="4" value={form.amigoSecretoRegras || ""} onChange={(e) => setForm((prev) => ({ ...prev, amigoSecretoRegras: e.target.value }))} /></div>}
         <div className="form-group"><label className="form-label">OBSERVACAO</label><textarea className="form-input" rows="4" value={form.observacao || ""} onChange={(e) => setForm((prev) => ({ ...prev, observacao: e.target.value }))} /></div>
         {formError && <div className="admin-presencial-form-error">{formError}</div>}
@@ -359,20 +359,20 @@ export function AdminPresencial({ currentUserId }) {
           <Modal.Container>
             <Modal.Dialog
               aria-label="Remover dia presencial"
-              style={{ maxWidth: 420, border: "1px solid var(--border)" }}
+              className="admin-confirm-dialog"
             >
-              <Modal.Body style={{ textAlign: "center", padding: 8 }}>
-                <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
+              <Modal.Body className="admin-confirm-body">
+                <div className="admin-confirm-icone">
                   <AlertTriangle size={36} />
                 </div>
-                <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, marginBottom: 8, color: "var(--text)" }}>
+                <div className="admin-confirm-titulo">
                   Remover dia presencial?
                 </div>
-                <div style={{ color: "var(--muted)", fontSize: 13 }}>
+                <div className="admin-confirm-texto">
                   Esta acao remove a data e todas as confirmacoes vinculadas.
                 </div>
               </Modal.Body>
-              <Modal.Footer style={{ justifyContent: "center" }}>
+              <Modal.Footer className="admin-confirm-footer">
                 <Button variant="tertiary" slot="close">Cancelar</Button>
                 <Button variant="danger" onPress={removeAgenda} isDisabled={removingId === confirmarExcluir.id}>
                   {removingId === confirmarExcluir.id ? "Removendo..." : "Remover"}

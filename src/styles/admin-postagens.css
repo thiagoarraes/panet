@@ -18,19 +18,8 @@
   gap: var(--space-4);
   margin-bottom: var(--space-7);
 }
-.admin-postagens-busca { max-width: 320px; }
 
 /* Lista */
-.admin-postagens-lista {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.admin-postagens-card {
-  padding: var(--space-7);
-  transition: border-color 0.2s;
-}
-
 /* Linha de um post. O mobile vira grid de 2 colunas (global.css). */
 .admin-post-row {
   display: flex;
@@ -82,15 +71,6 @@
 }
 
 /* Paginacao */
-.admin-postagens-paginacao {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: var(--space-5);
-}
-.admin-postagens-contagem { font-size: var(--text-sm); color: var(--muted); }
-.admin-postagens-paginacao-botoes { display: flex; gap: var(--space-3); }
-
 /* Fallback enquanto o editor lazy carrega */
 .admin-postagens-loading-overlay {
   align-items: center;
@@ -98,22 +78,6 @@
 }
 
 /* Modal de confirmacao de exclusao */
-.admin-postagens-confirm { max-width: 400px; border: 1px solid var(--border); }
-.admin-postagens-confirm-body { text-align: center; padding: var(--space-3); }
-.admin-postagens-confirm-icone {
-  margin-bottom: var(--space-5);
-  display: inline-flex;
-  color: var(--danger);
-}
-.admin-postagens-confirm-titulo {
-  font-family: 'Sora', sans-serif;
-  font-weight: 700;
-  font-size: 17px;
-  margin-bottom: var(--space-2);
-}
-.admin-postagens-confirm-texto { color: var(--muted); font-size: var(--text-md); }
-.admin-postagens-confirm-footer { justify-content: center; }
-
 /*
  * Responsivo. Vive aqui junto do desktop, e nao no @media do global.css: como
  * este arquivo e importado pelo componente, ele entra na cascata DEPOIS do

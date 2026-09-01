@@ -4,6 +4,7 @@ import { CalendarDays, CheckCircle2, Gift, Info, MapPin, Users } from "lucide-re
 import { Avatar } from "../components/Avatar";
 import { usePresencial } from "../hooks/queries/usePresencial";
 import { useRespondPresencial, useToggleSecretSanta } from "../hooks/mutations/usePresencialMutations";
+import "../styles/presencial-page.css";
 
 const SECRET_SANTA_SUGGESTION_LIMIT = 280;
 const EMPTY_SECRET_SANTA_MODAL = {
@@ -63,16 +64,13 @@ function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSavi
       }}
     >
       <Modal.Container scroll="inside">
-        <Modal.Dialog
-          className="presencial-suggestion-modal"
-          style={{ maxWidth: 560, border: "1px solid var(--border)" }}
-        >
+        <Modal.Dialog className="presencial-suggestion-modal presencial-suggestion-dialog">
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Heading className="section-title" style={{ fontSize: 18 }}>
+            <Modal.Heading className="section-title presencial-suggestion-heading">
               {state.mode === "edit" ? "Atualizar sugestão" : "Participar do amigo secreto"}
             </Modal.Heading>
-            <div className="section-sub" style={{ marginTop: 4 }}>
+            <div className="section-sub presencial-suggestion-agenda">
               {state.agendaTitle}
             </div>
           </Modal.Header>
@@ -220,9 +218,9 @@ export function PresencialPage({ currentUserId }) {
   return (
     <div className="fade-up presencial-page">
       {presencialQuery.isError && (
-        <div className="pan-card" style={{ marginBottom: 14 }}>
+        <div className="pan-card presencial-erro-card">
           <div className="card-body">
-            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar eventos</div>
+            <div className="section-title presencial-erro-titulo">Falha ao carregar eventos</div>
             <div className="section-sub">{presencialQuery.error?.message || "Não foi possível carregar os eventos da Pan."}</div>
           </div>
         </div>
@@ -230,10 +228,10 @@ export function PresencialPage({ currentUserId }) {
 
       <div className="section-header">
         <div>
-          <div className="section-title" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <div className="section-title presencial-titulo">
             <CalendarDays size={22} /> Eventos Pan
           </div>
-          <div className="section-sub" style={{ maxWidth: 720 }}>
+          <div className="section-sub presencial-subtitulo">
             Confira os eventos da Agência Pan, confirme sua presença e fique por dentro de tudo que acontece no time.
           </div>
         </div>
@@ -261,7 +259,7 @@ export function PresencialPage({ currentUserId }) {
           </div>
           {proximasAgendas.some((agenda) => agenda.amigoSecretoAtivo) && (
             <div className="presencial-hero-point">
-              <div className="presencial-hero-point-icon" style={{ background: "rgba(var(--accent-rgb, 99,102,241),0.14)", color: "var(--accent)" }}>
+              <div className="presencial-hero-point-icon presencial-hero-point-icon--gift">
                 <Gift size={14} />
               </div>
               <div className="presencial-hero-point-content">
@@ -273,7 +271,7 @@ export function PresencialPage({ currentUserId }) {
         </div>
       </div>
 
-      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="stagger presencial-lista">
         {presencialQuery.isLoading && proximasAgendas.length === 0 && (
           <div className="pan-card">
             <div className="card-body">
@@ -339,16 +337,16 @@ export function PresencialPage({ currentUserId }) {
                   </div>
                   {vagas > 0 && (
                     <div className="presencial-progress-track">
-                      <div className="presencial-progress-bar" style={{ width: `${ocupacao}%` }} />
+                      <div className="presencial-progress-bar" style={{ "--presencial-ocupacao": `${ocupacao}%` }} />
                     </div>
                   )}
                 </div>
 
                 <div className="presencial-step-section">
                   <div className="presencial-step-header">
-                    <div className="presencial-step-badge" style={{ background: minhaResposta ? "var(--success)" : "var(--muted)" }}>1</div>
+                    <div className="presencial-step-badge" style={{ "--presencial-step-cor": minhaResposta ? "var(--success)" : "var(--muted)" }}>1</div>
                     <span className="presencial-step-label">Confirme sua presença</span>
-                    {minhaResposta && <CheckCircle2 size={16} style={{ color: "var(--success)" }} />}
+                    {minhaResposta && <CheckCircle2 size={16} className="presencial-step-check" />}
                   </div>
                   <div className="presencial-actions">
                     <button
@@ -364,12 +362,12 @@ export function PresencialPage({ currentUserId }) {
                 {agenda.amigoSecretoAtivo && (
                   <div className={`presencial-secret-santa-section ${!minhaResposta ? "presencial-secret-santa-locked" : ""}`}>
                     <div className="presencial-step-header">
-                      <div className="presencial-step-badge" style={{ background: estouNoSorteio ? "var(--accent)" : "var(--muted)" }}>2</div>
+                      <div className="presencial-step-badge" style={{ "--presencial-step-cor": estouNoSorteio ? "var(--accent)" : "var(--muted)" }}>2</div>
                       <span className="presencial-step-label">
-                        <Gift size={15} style={{ verticalAlign: "text-bottom", marginRight: 4 }} />
+                        <Gift size={15} className="presencial-step-icone" />
                         Amigo secreto
                       </span>
-                      {estouNoSorteio && <CheckCircle2 size={16} style={{ color: "var(--accent)" }} />}
+                      {estouNoSorteio && <CheckCircle2 size={16} className="presencial-step-check--sorteio" />}
                     </div>
 
                     {!minhaResposta && (
@@ -381,7 +379,7 @@ export function PresencialPage({ currentUserId }) {
                     {minhaResposta && (
                       <div className="presencial-secret-santa-content">
                         {agenda.amigoSecretoRegras && (
-                          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}>
+                          <div className="presencial-regras">
                             {agenda.amigoSecretoRegras}
                           </div>
                         )}
@@ -446,7 +444,7 @@ export function PresencialPage({ currentUserId }) {
                         )}
 
                         {agenda.amigoSecretoSorteadoAt && (
-                          <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 8 }}>
+                          <div className="presencial-sorteio-aviso">
                             Sorteio concluído - só você pode ver seu resultado.
                           </div>
                         )}
@@ -456,9 +454,9 @@ export function PresencialPage({ currentUserId }) {
                             <div className="presencial-secret-santa-result-person">
                               <Avatar col={agenda.meuAmigoSecreto} size={42} />
                               <div>
-                                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 2 }}>Você tirou</div>
-                                <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700 }}>{agenda.meuAmigoSecreto.nome}</div>
-                                <div style={{ fontSize: 12, color: "var(--muted)" }}>{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
+                                <div className="presencial-sorteado-label">Você tirou</div>
+                                <div className="presencial-sorteado-nome">{agenda.meuAmigoSecreto.nome}</div>
+                                <div className="presencial-sorteado-cargo">{agenda.meuAmigoSecreto.cargo || "Colaborador Pan"}</div>
                               </div>
                             </div>
                             <div className="presencial-secret-santa-wish">
@@ -482,14 +480,14 @@ export function PresencialPage({ currentUserId }) {
                         confirmados.map((item) => (
                           <div key={item.id} className="presencial-person-row">
                             <Avatar col={item.colaborador} size={34} />
-                            <div style={{ minWidth: 0 }}>
+                            <div className="presencial-person-info">
                               <div className="presencial-person-name">{item.colaborador?.nome}</div>
                               <div className="presencial-person-note">{item.observacao || item.colaborador?.cargo || "Confirmou presença"}</div>
                             </div>
                           </div>
                         ))
                       ) : (
-                        <div className="empty-state" style={{ padding: 18 }}>
+                        <div className="empty-state presencial-lista-vazia">
                           Ninguém confirmou ainda.
                         </div>
                       )}
@@ -504,14 +502,14 @@ export function PresencialPage({ currentUserId }) {
                           participantesSorteio.map((item) => (
                             <div key={item.id} className="presencial-person-row">
                               <Avatar col={item.colaborador} size={34} />
-                              <div style={{ minWidth: 0 }}>
+                              <div className="presencial-person-info">
                                 <div className="presencial-person-name">{item.colaborador?.nome}</div>
                                 <div className="presencial-person-note">{item.observacao || "Participando do sorteio"}</div>
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="empty-state" style={{ padding: 18 }}>
+                          <div className="empty-state presencial-lista-vazia">
                             Ninguém entrou no sorteio ainda.
                           </div>
                         )}

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import { BarChart3, CalendarDays, Car, FileText, Images, KeyRound, Plane, Settings, Users } from "lucide-react";
 import { isSuperAdmin as checarSuperAdmin, temModulo } from "../../lib/permissoes.js";
+import "../../styles/admin-shared.css";
 
 const AdminColaboradores = lazy(() => import("./AdminColaboradores").then((m) => ({ default: m.AdminColaboradores })));
 const AdminPostagens = lazy(() => import("./AdminPostagens").then((m) => ({ default: m.AdminPostagens })));

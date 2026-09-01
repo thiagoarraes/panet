@@ -129,7 +129,7 @@ export function AdminPostagens({ currentUserId }) {
     <div>
       <div className="admin-toolbar admin-toolbar-end admin-postagens-toolbar">
         <input
-          className="form-input admin-postagens-busca"
+          className="form-input admin-busca"
           placeholder="Buscar por título, categoria ou descrição"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
@@ -138,9 +138,9 @@ export function AdminPostagens({ currentUserId }) {
           + Nova postagem
         </button>
       </div>
-      <div className="stagger admin-postagens-lista">
+      <div className="stagger admin-lista">
         {rows.map((post) => (
-          <div key={post.id} className="pan-card admin-postagens-card">
+          <div key={post.id} className="pan-card admin-lista-card">
             <div className="admin-post-row">
               <img src={post.imagem} alt={post.titulo} className="admin-post-thumb" />
               <div className="admin-post-main">
@@ -190,11 +190,11 @@ export function AdminPostagens({ currentUserId }) {
       </div>
 
       {totalItems > PAGE_SIZE && (
-        <div className="admin-postagens-paginacao">
-          <div className="admin-postagens-contagem">
+        <div className="admin-paginacao">
+          <div className="admin-paginacao-info">
             Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
-          <div className="admin-postagens-paginacao-botoes">
+          <div className="admin-paginacao-botoes">
             <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
@@ -242,16 +242,16 @@ export function AdminPostagens({ currentUserId }) {
           <Modal.Container>
             <Modal.Dialog
               aria-label="Excluir postagem"
-              className="admin-postagens-confirm"
+              className="admin-confirm-dialog"
             >
-              <Modal.Body className="admin-postagens-confirm-body">
-                <div className="admin-postagens-confirm-icone">
+              <Modal.Body className="admin-confirm-body">
+                <div className="admin-confirm-icone">
                   <AlertTriangle size={36} />
                 </div>
-                <div className="admin-postagens-confirm-titulo">Excluir postagem?</div>
-                <div className="admin-postagens-confirm-texto">Esta ação não pode ser desfeita.</div>
+                <div className="admin-confirm-titulo">Excluir postagem?</div>
+                <div className="admin-confirm-texto">Esta ação não pode ser desfeita.</div>
               </Modal.Body>
-              <Modal.Footer className="admin-postagens-confirm-footer">
+              <Modal.Footer className="admin-confirm-footer">
                 <Button variant="tertiary" slot="close">Cancelar</Button>
                 <Button
                   variant="danger"

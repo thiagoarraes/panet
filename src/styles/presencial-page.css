@@ -1,0 +1,84 @@
+/*
+ * Pagina de eventos presenciais (PresencialPage).
+ *
+ * Migrado de 24 style={{}} inline. O arquivo ja tinha um bom vocabulario de
+ * classes (.presencial-*) no global.css; o que estava inline eram sobretudo
+ * ajustes pontuais de tipografia e espacamento que nunca ganharam nome.
+ *
+ * Os estilos genuinamente dinamicos continuam inline, mas como custom
+ * property: a largura da barra de ocupacao (--presencial-ocupacao) e a cor do
+ * passo concluido (--presencial-step-cor). O resto e regra fixa e mora aqui.
+ */
+
+/* Cabecalho da pagina */
+.presencial-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.presencial-subtitulo { max-width: 720px; }
+
+/* Aviso de falha ao carregar */
+.presencial-erro-card { margin-bottom: var(--space-6); }
+.presencial-erro-titulo { font-size: var(--text-lg); }
+
+/* Lista de eventos */
+.presencial-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+/* Barra de ocupacao: a porcentagem e o unico dado que vem do JS. */
+.presencial-progress-bar { width: var(--presencial-ocupacao, 0%); }
+
+/* Numero do passo (1 = presenca, 2 = sorteio). Verde quando concluido. */
+.presencial-step-badge { background: var(--presencial-step-cor, var(--muted)); }
+.presencial-step-check { color: var(--success); }
+.presencial-step-check--sorteio { color: var(--accent); }
+
+/* Icone do passo 2 no hero */
+.presencial-hero-point-icon--gift {
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.14);
+  color: var(--accent);
+}
+
+/* Bloco do amigo secreto revelado */
+.presencial-sorteio-aviso {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  margin-top: var(--space-3);
+}
+.presencial-sorteado-label {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.presencial-sorteado-nome {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+}
+.presencial-sorteado-cargo { font-size: var(--text-sm); color: var(--muted); }
+
+/* Item de pessoa nas listas de confirmados / sorteio.
+   min-width: 0 e o que deixa o nome longo truncar em vez de esticar a linha. */
+.presencial-person-info { min-width: 0; }
+
+/* Estado vazio dentro das listas */
+.presencial-lista-vazia { padding: 18px; }
+
+/* Icone inline no rotulo do passo 2 */
+.presencial-step-icone { vertical-align: text-bottom; margin-right: var(--space-1); }
+
+/* Regras do amigo secreto (texto corrido do admin) */
+.presencial-regras {
+  color: var(--muted);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  margin-bottom: var(--space-4);
+}
+
+/* Modal de sugestao */
+.presencial-suggestion-dialog { max-width: 560px; border: 1px solid var(--border); }
+.presencial-suggestion-heading { font-size: 18px; }
+.presencial-suggestion-agenda { margin-top: var(--space-1); }

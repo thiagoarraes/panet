@@ -1,0 +1,72 @@
+/*
+ * Padroes repetidos entre as telas do painel administrativo.
+ *
+ * Criado durante a migracao dos inline styles, ao constatar que dois blocos
+ * apareciam identicos em 5 arquivos cada -- o modal de confirmacao de exclusao
+ * (AdminPostagens, AdminPresencial, AdminGaleria, AdminFerias, AdminEnquetes,
+ * ConfirmarExcluirModal de Colaboradores) e a barra de paginacao.
+ *
+ * Migrar esses para classes por arquivo teria criado a mesma regra 5 vezes com
+ * nomes diferentes. Aqui e uma so.
+ *
+ * Importado por AdminPage, que e o ancestral comum de todas essas telas.
+ */
+
+/* --- Barra de paginacao --------------------------------------------------- */
+.admin-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+}
+.admin-paginacao-info { font-size: var(--text-sm); color: var(--muted); }
+.admin-paginacao-botoes { display: flex; gap: var(--space-3); }
+
+/* --- Modal de confirmacao de exclusao ------------------------------------- */
+.admin-confirm-dialog { max-width: 420px; border: 1px solid var(--border); }
+.admin-confirm-body { text-align: center; padding: var(--space-3); }
+.admin-confirm-icone {
+  margin-bottom: var(--space-5);
+  display: inline-flex;
+  color: var(--danger);
+}
+.admin-confirm-titulo {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-3);
+  color: var(--text);
+}
+.admin-confirm-texto { color: var(--muted); font-size: var(--text-base); }
+.admin-confirm-footer { justify-content: center; }
+
+/* --- Toolbar de busca ----------------------------------------------------- */
+.admin-busca { max-width: 320px; }
+.admin-busca--curta { max-width: 260px; }
+
+/* --- Lista de cards ------------------------------------------------------- */
+.admin-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.admin-lista-card { padding: var(--space-7); }
+
+/* --- AdminPresencial ------------------------------------------------------ */
+.admin-presencial-toolbar { margin-bottom: var(--space-5); }
+.admin-presencial-heading { font-size: 17px; }
+.admin-presencial-toolbar-acoes { display: flex; gap: var(--space-4); }
+.admin-presencial-tabs { margin-bottom: var(--space-7); }
+.admin-presencial-note--espaco { margin-top: var(--space-4); }
+.admin-presencial-note--regras { margin-top: var(--space-3); }
+.admin-presencial-dialog { max-width: 620px; border: 1px solid var(--border); }
+.admin-presencial-modal-heading {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+}
+.admin-presencial-check-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
