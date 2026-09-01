@@ -12,6 +12,50 @@
     --accent: #00a09d; --accent2: #008684; --text: #E6EDF3; --muted: #7a9ab8;
     --danger: #FF6B6B; --success: #56D364; --sidebar-w: 240px;
     --avatar-empty-bg: #00a09d; --avatar-empty-text: #ffffff;
+
+    /*
+     * Escala canonica de tipografia, raio e espacamento.
+     *
+     * NAO e uma escala nova: sao os valores que o CSS ja usava, extraidos por
+     * frequencia real (ex.: 12px aparecia 61x, 11px 48x, 13px 55x). O objetivo
+     * e travar o drift -- antes disto existiam 25 tamanhos de fonte distintos,
+     * incluindo meio-pixels acidentais (9.5, 10.5, 11.5, 12.5, 13.5, 15.5) que
+     * nao criavam hierarquia nenhuma, so ruido.
+     *
+     * Para CSS novo: use o token. Os ~280 font-size legados continuam literais
+     * de proposito -- reescrever todos seria um diff enorme e arriscado sem
+     * ganho visual. A escala vale dali para frente.
+     *
+     * A densidade e baixa por escolha (11-13px no corpo): e uma intranet com
+     * muita informacao por tela, nao um site de marketing.
+     */
+    --text-3xs: 9px;    /* selos e overlines, so em maiusculas com tracking */
+    --text-2xs: 10px;   /* rotulos de seseao do menu */
+    --text-xs: 11px;    /* metadados, chips, legendas */
+    --text-sm: 12px;    /* texto auxiliar */
+    --text-base: 13px;  /* corpo padrao dos cards */
+    --text-md: 14px;    /* corpo de formulario e listas */
+    --text-lg: 16px;    /* titulo de card */
+    --text-xl: 20px;    /* titulo de secao */
+    --text-2xl: 22px;   /* titulo de pagina */
+    --text-3xl: 24px;
+    --text-4xl: 28px;   /* numeros de destaque */
+
+    --radius-sm: 8px;    /* campos de formulario */
+    --radius-md: 10px;
+    --radius-lg: 12px;   /* .pan-card */
+    --radius-xl: 14px;
+    --radius-2xl: 16px;
+    --radius-full: 999px;
+
+    --space-1: 4px;
+    --space-2: 6px;
+    --space-3: 8px;
+    --space-4: 10px;
+    --space-5: 12px;
+    --space-6: 14px;
+    --space-7: 16px;
+    --space-8: 20px;
   }
   .theme-light {
     --bg: color-mix(in srgb, #00a09d 7%, #f5f9fd); --surface: #ffffff; --surface2: color-mix(in srgb, #00a09d 8%, #edf4fb); --border: #c7d6e4;
@@ -4378,7 +4422,7 @@
   /* overflow-wrap: e-mail e chave Pix sao longos e sem espaco -- sem isto eles
      esticam a coluna do grid e o modal volta a ficar torto. */
   .collab-info-value {
-    font-size: 13.5px;
+    font-size: var(--text-md);
     color: var(--text);
     line-height: 1.35;
     overflow-wrap: anywhere;
@@ -5416,7 +5460,7 @@
 .corrida-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .corrida-meta-chip {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; color: var(--muted);
+  font-size: var(--text-xs); color: var(--muted);
   border: 1px solid var(--border); border-radius: 999px;
   padding: 3px 8px; background: var(--surface);
   white-space: nowrap;
@@ -5438,7 +5482,7 @@
 
 .corrida-status {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; font-weight: 600;
+  font-size: var(--text-xs); font-weight: 600;
   border-radius: 999px; padding: 3px 9px;
 }
 .corrida-status.is-ok {
@@ -5521,7 +5565,7 @@
 .corrida-modal-valor-bloco { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding-right: 14px; }
 .corrida-modal-valor-label {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+  font-size: var(--text-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
 }
 .corrida-modal-valor { font-family: 'Sora', sans-serif; font-weight: 800; font-size: 24px; line-height: 1.1; }
 
@@ -5558,7 +5602,7 @@
   border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
 }
 .corrida-modal-fato-valor { font-size: 13px; font-weight: 600; }
-.corrida-modal-fato-label { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
+.corrida-modal-fato-label { font-size: var(--text-xs); color: var(--muted); margin-top: 1px; }
 
 .corrida-modal-motivo {
   font-size: 13px; line-height: 1.55;
@@ -5619,7 +5663,7 @@
 }
 .corrida-destino-textos { display: flex; flex-direction: column; gap: 4px; min-width: 0; align-items: flex-start; }
 .corrida-destino-endereco {
-  font-size: 12.5px; font-weight: 500; color: var(--text);
+  font-size: var(--text-base); font-weight: 500; color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
 
@@ -5634,7 +5678,7 @@
 }
 .corrida-cliente-definir {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 10.5px; font-weight: 600; color: var(--muted);
+  font-size: var(--text-xs); font-weight: 600; color: var(--muted);
   border: 1px dashed var(--border); border-radius: 999px;
   padding: 3px 9px; cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
@@ -5650,7 +5694,7 @@
 
 .corrida-cliente-endereco {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12.5px; color: var(--text);
+  font-size: var(--text-base); color: var(--text);
   padding: 9px 12px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--surface2);
 }
@@ -5681,7 +5725,7 @@
 }
 .corridas-mes-textos { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
 .corridas-mes-caption { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.corridas-mes-valor { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.corridas-mes-valor { font-size: var(--text-base); font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Popover do picker */
 .corridas-mes-pop {
@@ -5714,7 +5758,7 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
 }
 .corridas-mes-limpar {
-  font: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted);
+  font: inherit; font-size: var(--text-sm); font-weight: 600; color: var(--muted);
   background: transparent; border: none; border-top: 1px solid var(--border);
   padding: 8px 0 2px; margin-top: 2px; cursor: pointer;
   transition: color 0.14s ease;
@@ -5858,7 +5902,7 @@
 
 .panpass-titulo-wrap { flex: 1; min-width: 0; padding-top: 1px; }
 .panpass-nome {
-  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 15.5px;
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: var(--text-lg);
   margin: 0 0 3px; line-height: 1.25;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -5889,7 +5933,7 @@
   transition: border-color 160ms ease, background 160ms ease;
 }
 .panpass-rotulo {
-  font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase;
+  font-size: var(--text-2xs); letter-spacing: .07em; text-transform: uppercase;
   font-weight: 600; color: var(--muted); flex-shrink: 0;
 }
 .panpass-valor {
