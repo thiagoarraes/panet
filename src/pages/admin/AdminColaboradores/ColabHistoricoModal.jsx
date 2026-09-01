@@ -3,6 +3,7 @@ import { Modal } from "@heroui/react";
 import { CalendarDays, Clock, Plane, UserMinus } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { useColabHistorico } from "../../../hooks/queries/admin/useColabHistorico.js";
+import "../../../styles/colab-historico.css";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,33 +78,19 @@ const STATUS_META = {
 
 function StatusBadge({ status }) {
   const m = STATUS_META[status] || STATUS_META.encerrado;
+  // As cores do status sao dado (STATUS_META), nao layout: entram como custom
+  // properties e a regra de estilo fica no CSS.
   return (
     <span
+      className="hist-badge"
       style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: "0.3px",
-        padding: "3px 9px",
-        borderRadius: 20,
-        background: m.bg,
-        color: m.color,
-        border: `1px solid ${m.border}`,
-        whiteSpace: "nowrap",
-        flexShrink: 0,
+        "--hist-badge-bg": m.bg,
+        "--hist-badge-color": m.color,
+        "--hist-badge-border": m.border,
+        "--hist-badge-dot": m.dot,
       }}
     >
-      <span
-        style={{
-          width: 5,
-          height: 5,
-          borderRadius: "50%",
-          background: m.dot,
-          flexShrink: 0,
-        }}
-      />
+      <span className="hist-badge-dot" />
       {m.label}
     </span>
   );
@@ -123,67 +110,17 @@ function FeriasEntry({ item, accentColor }) {
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 0,
-        borderRadius: 12,
-        overflow: "hidden",
-        background: `linear-gradient(100deg, color-mix(in srgb, ${accentColor} 7%, var(--surface2)) 0%, var(--surface2) 60%)`,
-        border: `1px solid color-mix(in srgb, ${accentColor} ${dimmed ? "12%" : "22%"}, var(--border))`,
-        transition: "transform 0.15s, box-shadow 0.15s",
-        cursor: "default",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = `0 6px 20px rgba(0,0,0,0.18)`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+      className={`hist-entry${dimmed ? " is-dimmed" : ""}`}
+      style={{ "--hist-accent": accentColor }}
     >
-      {/* Accent stripe */}
-      <div
-        style={{
-          width: 3,
-          alignSelf: "stretch",
-          background: dimmed
-            ? "color-mix(in srgb, var(--border) 80%, transparent)"
-            : `linear-gradient(180deg, ${accentColor}, color-mix(in srgb, ${accentColor} 55%, transparent))`,
-          flexShrink: 0,
-        }}
-      />
+      <div className="hist-entry-stripe" />
 
-      {/* Content */}
-      <div
-        style={{
-          flex: 1,
-          padding: "13px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          minWidth: 0,
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: dimmed ? "var(--muted)" : "var(--text)",
-              marginBottom: 5,
-              letterSpacing: "-0.1px",
-            }}
-          >
-            {periodo}
-          </div>
+      <div className="hist-entry-body hist-entry-body--row">
+        <div className="hist-entry-col">
+          <div className="hist-entry-title hist-entry-title--periodo">{periodo}</div>
           {dias && (
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--muted)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <Clock size={11} style={{ flexShrink: 0 }} />
+            <div className="hist-meta">
+              <Clock size={11} />
               {dias} {dias === 1 ? "dia" : "dias"}
             </div>
           )}
@@ -210,86 +147,27 @@ function AusenciaEntry({ item }) {
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 0,
-        borderRadius: 12,
-        overflow: "hidden",
-        background: `linear-gradient(100deg, color-mix(in srgb, #FFA032 7%, var(--surface2)) 0%, var(--surface2) 60%)`,
-        border: `1px solid color-mix(in srgb, #FFA032 ${dimmed ? "12%" : "22%"}, var(--border))`,
-        transition: "transform 0.15s, box-shadow 0.15s",
-        cursor: "default",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = `0 6px 20px rgba(0,0,0,0.18)`; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+      className={`hist-entry${dimmed ? " is-dimmed" : ""}`}
+      style={{ "--hist-accent": "#FFA032" }}
     >
-      <div
-        style={{
-          width: 3,
-          alignSelf: "stretch",
-          background: dimmed
-            ? "color-mix(in srgb, var(--border) 80%, transparent)"
-            : "linear-gradient(180deg, #FFA032, color-mix(in srgb, #FFA032 55%, transparent))",
-          flexShrink: 0,
-        }}
-      />
+      <div className="hist-entry-stripe" />
 
-      <div style={{ flex: 1, padding: "13px 16px", minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 6,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: dimmed ? "var(--muted)" : "var(--text)",
-              lineHeight: 1.4,
-              minWidth: 0,
-              wordBreak: "break-word",
-            }}
-          >
+      <div className="hist-entry-body">
+        <div className="hist-entry-head">
+          <div className="hist-entry-title hist-entry-title--motivo">
             {item.motivo || "—"}
           </div>
           <StatusBadge status={status} />
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontSize: 12,
-              color: "var(--muted)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <CalendarDays size={11} style={{ flexShrink: 0 }} />
+        <div className="hist-entry-metas">
+          <span className="hist-meta">
+            <CalendarDays size={11} />
             {formatDateBR(item.inicio)}
           </span>
           {timeLabel && (
-            <span
-              style={{
-                fontSize: 12,
-                color: "var(--muted)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <Clock size={11} style={{ flexShrink: 0 }} />
+            <span className="hist-meta">
+              <Clock size={11} />
               {timeLabel}
             </span>
           )}
@@ -305,32 +183,9 @@ function AusenciaEntry({ item }) {
 
 function EmptyState({ icon, message }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 12,
-        padding: "44px 24px",
-      }}
-    >
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          background: "var(--surface2)",
-          border: "1px solid var(--border)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--muted)",
-          opacity: 0.6,
-        }}
-      >
-        {icon}
-      </div>
-      <span style={{ fontSize: 13, color: "var(--muted)" }}>{message}</span>
+    <div className="hist-empty">
+      <div className="hist-empty-icon">{icon}</div>
+      <span className="hist-empty-msg">{message}</span>
     </div>
   );
 }
@@ -339,29 +194,10 @@ function EmptyState({ icon, message }) {
 // Skeleton loading
 // ---------------------------------------------------------------------------
 
+// O brilho do shimmer virou ::after no CSS, junto com a keyframe -- antes uma
+// <style> inline reinjetava a keyframe a cada abertura do modal.
 function SkeletonCard() {
-  return (
-    <div
-      style={{
-        height: 68,
-        borderRadius: 12,
-        background: "var(--surface2)",
-        border: "1px solid var(--border)",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%)",
-          animation: "shimmer 1.4s infinite",
-        }}
-      />
-    </div>
-  );
+  return <div className="hist-skeleton" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -390,154 +226,43 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
   const activeTabMeta = TABS.find((t) => t.id === activeTab);
 
   return (
-    <>
-      {/* shimmer keyframe — injected once */}
-      <style>{`
-        @keyframes shimmer {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-
-      <Modal.Backdrop
-        isOpen
-        variant="blur"
-        onOpenChange={(aberto) => {
-          if (!aberto) onClose();
-        }}
-      >
-        <Modal.Container>
-          <Modal.Dialog
-            aria-label="Histórico do colaborador"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 18,
-              width: "min(660px, calc(100vw - 32px))",
-              maxWidth: 660,
-              maxHeight: "88vh",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              padding: 0,
-              boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
-            }}
-          >
+    <Modal.Backdrop
+      isOpen
+      variant="blur"
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <Modal.Container>
+        <Modal.Dialog aria-label="Histórico do colaborador" className="hist-dialog">
           {/* ── Hero header ─────────────────────────────────────────────── */}
-          <div
-            style={{
-              background:
-                "linear-gradient(160deg, var(--surface) 0%, color-mix(in srgb, var(--accent) 9%, var(--surface)) 100%)",
-              padding: "22px 22px 20px",
-              position: "relative",
-              flexShrink: 0,
-              borderBottom: "1px solid var(--border)",
-            }}
-          >
-            {/* Decorative glow */}
-            <div
-              style={{
-                position: "absolute",
-                right: -30,
-                top: -30,
-                width: 180,
-                height: 180,
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 70%)",
-                pointerEvents: "none",
-              }}
-            />
-
-            {/* Close */}
-            <button
-              className="modal-close"
-              onClick={onClose}
-              style={{
-                position: "absolute",
-                top: 16,
-                right: 18,
-                zIndex: 1,
-              }}
-            >
+          <div className="hist-hero">
+            <button className="modal-close hist-close" onClick={onClose}>
               ×
             </button>
 
-            {/* Avatar + name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+            {/* Avatar + nome */}
+            <div className="hist-identity">
               <Avatar col={colaborador} size={46} />
               <div>
-                <div
-                  style={{
-                    fontFamily: "'Sora', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 17,
-                    color: "var(--text)",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {colaborador.nome}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 3 }}>
-                  {colaborador.cargo}
-                </div>
+                <div className="hist-name">{colaborador.nome}</div>
+                <div className="hist-cargo">{colaborador.cargo}</div>
               </div>
             </div>
 
-            {/* Stats row */}
-            <div style={{ display: "flex", gap: 8 }}>
+            {/* Contagem por aba */}
+            <div className="hist-stats">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    flex: 1,
-                    background:
-                      activeTab === tab.id
-                        ? `color-mix(in srgb, ${tab.color} 13%, var(--surface2))`
-                        : "var(--surface2)",
-                    border: `1px solid ${
-                      activeTab === tab.id
-                        ? `color-mix(in srgb, ${tab.color} 35%, var(--border))`
-                        : "var(--border)"
-                    }`,
-                    borderRadius: 12,
-                    padding: "10px 8px 9px",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    transition: "background 0.18s, border-color 0.18s, transform 0.15s",
-                    transform: activeTab === tab.id ? "translateY(-1px)" : "none",
-                    boxShadow:
-                      activeTab === tab.id
-                        ? `0 4px 14px color-mix(in srgb, ${tab.color} 18%, transparent)`
-                        : "none",
-                  }}
+                  className={`hist-stat${activeTab === tab.id ? " is-active" : ""}`}
+                  style={{ "--hist-accent": tab.color }}
                 >
-                  <div
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 700,
-                      fontFamily: "'Sora', sans-serif",
-                      color:
-                        activeTab === tab.id ? tab.color : "var(--text)",
-                      lineHeight: 1,
-                      marginBottom: 5,
-                    }}
-                  >
+                  <div className="hist-stat-num">
                     {isLoading ? "—" : counts[tab.id]}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color:
-                        activeTab === tab.id ? tab.color : "var(--muted)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 4,
-                      fontWeight: activeTab === tab.id ? 600 : 400,
-                    }}
-                  >
+                  <div className="hist-stat-label">
                     {tab.icon}
                     {tab.label}
                   </div>
@@ -547,46 +272,15 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
           </div>
 
           {/* ── Tab label bar ────────────────────────────────────────────── */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "11px 20px 10px",
-              borderBottom: "1px solid var(--border)",
-              flexShrink: 0,
-              background: "color-mix(in srgb, var(--surface2) 50%, var(--surface))",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                fontSize: 13,
-                fontWeight: 600,
-                color: activeTabMeta.color,
-              }}
-            >
+          <div className="hist-tabbar" style={{ "--hist-accent": activeTabMeta.color }}>
+            <div className="hist-tabbar-label">
               {activeTabMeta.icon}
               {activeTabMeta.label}
               {!isLoading && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: `color-mix(in srgb, ${activeTabMeta.color} 15%, transparent)`,
-                    color: activeTabMeta.color,
-                    padding: "1px 7px",
-                    borderRadius: 20,
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {counts[activeTab]}
-                </span>
+                <span className="hist-tabbar-count">{counts[activeTab]}</span>
               )}
             </div>
-            <div style={{ fontSize: 11, color: "var(--muted)" }}>
+            <div className="hist-tabbar-total">
               {!isLoading && counts[activeTab] > 0
                 ? `${counts[activeTab]} ${counts[activeTab] === 1 ? "registro" : "registros"}`
                 : ""}
@@ -594,15 +288,9 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
           </div>
 
           {/* ── Content ──────────────────────────────────────────────────── */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "14px 18px 18px",
-            }}
-          >
+          <div className="hist-content">
             {isLoading ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="hist-list">
                 {[1, 2, 3].map((i) => (
                   <SkeletonCard key={i} />
                 ))}
@@ -613,7 +301,7 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
                   ferias.length === 0
                     ? <EmptyState icon={<Plane size={26} />} message="Nenhuma férias registrada." />
                     : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div className="hist-list">
                         {ferias.map((item) => (
                           <FeriasEntry key={item.id} item={item} accentColor="#5B8DEF" />
                         ))}
@@ -625,7 +313,7 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
                   dayoff.length === 0
                     ? <EmptyState icon={<CalendarDays size={26} />} message="Nenhum day off registrado." />
                     : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div className="hist-list">
                         {dayoff.map((item) => (
                           <FeriasEntry key={item.id} item={item} accentColor="#E84B7A" />
                         ))}
@@ -637,7 +325,7 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
                   ausencias.length === 0
                     ? <EmptyState icon={<UserMinus size={26} />} message="Nenhuma ausência registrada." />
                     : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div className="hist-list">
                         {ausencias.map((item) => (
                           <AusenciaEntry key={item.id} item={item} />
                         ))}
@@ -647,9 +335,8 @@ export function ColabHistoricoModal({ colaborador, onClose }) {
               </>
             )}
           </div>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }
