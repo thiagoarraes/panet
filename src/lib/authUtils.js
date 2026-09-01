@@ -153,6 +153,20 @@ export const friendlyLoginError = (error) => {
   }
   const msg = String(error?.message || "").toLowerCase();
   const status = Number(error?.status || 0);
+  const code = String(error?.code || error?.error_code || "").toLowerCase();
+
+  // Ex Panner. Ao desativar um colaborador, a edge deactivate-collaborator
+  // bane o usuario no Auth (ban_duration de ~100 anos), e o Supabase responde
+  // 400 com error_code "user_banned".
+  //
+  // A checagem tem que vir ANTES da de credencial: o status tambem e 400, e a
+  // regra abaixo capturava esse caso, dizendo "e-mail ou senha incorretos" a
+  // quem na verdade teve o acesso encerrado -- fazendo o ex-colaborador
+  // tentar recuperar senha e abrir chamado no RH sem motivo.
+  if (code === "user_banned" || msg.includes("user is banned") || msg.includes("user banned")) {
+    return "Seu acesso à Panet foi encerrado. Se acha que houve engano, fale com o RH.";
+  }
+
   if (
     status === 400 ||
     msg.includes("invalid login credentials") ||

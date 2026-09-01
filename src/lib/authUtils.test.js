@@ -4,6 +4,7 @@ import { friendlyLoginError, isRetryableLoginError } from "./authUtils";
 const INSTAVEL = "O serviço de autenticação está instável. Tente novamente em alguns segundos.";
 const CREDENCIAL = "E-mail ou senha incorretos. Verifique os dados e tente novamente.";
 const GENERICA = "Não foi possível fazer login.";
+const BANIDO = "Seu acesso à Panet foi encerrado. Se acha que houve engano, fale com o RH.";
 
 describe("isRetryableLoginError", () => {
   it("trata erro 5xx como instabilidade temporária", () => {
@@ -44,6 +45,31 @@ describe("friendlyLoginError", () => {
   // problema de conexao, nao senha errada.
   it("prioriza instabilidade sobre credencial quando os dois combinam", () => {
     expect(friendlyLoginError({ status: 400, message: "network request failed" })).toBe(INSTAVEL);
+  });
+
+  // Ex Panner: o Supabase responde 400 + error_code user_banned. Como a regra
+  // de credencial tambem captura 400, sem a checagem vindo antes o
+  // ex-colaborador via "e-mail ou senha incorretos" e ia tentar recuperar
+  // senha a toa.
+  it("identifica usuario banido (Ex Panner) em vez de culpar a senha", () => {
+    // formato do supabase-js
+    expect(friendlyLoginError({ status: 400, code: "user_banned", message: "User is banned" })).toBe(BANIDO);
+    // formato cru da API auth/v1
+    expect(friendlyLoginError({ status: 400, error_code: "user_banned", msg: "User is banned" })).toBe(BANIDO);
+    // so pela mensagem, se o code nao vier
+    expect(friendlyLoginError({ status: 400, message: "User is banned" })).toBe(BANIDO);
+  });
+
+  it("banido tem precedencia sobre credencial (ambos sao 400)", () => {
+    const msg = friendlyLoginError({ status: 400, code: "user_banned", message: "User is banned" });
+    expect(msg).not.toBe(CREDENCIAL);
+    expect(msg).toContain("RH");
+  });
+
+  // Instabilidade continua ganhando de tudo: se a rede caiu, nao da para
+  // afirmar que a conta foi encerrada.
+  it("instabilidade tem precedencia sobre banido", () => {
+    expect(friendlyLoginError({ status: 503, code: "user_banned" })).toBe(INSTAVEL);
   });
 
   it("repassa mensagens desconhecidas sem reescrever", () => {
