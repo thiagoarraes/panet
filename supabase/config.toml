@@ -1,14 +1,54 @@
+# Config das edge functions.
+#
+# verify_jwt = false em todas de proposito. Nao significa funcao aberta: o
+# gateway do Supabase valida o JWT ANTES de chamar a funcao, e o preflight
+# OPTIONS que o browser dispara nao carrega header Authorization -- entao com
+# verify_jwt = true o preflight leva 401, o CORS falha e a chamada nunca sai
+# do browser. Cada funcao aqui faz a propria verificacao: exige o bearer
+# token, resolve o usuario via auth.getUser e checa perfil/modulo quando o
+# caso pede.
+#
+# Toda funcao chamada pelo browser precisa estar listada aqui. Faltar nesta
+# lista foi exatamente o que quebrou o botao "Tornar Ex Panner": a
+# deactivate-collaborator nunca tinha sido deployada, e sem a entrada um
+# deploy futuro a devolveria com verify_jwt = true, reproduzindo o mesmo
+# erro de CORS.
+
+# grava evento no Google Calendar; exige bearer + perfil
+[functions.add-calendar-event]
+verify_jwt = false
+
 [functions.create-collaborator]
 verify_jwt = false
 
+# Ex Panner / reativar; exige bearer + modulo colaboradores
+[functions.deactivate-collaborator]
+verify_jwt = false
+
 [functions.delete-collaborator]
+verify_jwt = false
+
+# OCR do recibo; dono da corrida ou admin
+[functions.extract-recibo]
+verify_jwt = false
+
+# CRUD de servicos; somente admin
+[functions.panpass-admin]
+verify_jwt = false
+
+# revela credencial e registra o acesso; exige bearer
+[functions.panpass-reveal]
+verify_jwt = false
+
+[functions.post-og]
+verify_jwt = false
+
+# remove evento do Google Calendar; exige bearer + perfil
+[functions.remove-calendar-event]
 verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
 
 [functions.update-profile]
-verify_jwt = false
-
-[functions.post-og]
 verify_jwt = false
