@@ -3811,6 +3811,11 @@
   .form-label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 6px; display: block; font-weight: 500; }
   .form-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; color: var(--text); font-family: 'Sora', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
   .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(17,231,231,0.08); }
+  /* Input com list= (sugestao de banco) ganha appearance:auto do Chromium --
+     um combobox nativo que, ao focar/clicar, sobrepoe fundo e borda escuros
+     com o chrome nativo do SO. Mesma classe de bug do date-picker antigo:
+     preflight desativado de proposito, entao o reset tem que ser explicito. */
+  input.form-input[list] { -webkit-appearance: none; appearance: none; }
   .input-group { display: flex; width: 100%; }
   .input-group .input-group-text { background: var(--surface2); border: 1px solid var(--border); border-right: none; border-radius: 8px 0 0 8px; padding: 11px 12px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .input-group .form-input { border-radius: 0 8px 8px 0; }
