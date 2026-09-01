@@ -179,7 +179,7 @@
   font-family: var(--ade-display);
   font-weight: 600;
   font-size: 15px;
-  color: var(--accent);
+  color: var(--accent-text);
   transition: gap 0.2s;
 }
 .jogo-card:hover .jogo-card-play { gap: 12px; }
@@ -353,7 +353,7 @@
   font-family: var(--ade-display);
   font-size: 30px !important;
   font-weight: 600;
-  color: var(--accent) !important;
+  color: var(--accent-text) !important;
   text-align: center;
   margin-bottom: 18px !important;
   letter-spacing: 0.5px;
@@ -551,7 +551,7 @@
   cursor: pointer;
   transition: color 0.15s;
 }
-.ade-reset-btn:hover { color: var(--accent); }
+.ade-reset-btn:hover { color: var(--accent-text); }
 .ade-reset-btn svg { display: block; }
 
 /* Chips de categoria coloridos */
@@ -660,7 +660,7 @@
 .ade-sala-item .badge {
   font-family: var(--ade-display);
   font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent-text);
   letter-spacing: 0.4px;
 }
 .ade-sala-item .badge.jogando {
@@ -804,7 +804,7 @@
   background: #fff; color: #e02e2e; font-size: 19px; font-weight: 800;
 }
 .ade-stop-hint { font-size: 12px; color: var(--muted); }
-.ade-stop-progress { font-family: var(--ade-display); font-weight: 700; color: var(--accent); }
+.ade-stop-progress { font-family: var(--ade-display); font-weight: 700; color: var(--accent-text); }
 
 /* ── Overlays (sorteio / stop) ────────────────────────────────────────── */
 .ade-overlay {
@@ -959,7 +959,7 @@
   text-transform: uppercase;
   color: #fff;
 }
-.ade-sorteio-label strong { color: var(--accent); font-size: 26px; }
+.ade-sorteio-label strong { color: var(--accent-text); font-size: 26px; }
 
 /* STOP overlay — placa de PARE com slam + screen shake */
 .ade-overlay-shake { animation: ade-fade-in 0.15s ease, ade-screen-shake 0.45s linear 0.18s; }

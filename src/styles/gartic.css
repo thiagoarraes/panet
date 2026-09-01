@@ -73,7 +73,7 @@
   width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
   background: var(--surface2); border: 1px solid var(--border); color: var(--text);
 }
-.gartic-espessura.on, .gartic-tool.on { border-color: var(--accent); color: var(--accent); }
+.gartic-espessura.on, .gartic-tool.on { border-color: var(--accent); color: var(--accent-text); }
 .gartic-espessura span { display: block; background: currentColor; border-radius: 50%; }
 
 /* ── Chat de palpites ───────────────────────────────────────────────────────── */
@@ -102,7 +102,7 @@
 /* ── Revelacao / fim ────────────────────────────────────────────────────────── */
 .gartic-revelacao { text-align: center; }
 .gartic-palavra-revelada {
-  font-size: clamp(26px, 5vw, 40px); font-weight: 900; color: var(--accent);
+  font-size: clamp(26px, 5vw, 40px); font-weight: 900; color: var(--accent-text);
   letter-spacing: 2px; margin: 4px 0;
 }
 .gartic-acertos { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
