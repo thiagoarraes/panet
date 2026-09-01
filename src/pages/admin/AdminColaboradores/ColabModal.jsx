@@ -1,4 +1,4 @@
-import { Button, Modal } from "@heroui/react";
+import { Button, Checkbox, Modal } from "@heroui/react";
 import { MODULES, MONTH_OPTIONS } from "../../../lib/adminColabUtils.js";
 
 export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdmin, onClose, onSalvar }) {
@@ -131,40 +131,46 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
                   border: "1px solid var(--border)",
                 }}
               >
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
-                  <input
-                    type="checkbox"
-                    checked={form.adminModulos === null}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        adminModulos: e.target.checked ? null : MODULES.map((m) => m.id),
-                      }))
-                    }
-                  />
-                  <span style={{ fontWeight: 600 }}>Acesso total</span>
-                  <span style={{ color: "var(--muted)", fontSize: 11 }}>(todos os módulos)</span>
-                </label>
+                <Checkbox
+                  variant="secondary"
+                  isSelected={form.adminModulos === null}
+                  onChange={(isSelected) =>
+                    setForm((p) => ({
+                      ...p,
+                      adminModulos: isSelected ? null : MODULES.map((m) => m.id),
+                    }))
+                  }
+                >
+                  <Checkbox.Content>
+                    <Checkbox.Control>
+                      <Checkbox.Indicator />
+                    </Checkbox.Control>
+                    <span style={{ fontWeight: 600 }}>Acesso total</span>{" "}
+                    <span style={{ color: "var(--muted)", fontSize: 11 }}>(todos os módulos)</span>
+                  </Checkbox.Content>
+                </Checkbox>
                 <div style={{ height: 1, background: "var(--border)" }} />
                 {MODULES.map((m) => {
                   const isChecked = form.adminModulos === null || (form.adminModulos || []).includes(m.id);
                   return (
-                    <label
+                    <Checkbox
                       key={m.id}
-                      style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, paddingLeft: 4 }}
+                      variant="secondary"
+                      isSelected={isChecked}
+                      onChange={(isSelected) => {
+                        const current = form.adminModulos === null ? MODULES.map((x) => x.id) : [...(form.adminModulos || [])];
+                        const next = isSelected ? [...current, m.id] : current.filter((id) => id !== m.id);
+                        const allSelected = MODULES.every((x) => next.includes(x.id));
+                        setForm((p) => ({ ...p, adminModulos: allSelected ? null : next }));
+                      }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          const current = form.adminModulos === null ? MODULES.map((x) => x.id) : [...(form.adminModulos || [])];
-                          const next = e.target.checked ? [...current, m.id] : current.filter((id) => id !== m.id);
-                          const allSelected = MODULES.every((x) => next.includes(x.id));
-                          setForm((p) => ({ ...p, adminModulos: allSelected ? null : next }));
-                        }}
-                      />
-                      {m.label}
-                    </label>
+                      <Checkbox.Content>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        {m.label}
+                      </Checkbox.Content>
+                    </Checkbox>
                   );
                 })}
               </div>

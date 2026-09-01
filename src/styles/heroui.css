@@ -60,6 +60,7 @@
 @import "@heroui/styles/components/list-box.css" layer(components);
 @import "@heroui/styles/components/list-box-item.css" layer(components);
 @import "@heroui/styles/components/list-box-section.css" layer(components);
+@import "@heroui/styles/components/checkbox.css" layer(components);
 @import "@heroui/styles/components/select.css" layer(components);
 @import "@heroui/styles/components/input-group.css" layer(components);
 @import "@heroui/styles/components/combo-box.css" layer(components);
