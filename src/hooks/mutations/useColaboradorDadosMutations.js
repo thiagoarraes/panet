@@ -12,6 +12,7 @@ const mapFormToRhRow = (form) => ({
   cnpj: form.cnpj ? soDigitos(form.cnpj) : null,
   email_pessoal: form.emailPessoal?.trim() || null,
   email_pan: form.emailPan?.trim() || null,
+  banco_nome: form.bancoNome?.trim() || null,
   banco_agencia: form.bancoAgencia?.trim() || null,
   banco_conta: form.bancoConta?.trim() || null,
   banco_pix: form.bancoPix?.trim() || null,
@@ -54,6 +55,10 @@ export function useSalvarColaboradorDados() {
     },
     onSuccess: (_data, { colaboradorId }) => {
       queryClient.invalidateQueries({ queryKey: ["colaborador-dados", colaboradorId] });
+      // A lista de sugestoes de banco e derivada destas linhas: sem invalidar,
+      // um banco digitado agora so apareceria para o proximo colaborador depois
+      // do staleTime.
+      queryClient.invalidateQueries({ queryKey: ["bancos-cadastrados"] });
     },
   });
 }

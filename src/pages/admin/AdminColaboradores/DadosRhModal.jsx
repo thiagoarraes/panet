@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Modal } from "@heroui/react";
 import { useColaboradorDados } from "../../../hooks/queries/useColaboradorDados.js";
+import { useBancosCadastrados } from "../../../hooks/queries/useBancosCadastrados.js";
 import { useSalvarColaboradorDados } from "../../../hooks/mutations/useColaboradorDadosMutations.js";
 import { formatCpf, formatCnpj, formatTelefone, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
@@ -14,6 +15,7 @@ const FORM_VAZIO = {
   cnpj: "",
   emailPessoal: "",
   emailPan: "",
+  bancoNome: "",
   bancoAgencia: "",
   bancoConta: "",
   bancoPix: "",
@@ -33,6 +35,9 @@ const FORM_VAZIO = {
  */
 function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
   const [form, setForm] = useState(() => ({ ...FORM_VAZIO, ...dadosIniciais }));
+  // Sugestoes do campo BANCO. So dispara aqui dentro, ou seja, quando o modal
+  // de RH ja foi aberto -- a listagem de colaboradores nao paga por isso.
+  const bancos = useBancosCadastrados().data || [];
   const [erro, setErro] = useState("");
   const salvar = useSalvarColaboradorDados();
 
@@ -153,7 +158,25 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="form-group" style={{ marginTop: 16 }}>
+          <label className="form-label">BANCO</label>
+          {/* datalist nativo: sugere os bancos ja cadastrados sem impedir que o
+              RH digite um novo -- que passa a ser sugerido no proximo cadastro.
+              Um <select> puro obrigaria uma tela de manutencao de bancos. */}
+          <input
+            className="form-input"
+            list="rh-bancos-sugeridos"
+            autoComplete="off"
+            placeholder="Selecione ou digite um novo"
+            value={form.bancoNome}
+            onChange={(e) => setCampo("bancoNome", e.target.value)}
+          />
+          <datalist id="rh-bancos-sugeridos">
+            {bancos.map((banco) => <option key={banco} value={banco} />)}
+          </datalist>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">AGÊNCIA</label>
             <input

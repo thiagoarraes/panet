@@ -109,6 +109,7 @@ const construirSecoes = (col, signo, signoHref, rh) => {
         restrito: true,
         itens: [
           { id: "cnpj", icon: <Building2 size={15} />, label: "CNPJ", value: rh.cnpj },
+          { id: "banco", icon: <Landmark size={15} />, label: "Banco", value: rh.bancoNome },
           { id: "ag", icon: <Landmark size={15} />, label: "Agência", value: rh.bancoAgencia },
           { id: "conta", icon: <Landmark size={15} />, label: "Conta", value: rh.bancoConta },
           { id: "pix", icon: <Landmark size={15} />, label: "Chave Pix", value: rh.bancoPix },

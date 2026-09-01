@@ -19,6 +19,7 @@ export const mapRhRowToForm = (row) => {
     cnpj: row.cnpj ? formatCnpj(row.cnpj) : "",
     emailPessoal: row.email_pessoal || "",
     emailPan: row.email_pan || "",
+    bancoNome: row.banco_nome || "",
     bancoAgencia: row.banco_agencia || "",
     bancoConta: row.banco_conta || "",
     bancoPix: row.banco_pix || "",
