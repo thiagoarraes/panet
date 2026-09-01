@@ -9,7 +9,12 @@
   }
   :root {
     --bg: #152132; --surface: #1a2a3e; --surface2: #1f3149; --border: #243d57;
-    --accent: #00a09d; --accent2: #008684; --text: #E6EDF3; --muted: #7a9ab8;
+    --accent: #00a09d; --accent2: #008684; --text: #E6EDF3;
+    /* #7a9ab8 dava 4.48:1 sobre --surface2, logo abaixo do minimo 4.5 do
+       WCAG AA -- e --surface2 e o fundo de card/linha onde este cinza mais
+       aparece (cargo do colaborador, horarios, rotulos). +3 por canal sobe
+       para 4.65:1 sem mudanca perceptivel de tom. */
+    --muted: #7d9dbb;
     --danger: #FF6B6B; --success: #56D364; --sidebar-w: 240px;
     --avatar-empty-bg: #00a09d; --avatar-empty-text: #ffffff;
 
