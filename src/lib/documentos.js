@@ -25,6 +25,12 @@ export const formatCnpj = (valor) => {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 };
 
+/** Aplica a mascara 00000-000 progressivamente. */
+export const formatCep = (valor) => {
+  const d = soDigitos(valor).slice(0, 8);
+  return d.replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+};
+
 /** Aceita fixo (00) 0000-0000 e celular (00) 00000-0000. */
 export const formatTelefone = (valor) => {
   const d = soDigitos(valor).slice(0, 11);

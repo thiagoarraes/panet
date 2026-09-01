@@ -4,6 +4,7 @@ import {
   formatCpf,
   formatCnpj,
   formatTelefone,
+  formatCep,
   isCpfValido,
   isCnpjValido,
 } from "./documentos.js";
@@ -45,6 +46,17 @@ describe("formatTelefone", () => {
 
   test("formata celular (11 digitos)", () => {
     expect(formatTelefone("11922223333")).toBe("(11) 92222-3333");
+  });
+});
+
+describe("formatCep", () => {
+  test("aplica a mascara progressivamente", () => {
+    expect(formatCep("01310")).toBe("01310");
+    expect(formatCep("01310100")).toBe("01310-100");
+  });
+
+  test("ignora caracteres nao numericos e trunca em 8 digitos", () => {
+    expect(formatCep("01310-100extra")).toBe("01310-100");
   });
 });
 

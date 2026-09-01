@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase, isSupabaseEnabled } from "../../lib/supabase.js";
 import { timeQuery } from "../../lib/queryTiming.js";
-import { formatCpf, formatCnpj, formatTelefone } from "../../lib/documentos.js";
+import { formatCpf, formatCnpj, formatTelefone, formatCep } from "../../lib/documentos.js";
 
 /**
  * snake_case (banco) -> camelCase (UI). Espelha o padrao de mapProfileToRow.
@@ -23,6 +23,13 @@ export const mapRhRowToForm = (row) => {
     bancoAgencia: row.banco_agencia || "",
     bancoConta: row.banco_conta || "",
     bancoPix: row.banco_pix || "",
+    enderecoCep: row.endereco_cep ? formatCep(row.endereco_cep) : "",
+    enderecoLogradouro: row.endereco_logradouro || "",
+    enderecoNumero: row.endereco_numero || "",
+    enderecoComplemento: row.endereco_complemento || "",
+    enderecoBairro: row.endereco_bairro || "",
+    enderecoCidade: row.endereco_cidade || "",
+    enderecoUf: row.endereco_uf || "",
     planoSaude: Boolean(row.plano_saude),
     planoSaudeQual: row.plano_saude_qual || "",
     tipoSanguineo: row.tipo_sanguineo || "",

@@ -10,6 +10,7 @@ import {
   Landmark,
   Lock,
   Mail,
+  MapPin,
   PhoneCall,
   Droplet,
 } from "lucide-react";
@@ -101,6 +102,25 @@ const construirSecoes = (col, signo, signoHref, rh) => {
           { id: "cpf", icon: <IdCard size={15} />, label: "CPF", value: rh.cpf },
           { id: "mail-pessoal", icon: <Mail size={15} />, label: "E-mail pessoal", value: rh.emailPessoal },
           { id: "mail-pan", icon: <Mail size={15} />, label: "E-mail PAN", value: rh.emailPan },
+        ],
+      },
+      {
+        id: "rh-endereco",
+        titulo: "Endereço",
+        restrito: true,
+        itens: [
+          {
+            id: "endereco",
+            icon: <MapPin size={15} />,
+            label: "Endereço",
+            value: [
+              rh.enderecoLogradouro && [rh.enderecoLogradouro, rh.enderecoNumero].filter(Boolean).join(", "),
+              rh.enderecoComplemento,
+              rh.enderecoBairro,
+              [rh.enderecoCidade, rh.enderecoUf].filter(Boolean).join(" - "),
+              rh.enderecoCep,
+            ].filter(Boolean).join(" · "),
+          },
         ],
       },
       {

@@ -3,7 +3,8 @@ import { Button, Modal } from "@heroui/react";
 import { useColaboradorDados } from "../../../hooks/queries/useColaboradorDados.js";
 import { useBancosCadastrados } from "../../../hooks/queries/useBancosCadastrados.js";
 import { useSalvarColaboradorDados } from "../../../hooks/mutations/useColaboradorDadosMutations.js";
-import { formatCpf, formatCnpj, formatTelefone, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
+import { formatCpf, formatCnpj, formatTelefone, formatCep, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
+import { useBuscaCep } from "../../../hooks/queries/useBuscaCep.js";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 import { PanComboBox } from "../../../components/ui/PanComboBox.jsx";
 
@@ -20,6 +21,13 @@ const FORM_VAZIO = {
   bancoAgencia: "",
   bancoConta: "",
   bancoPix: "",
+  enderecoCep: "",
+  enderecoLogradouro: "",
+  enderecoNumero: "",
+  enderecoComplemento: "",
+  enderecoBairro: "",
+  enderecoCidade: "",
+  enderecoUf: "",
   planoSaude: false,
   planoSaudeQual: "",
   tipoSanguineo: "",
@@ -39,10 +47,25 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
   // Sugestoes do campo BANCO. So dispara aqui dentro, ou seja, quando o modal
   // de RH ja foi aberto -- a listagem de colaboradores nao paga por isso.
   const bancos = useBancosCadastrados().data || [];
+  const cepLookup = useBuscaCep();
   const [erro, setErro] = useState("");
   const salvar = useSalvarColaboradorDados();
 
   const setCampo = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
+
+  // So sobrescreve logradouro/bairro/cidade/uf -- numero e complemento (predio)
+  // continuam sob responsabilidade de quem preenche, o ViaCEP nao sabe disso.
+  const handleCepBlur = async () => {
+    const endereco = await cepLookup.buscar(form.enderecoCep);
+    if (!endereco) return;
+    setForm((prev) => ({
+      ...prev,
+      enderecoLogradouro: endereco.logradouro || prev.enderecoLogradouro,
+      enderecoBairro: endereco.bairro || prev.enderecoBairro,
+      enderecoCidade: endereco.cidade || prev.enderecoCidade,
+      enderecoUf: endereco.uf || prev.enderecoUf,
+    }));
+  };
 
   const handleSalvar = async () => {
     setErro("");
@@ -156,6 +179,85 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
               value={form.emailPan}
               onChange={(e) => setCampo("emailPan", e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: 16 }}>
+          <div className="form-group">
+            <label className="form-label">CEP</label>
+            <input
+              className="form-input"
+              value={form.enderecoCep}
+              onChange={(e) => setCampo("enderecoCep", formatCep(e.target.value))}
+              onBlur={handleCepBlur}
+              placeholder="00000-000"
+            />
+            {cepLookup.buscando && (
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>Buscando endereço...</span>
+            )}
+            {cepLookup.erro && (
+              <span style={{ fontSize: 11, color: "var(--danger)" }}>{cepLookup.erro}</span>
+            )}
+          </div>
+          <div className="form-group">
+            <label className="form-label">LOGRADOURO</label>
+            <input
+              className="form-input"
+              value={form.enderecoLogradouro}
+              onChange={(e) => setCampo("enderecoLogradouro", e.target.value)}
+              placeholder="Preenchido pelo CEP"
+            />
+          </div>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: 12 }}>
+          <div className="form-group">
+            <label className="form-label">NÚMERO</label>
+            <input
+              className="form-input"
+              value={form.enderecoNumero}
+              onChange={(e) => setCampo("enderecoNumero", e.target.value)}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">COMPLEMENTO (APTO/BLOCO)</label>
+            <input
+              className="form-input"
+              value={form.enderecoComplemento}
+              onChange={(e) => setCampo("enderecoComplemento", e.target.value)}
+              placeholder="Se prédio: apartamento, bloco..."
+            />
+          </div>
+        </div>
+
+        <div className="grid-2" style={{ marginTop: 12 }}>
+          <div className="form-group">
+            <label className="form-label">BAIRRO</label>
+            <input
+              className="form-input"
+              value={form.enderecoBairro}
+              onChange={(e) => setCampo("enderecoBairro", e.target.value)}
+              placeholder="Preenchido pelo CEP"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">CIDADE / UF</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                className="form-input"
+                style={{ flex: 1 }}
+                value={form.enderecoCidade}
+                onChange={(e) => setCampo("enderecoCidade", e.target.value)}
+                placeholder="Preenchido pelo CEP"
+              />
+              <input
+                className="form-input"
+                style={{ width: 64, textAlign: "center" }}
+                value={form.enderecoUf}
+                onChange={(e) => setCampo("enderecoUf", e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="UF"
+              />
+            </div>
           </div>
         </div>
 
