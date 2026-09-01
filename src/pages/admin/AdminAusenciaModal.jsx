@@ -1,5 +1,6 @@
 import { Button, Modal } from "@heroui/react";
 import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
+import { PanColaboradorSelect } from "../../components/ui/PanColaboradorSelect.jsx";
 import {
   AUSENCIA_TIME_OPTIONS,
   combineLocalDateAndTime,
@@ -48,19 +49,13 @@ export function AdminAusenciaModal({
 
           <Modal.Body>
           <div className="form-group">
-            <label className="form-label">COLABORADOR *</label>
-            <select
-              className="form-input"
-              value={form.colaboradorId || ""}
-              onChange={(event) => setForm((prev) => ({ ...prev, colaboradorId: event.target.value }))}
-            >
-              <option value="">Selecione...</option>
-              {colaboradoresOpts.map((colaborador) => (
-                <option key={colaborador.id} value={colaborador.id}>
-                  {colaborador.nome}
-                </option>
-              ))}
-            </select>
+            <PanColaboradorSelect
+              label="COLABORADOR *"
+              value={form.colaboradorId}
+              onChange={(colaboradorId) => setForm((prev) => ({ ...prev, colaboradorId }))}
+              colaboradores={colaboradoresOpts}
+              isRequired
+            />
           </div>
 
           <div className="form-group">

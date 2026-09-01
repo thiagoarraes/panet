@@ -1,5 +1,6 @@
 import { Button, Modal } from "@heroui/react";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
+import { PanColaboradorSelect } from "../../../components/ui/PanColaboradorSelect.jsx";
 
 export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOpts, onClose, onSalvar }) {
   return (
@@ -21,17 +22,13 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
 
           <Modal.Body>
           <div className="form-group">
-            <label className="form-label">COLABORADOR *</label>
-            <select
-              className="form-input"
-              value={form.colaboradorId || ""}
-              onChange={(e) => setForm((prev) => ({ ...prev, colaboradorId: e.target.value }))}
-            >
-              <option value="">Selecione...</option>
-              {colaboradoresOpts.map((col) => (
-                <option key={col.id} value={col.id}>{col.nome}</option>
-              ))}
-            </select>
+            <PanColaboradorSelect
+              label="COLABORADOR *"
+              value={form.colaboradorId}
+              onChange={(colaboradorId) => setForm((prev) => ({ ...prev, colaboradorId }))}
+              colaboradores={colaboradoresOpts}
+              isRequired
+            />
           </div>
 
           {sub === "dayoff" ? (

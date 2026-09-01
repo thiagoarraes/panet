@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Button, Modal } from "@heroui/react";
 import { EditorContent, ReactRenderer, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -166,16 +167,27 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
     setEmojiOpen(true);
   };
 
+  // window.prompt() nativo quebrava o tema escuro (popup do proprio SO,
+  // sem estilo nenhum do app). Guarda so a URL em estado; a selecao do
+  // Tiptap fica preservada internamente e "focus()" a restaura ao confirmar,
+  // mesmo apos o modal fechar de forma assincrona.
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
   const setLink = () => {
     if (!editor) return;
-    const previousUrl = editor.getAttributes("link").href || "";
-    const url = window.prompt("Cole a URL do link", previousUrl);
-    if (url === null) return;
-    if (url === "") {
+    setLinkUrl(editor.getAttributes("link").href || "");
+    setLinkModalOpen(true);
+  };
+
+  const confirmLink = () => {
+    const url = linkUrl.trim();
+    if (!url) {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
+    } else {
+      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    setLinkModalOpen(false);
   };
 
   // Fecha o popover de GIF ao clicar fora.
@@ -324,6 +336,41 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
         </PanTooltip>
       </div>
       <EditorContent editor={editor} className="rte-editor" />
+
+      <Modal.Backdrop
+        isOpen={linkModalOpen}
+        variant="blur"
+        onOpenChange={(aberto) => { if (!aberto) setLinkModalOpen(false); }}
+      >
+        <Modal.Container>
+          <Modal.Dialog style={{ maxWidth: 420, border: "1px solid var(--border)" }}>
+            <Modal.CloseTrigger />
+            <Modal.Header>
+              <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+                Link
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <div className="form-group">
+                <label className="form-label">URL</label>
+                <input
+                  className="form-input"
+                  type="url"
+                  autoFocus
+                  placeholder="https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmLink(); } }}
+                />
+              </div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="tertiary" onPress={() => setLinkModalOpen(false)}>Cancelar</Button>
+              <Button onPress={confirmLink}>{linkUrl.trim() ? "Salvar" : "Remover link"}</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 }
