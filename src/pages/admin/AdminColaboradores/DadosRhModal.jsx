@@ -5,6 +5,7 @@ import { useBancosCadastrados } from "../../../hooks/queries/useBancosCadastrado
 import { useSalvarColaboradorDados } from "../../../hooks/mutations/useColaboradorDadosMutations.js";
 import { formatCpf, formatCnpj, formatTelefone, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
+import { PanComboBox } from "../../../components/ui/PanComboBox.jsx";
 
 const FORM_VAZIO = {
   nomeCompleto: "",
@@ -159,21 +160,16 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
         </div>
 
         <div className="form-group" style={{ marginTop: 16 }}>
-          <label className="form-label">BANCO</label>
-          {/* datalist nativo: sugere os bancos ja cadastrados sem impedir que o
-              RH digite um novo -- que passa a ser sugerido no proximo cadastro.
-              Um <select> puro obrigaria uma tela de manutencao de bancos. */}
-          <input
-            className="form-input"
-            list="rh-bancos-sugeridos"
-            autoComplete="off"
-            placeholder="Selecione ou digite um novo"
+          {/* ComboBox do HeroUI: lista tradicional dos bancos ja cadastrados,
+              mas allowsCustomValue deixa digitar um banco novo -- que passa a
+              aparecer na lista para os proximos cadastros assim que salvo. */}
+          <PanComboBox
+            label="BANCO"
             value={form.bancoNome}
-            onChange={(e) => setCampo("bancoNome", e.target.value)}
+            onChange={(valor) => setCampo("bancoNome", valor)}
+            options={bancos}
+            placeholder="Selecione ou digite um novo"
           />
-          <datalist id="rh-bancos-sugeridos">
-            {bancos.map((banco) => <option key={banco} value={banco} />)}
-          </datalist>
         </div>
 
         <div className="grid-2" style={{ marginTop: 12 }}>
