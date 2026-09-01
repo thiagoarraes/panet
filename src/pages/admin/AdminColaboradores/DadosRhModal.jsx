@@ -7,6 +7,7 @@ import { formatCpf, formatCnpj, formatTelefone, formatCep, isCpfValido, isCnpjVa
 import { useBuscaCep } from "../../../hooks/queries/useBuscaCep.js";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 import { PanComboBox } from "../../../components/ui/PanComboBox.jsx";
+import "../../../styles/dados-rh.css";
 
 const FORM_VAZIO = {
   nomeCompleto: "",
@@ -89,19 +90,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
     <>
       <Modal.Body>
         {erro && (
-          <div
-            style={{
-              marginBottom: 12,
-              padding: "10px 12px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,107,107,0.4)",
-              background: "rgba(255,107,107,0.1)",
-              color: "var(--danger)",
-              fontSize: 13,
-            }}
-          >
-            {erro}
-          </div>
+          <div className="rh-erro">{erro}</div>
         )}
 
         <div className="form-group">
@@ -114,7 +103,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           />
         </div>
 
-        <div className="grid-2" style={{ marginTop: 12 }}>
+        <div className="grid-2 rh-row">
           <div className="form-group">
             <label className="form-label">DATA DE NASCIMENTO</label>
             <PanDatePicker
@@ -131,7 +120,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 12 }}>
+        <div className="grid-2 rh-row">
           <div className="form-group">
             <label className="form-label">RG</label>
             <input
@@ -151,7 +140,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="form-group" style={{ marginTop: 12 }}>
+        <div className="form-group rh-row">
           <label className="form-label">CNPJ</label>
           <input
             className="form-input"
@@ -161,7 +150,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           />
         </div>
 
-        <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="grid-2 rh-row--grupo">
           <div className="form-group">
             <label className="form-label">E-MAIL PESSOAL</label>
             <input
@@ -182,7 +171,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="grid-2 rh-row--grupo">
           <div className="form-group">
             <label className="form-label">CEP</label>
             <input
@@ -193,10 +182,10 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
               placeholder="00000-000"
             />
             {cepLookup.buscando && (
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>Buscando endereço...</span>
+              <span className="rh-hint">Buscando endereço...</span>
             )}
             {cepLookup.erro && (
-              <span style={{ fontSize: 11, color: "var(--danger)" }}>{cepLookup.erro}</span>
+              <span className="rh-hint rh-hint--erro">{cepLookup.erro}</span>
             )}
           </div>
           <div className="form-group">
@@ -210,7 +199,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 12 }}>
+        <div className="grid-2 rh-row">
           <div className="form-group">
             <label className="form-label">NÚMERO</label>
             <input
@@ -230,7 +219,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 12 }}>
+        <div className="grid-2 rh-row">
           <div className="form-group">
             <label className="form-label">BAIRRO</label>
             <input
@@ -242,17 +231,15 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
           <div className="form-group">
             <label className="form-label">CIDADE / UF</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="rh-cidade-uf">
               <input
-                className="form-input"
-                style={{ flex: 1 }}
+                className="form-input rh-cidade"
                 value={form.enderecoCidade}
                 onChange={(e) => setCampo("enderecoCidade", e.target.value)}
                 placeholder="Preenchido pelo CEP"
               />
               <input
-                className="form-input"
-                style={{ width: 64, textAlign: "center" }}
+                className="form-input rh-uf"
                 value={form.enderecoUf}
                 onChange={(e) => setCampo("enderecoUf", e.target.value.toUpperCase().slice(0, 2))}
                 placeholder="UF"
@@ -261,7 +248,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="form-group" style={{ marginTop: 16 }}>
+        <div className="form-group rh-row--grupo">
           {/* ComboBox do HeroUI: lista tradicional dos bancos ja cadastrados,
               mas allowsCustomValue deixa digitar um banco novo -- que passa a
               aparecer na lista para os proximos cadastros assim que salvo. */}
@@ -274,7 +261,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           />
         </div>
 
-        <div className="grid-2" style={{ marginTop: 12 }}>
+        <div className="grid-2 rh-row">
           <div className="form-group">
             <label className="form-label">AGÊNCIA</label>
             <input
@@ -292,7 +279,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             />
           </div>
         </div>
-        <div className="form-group" style={{ marginTop: 12 }}>
+        <div className="form-group rh-row">
           <label className="form-label">CHAVE PIX</label>
           <input
             className="form-input"
@@ -301,7 +288,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           />
         </div>
 
-        <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="grid-2 rh-row--grupo">
           <div className="form-group">
             <label className="form-label">PLANO DE SAÚDE</label>
             <select
@@ -325,7 +312,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
 
-        <div className="form-group" style={{ marginTop: 12 }}>
+        <div className="form-group rh-row">
           <label className="form-label">TIPO SANGUÍNEO</label>
           <select
             className="form-input"
@@ -339,7 +326,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </select>
         </div>
 
-        <div className="grid-2" style={{ marginTop: 16 }}>
+        <div className="grid-2 rh-row--grupo">
           <div className="form-group">
             <label className="form-label">CONTATO DE EMERGÊNCIA</label>
             <input
@@ -390,17 +377,17 @@ export function DadosRhModal({ colaborador, onClose }) {
       }}
     >
       <Modal.Container scroll="inside">
-        <Modal.Dialog style={{ maxWidth: 720, border: "1px solid var(--border)" }}>
+        <Modal.Dialog className="rh-dialog">
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Heading style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>
+            <Modal.Heading className="rh-heading">
               Dados RH — {colaborador.nome}
             </Modal.Heading>
           </Modal.Header>
 
           {query.isLoading && (
             <Modal.Body>
-              <div style={{ padding: "24px 0", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+              <div className="rh-estado">
                 Carregando...
               </div>
             </Modal.Body>
@@ -408,7 +395,7 @@ export function DadosRhModal({ colaborador, onClose }) {
 
           {query.isError && (
             <Modal.Body>
-              <div style={{ padding: "24px 0", textAlign: "center", color: "var(--danger)", fontSize: 13 }}>
+              <div className="rh-estado rh-estado--erro">
                 Não foi possível carregar os dados. Verifique se você tem acesso ao módulo Colaboradores.
               </div>
             </Modal.Body>

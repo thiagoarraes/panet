@@ -5,6 +5,7 @@ import { Badge } from "../../components/Badge";
 import { useAdminPostagens } from "../../hooks/queries/admin/useAdminPostagens.js";
 import { useCreatePost, useUpdatePost, useDeletePost } from "../../hooks/mutations/usePostMutations.js";
 import { PanTooltip } from "../../components/ui/PanTooltip";
+import "../../styles/admin-postagens.css";
 
 const loadAdminPostagemModal = () => import("./AdminPostagemModal");
 const AdminPostagemModal = lazy(() => loadAdminPostagemModal().then((m) => ({ default: m.AdminPostagemModal })));
@@ -126,10 +127,9 @@ export function AdminPostagens({ currentUserId }) {
 
   return (
     <div>
-      <div className="admin-toolbar admin-toolbar-end" style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 16 }}>
+      <div className="admin-toolbar admin-toolbar-end admin-postagens-toolbar">
         <input
-          className="form-input"
-          style={{ maxWidth: 320 }}
+          className="form-input admin-postagens-busca"
           placeholder="Buscar por título, categoria ou descrição"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
@@ -138,33 +138,21 @@ export function AdminPostagens({ currentUserId }) {
           + Nova postagem
         </button>
       </div>
-      <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="stagger admin-postagens-lista">
         {rows.map((post) => (
-          <div key={post.id} className="pan-card" style={{ padding: 16, transition: "border-color 0.2s" }}>
-            <div className="admin-post-row" style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <img src={post.imagem} alt={post.titulo} style={{ width: 72, height: 36, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
-              <div className="admin-post-main" style={{ flex: 1 }}>
-                <div className="admin-post-meta" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
+          <div key={post.id} className="pan-card admin-postagens-card">
+            <div className="admin-post-row">
+              <img src={post.imagem} alt={post.titulo} className="admin-post-thumb" />
+              <div className="admin-post-main">
+                <div className="admin-post-meta">
                   <Badge cat={post.categoria} />
-                  <span style={{ fontSize: 12, color: "var(--muted)" }}>{fmtDate(post.data)}</span>
+                  <span className="admin-post-data">{fmtDate(post.data)}</span>
                 </div>
-                <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: 14 }}>{post.titulo}</div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--muted)",
-                    marginTop: 2,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {stripHtml(post.descricao)}
-                </div>
+                <div className="admin-post-titulo">{post.titulo}</div>
+                <div className="admin-post-desc">{stripHtml(post.descricao)}</div>
               </div>
-              <div className="admin-post-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span className="admin-post-stats" style={{ fontSize: 12, color: "var(--muted)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <div className="admin-post-actions">
+                <span className="admin-post-stats">
                   <Heart size={12} /> {post.curtidas.length} · <MessageCircle size={12} /> {post.comentarios.length}
                 </span>
                 <div className="admin-post-action-buttons">
@@ -202,11 +190,11 @@ export function AdminPostagens({ currentUserId }) {
       </div>
 
       {totalItems > PAGE_SIZE && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-          <div style={{ fontSize: 12, color: "var(--muted)" }}>
+        <div className="admin-postagens-paginacao">
+          <div className="admin-postagens-contagem">
             Página {uiPage} de {uiTotalPages} · {totalItems} item(ns)
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="admin-postagens-paginacao-botoes">
             <button className="btn-ghost" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={uiPage <= 1}>
               Anterior
             </button>
@@ -220,7 +208,7 @@ export function AdminPostagens({ currentUserId }) {
       {modal !== null && (
         <Suspense
           fallback={
-            <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }}>
+            <div className="modal-overlay admin-postagens-loading-overlay">
               <div className="pan-modal">
                 <div className="modal-body">
                   <div className="section-sub">Carregando editor...</div>
@@ -254,26 +242,16 @@ export function AdminPostagens({ currentUserId }) {
           <Modal.Container>
             <Modal.Dialog
               aria-label="Excluir postagem"
-              style={{ maxWidth: 400, border: "1px solid var(--border)" }}
+              className="admin-postagens-confirm"
             >
-              <Modal.Body style={{ textAlign: "center", padding: 8 }}>
-                <div style={{ marginBottom: 12, display: "inline-flex", color: "var(--danger)" }}>
+              <Modal.Body className="admin-postagens-confirm-body">
+                <div className="admin-postagens-confirm-icone">
                   <AlertTriangle size={36} />
                 </div>
-                <div
-                  style={{
-                    fontFamily: "'Sora', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 17,
-                    marginBottom: 8,
-                    color: "var(--text)",
-                  }}
-                >
-                  Excluir postagem?
-                </div>
-                <div style={{ color: "var(--muted)", fontSize: 14 }}>Esta ação não pode ser desfeita.</div>
+                <div className="admin-postagens-confirm-titulo">Excluir postagem?</div>
+                <div className="admin-postagens-confirm-texto">Esta ação não pode ser desfeita.</div>
               </Modal.Body>
-              <Modal.Footer style={{ justifyContent: "center" }}>
+              <Modal.Footer className="admin-postagens-confirm-footer">
                 <Button variant="tertiary" slot="close">Cancelar</Button>
                 <Button
                   variant="danger"

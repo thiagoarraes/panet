@@ -1,0 +1,47 @@
+/*
+ * Formulario de dados de RH (DadosRhModal).
+ *
+ * Migrado de 25 style={{}} inline. O grosso (13 deles) era so marginTop 12 ou
+ * 16 repetido linha a linha -- o ritmo vertical do formulario estava espalhado
+ * pelo JSX em vez de declarado num lugar so.
+ *
+ * .rh-row e o espacamento entre campos do mesmo assunto; .rh-row--grupo e o
+ * respiro maior que separa blocos (identificacao / endereco / banco / saude).
+ * Mudar o ritmo do form agora e mudar duas linhas aqui.
+ */
+
+.rh-row { margin-top: var(--space-5); }
+.rh-row--grupo { margin-top: var(--space-7); }
+
+/* Cidade + UF dividem a mesma linha: a UF tem largura fixa porque sao sempre
+   2 caracteres, e a cidade ocupa o resto. */
+.rh-cidade-uf { display: flex; gap: var(--space-3); }
+.rh-cidade-uf .rh-cidade { flex: 1; }
+.rh-cidade-uf .rh-uf { width: 64px; text-align: center; }
+
+/* Aviso curto abaixo do CEP (buscando / nao encontrado). */
+.rh-hint { font-size: var(--text-xs); color: var(--muted); }
+.rh-hint--erro { color: var(--danger); }
+
+/* Faixa de erro do topo do form. */
+.rh-erro {
+  margin-bottom: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--danger);
+  font-size: var(--text-base);
+}
+
+/* Estados de carregando / erro que ocupam o corpo inteiro do modal. */
+.rh-estado {
+  padding: var(--space-8) 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--text-base);
+}
+.rh-estado--erro { color: var(--danger); }
+
+.rh-dialog { max-width: 720px; border: 1px solid var(--border); }
+.rh-heading { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 17px; }

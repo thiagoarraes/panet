@@ -1,0 +1,161 @@
+/*
+ * Listagem de postagens do admin (AdminPostagens).
+ *
+ * Migrado de 23 style={{}} inline. Aqui a migracao nao foi so organizacao: as
+ * classes .admin-post-row / -main / -meta / -actions / -stats JA existiam, mas
+ * so tinham regra dentro do @media de 600px do global.css -- e precisavam de
+ * `!important` justamente para vencer os inline styles do desktop.
+ *
+ * Com o estilo desktop declarado aqui, o mobile passa a sobrescrever uma
+ * regra normal em vez de um style attribute, e os 4 !important daquele bloco
+ * puderam sair (ver global.css, @media max-width: 600px).
+ */
+
+/* Barra de busca + botao de nova postagem */
+.admin-postagens-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+.admin-postagens-busca { max-width: 320px; }
+
+/* Lista */
+.admin-postagens-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.admin-postagens-card {
+  padding: var(--space-7);
+  transition: border-color 0.2s;
+}
+
+/* Linha de um post. O mobile vira grid de 2 colunas (global.css). */
+.admin-post-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.admin-post-thumb {
+  width: 72px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.admin-post-main { flex: 1; }
+.admin-post-meta {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+.admin-post-data { font-size: var(--text-sm); color: var(--muted); }
+.admin-post-titulo {
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: var(--text-md);
+}
+/* -webkit-box + line-clamp: corta a descricao em 1 linha com reticencias. */
+.admin-post-desc {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.admin-post-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.admin-post-stats {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Paginacao */
+.admin-postagens-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+}
+.admin-postagens-contagem { font-size: var(--text-sm); color: var(--muted); }
+.admin-postagens-paginacao-botoes { display: flex; gap: var(--space-3); }
+
+/* Fallback enquanto o editor lazy carrega */
+.admin-postagens-loading-overlay {
+  align-items: center;
+  justify-items: center;
+}
+
+/* Modal de confirmacao de exclusao */
+.admin-postagens-confirm { max-width: 400px; border: 1px solid var(--border); }
+.admin-postagens-confirm-body { text-align: center; padding: var(--space-3); }
+.admin-postagens-confirm-icone {
+  margin-bottom: var(--space-5);
+  display: inline-flex;
+  color: var(--danger);
+}
+.admin-postagens-confirm-titulo {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  margin-bottom: var(--space-2);
+}
+.admin-postagens-confirm-texto { color: var(--muted); font-size: var(--text-md); }
+.admin-postagens-confirm-footer { justify-content: center; }
+
+/*
+ * Responsivo. Vive aqui junto do desktop, e nao no @media do global.css: como
+ * este arquivo e importado pelo componente, ele entra na cascata DEPOIS do
+ * global -- e media query nao aumenta especificidade, entao a regra mobile de
+ * la perdia para a regra desktop daqui. Mantendo o par no mesmo arquivo, a
+ * ordem fica garantida e dispensa !important.
+ */
+@media (max-width: 600px) {
+  .admin-post-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    position: relative;
+    align-items: start;
+    column-gap: var(--space-5);
+    row-gap: var(--space-4);
+  }
+  .admin-post-row > img:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .admin-post-main {
+    width: 100%;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .admin-post-meta { flex-wrap: wrap; }
+  .admin-post-actions {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    display: block;
+  }
+  .admin-post-action-buttons {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .admin-post-stats {
+    width: auto;
+    margin-bottom: 0;
+  }
+}

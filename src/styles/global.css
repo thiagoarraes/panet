@@ -5024,36 +5024,17 @@
       align-items: flex-start !important;
       gap: 10px !important;
     }
-    .admin-post-row {
-      display: grid !important;
-      grid-template-columns: 72px minmax(0, 1fr);
-      position: relative;
-      align-items: start !important;
-      column-gap: 12px !important;
-      row-gap: 10px !important;
-    }
-    .admin-post-row > img:first-child {
-      grid-column: 1;
-      grid-row: 1;
-    }
     .admin-post-main,
     .admin-ferias-main,
     .admin-galeria-main,
     .admin-presencial-main {
       width: 100%;
     }
-    .admin-post-main {
-      grid-column: 1 / -1;
-      grid-row: 2;
-    }
     .admin-presencial-title-row {
       display: inline-flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 8px;
-    }
-    .admin-post-meta {
-      flex-wrap: wrap;
     }
     .admin-post-actions,
     .admin-ferias-actions,
@@ -5063,24 +5044,6 @@
       flex-wrap: wrap;
       justify-content: flex-start;
       gap: 8px;
-    }
-    .admin-post-actions {
-      grid-column: 1 / -1;
-      grid-row: 3;
-      width: 100%;
-      display: block;
-    }
-    .admin-post-action-buttons {
-      position: absolute;
-      top: 0;
-      right: 0;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .admin-post-stats {
-      width: auto;
-      margin-bottom: 0;
     }
     .admin-ferias-status {
       align-self: flex-start;
