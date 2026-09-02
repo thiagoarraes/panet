@@ -25,6 +25,14 @@ const textoOuNull = (v: unknown): string | null => {
   return s === "" ? null : s;
 };
 
+const REQUIRED_ADMIN_MODULE = "panpass";
+
+const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null) => {
+  if (!profile || profile.perfil !== "admin" || profile.ativo === false) return false;
+  if (profile.admin_modulos === null || profile.admin_modulos === undefined) return true;
+  return Array.isArray(profile.admin_modulos) && profile.admin_modulos.includes(REQUIRED_ADMIN_MODULE);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -50,10 +58,10 @@ serve(async (req) => {
 
     const { data: perfil } = await adminClient
       .from("colaboradores")
-      .select("perfil")
+      .select("perfil, admin_modulos, ativo")
       .eq("id", callerUser.id)
       .maybeSingle();
-    if (perfil?.perfil !== "admin") return jsonResponse({ error: "Acesso restrito." }, 403);
+    if (!hasRequiredAdminModule(perfil)) return jsonResponse({ error: "Acesso restrito." }, 403);
 
     const body = await req.json();
     const acao = String(body?.acao || "").trim();

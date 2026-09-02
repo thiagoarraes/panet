@@ -34,8 +34,8 @@ const extractAvatarPathFromUrl = (fotoUrl: string) => {
 
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
-const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos?: string[] | null } | null) => {
-  if (!profile || profile.perfil !== "admin") return false;
+const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null) => {
+  if (!profile || profile.perfil !== "admin" || profile.ativo === false) return false;
   if (profile.admin_modulos === null || profile.admin_modulos === undefined) return true;
   return Array.isArray(profile.admin_modulos) && profile.admin_modulos.includes(REQUIRED_ADMIN_MODULE);
 };
@@ -115,7 +115,7 @@ serve(async (req) => {
 
     const { data: callerProfile, error: profileError } = await adminClient
       .from("colaboradores")
-      .select("id, perfil, admin_modulos")
+      .select("id, perfil, admin_modulos, ativo")
       .eq("id", callerUser.id)
       .maybeSingle();
 
