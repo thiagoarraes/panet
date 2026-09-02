@@ -1,18 +1,20 @@
 # Config das edge functions.
 #
-# verify_jwt = false em todas de proposito. Nao significa funcao aberta: o
-# gateway do Supabase valida o JWT ANTES de chamar a funcao, e o preflight
-# OPTIONS que o browser dispara nao carrega header Authorization -- entao com
-# verify_jwt = true o preflight leva 401, o CORS falha e a chamada nunca sai
-# do browser. Cada funcao aqui faz a propria verificacao: exige o bearer
-# token, resolve o usuario via auth.getUser e checa perfil/modulo quando o
-# caso pede.
+# verify_jwt = false na maioria de proposito: o gateway do Supabase valida o
+# JWT ANTES de chamar a funcao, e por algum tempo presumiu-se que o preflight
+# OPTIONS (que o browser dispara sem header Authorization) levava 401 com
+# verify_jwt = true, quebrando o CORS antes da chamada sair do browser --
+# verificado ao vivo (2026-09-02) que isso nao reproduz mais: o gateway hoje
+# nao aplica a checagem de JWT no OPTIONS, tenha a funcao verify_jwt true ou
+# false. As 3 marcadas true abaixo ja rodam assim em producao sem problema;
+# alinhado aqui so por consistencia com o estado real, sem re-deploy.
+# Cada funcao faz a propria verificacao interna tambem: exige o bearer token,
+# resolve o usuario via auth.getUser e checa perfil/modulo quando o caso pede.
 #
 # Toda funcao chamada pelo browser precisa estar listada aqui. Faltar nesta
 # lista foi exatamente o que quebrou o botao "Tornar Ex Panner": a
 # deactivate-collaborator nunca tinha sido deployada, e sem a entrada um
-# deploy futuro a devolveria com verify_jwt = true, reproduzindo o mesmo
-# erro de CORS.
+# deploy futuro a devolveria com verify_jwt = true por padrao.
 
 # grava evento no Google Calendar; exige bearer + perfil
 [functions.add-calendar-event]
@@ -30,7 +32,7 @@ verify_jwt = false
 
 # OCR do recibo; dono da corrida ou admin
 [functions.extract-recibo]
-verify_jwt = false
+verify_jwt = true
 
 # CRUD de servicos; somente admin
 [functions.panpass-admin]
@@ -38,14 +40,14 @@ verify_jwt = false
 
 # revela credencial e registra o acesso; exige bearer
 [functions.panpass-reveal]
-verify_jwt = false
+verify_jwt = true
 
 [functions.post-og]
 verify_jwt = false
 
 # remove evento do Google Calendar; exige bearer + perfil
 [functions.remove-calendar-event]
-verify_jwt = false
+verify_jwt = true
 
 [functions.reset-password]
 verify_jwt = false
