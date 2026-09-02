@@ -68,9 +68,9 @@ function AppShell() {
 
 function PrivateRoute({ children }) {
   const { authLoading, currentProfile, sessionUserId, theme } = useAuth();
-  
+
   if (authLoading) return <AppShellSkeleton theme={theme} />;
-  
+
   if (!currentProfile && !sessionUserId) {
     return <Navigate to="/login" replace />;
   }
@@ -81,6 +81,25 @@ function PrivateRoute({ children }) {
   // de trocar a senha num loop de volta pra /primeiro-acesso.
   if (currentProfile && currentProfile.primeiro_acesso === true) {
     return <Navigate to="/primeiro-acesso" replace />;
+  }
+
+  return children;
+}
+
+// /login e /primeiro-acesso nao tinham guarda: apos autenticar, o state
+// (currentProfile/sessionUserId) mudava mas a URL continuava em /login, e
+// nada chamava navigate("/") -- o botao voltava para "Entrar na Panet" sem
+// erro e sem sair da tela. No sistema antigo (tela/pagina como state) isso
+// nao existia porque a propria troca de `tela` decidia o que renderizar,
+// independente da URL.
+function PublicOnlyRoute({ children }) {
+  const { authLoading, currentProfile, sessionUserId, theme } = useAuth();
+
+  if (authLoading) return <AppShellSkeleton theme={theme} />;
+
+  if (currentProfile && sessionUserId) {
+    if (currentProfile.primeiro_acesso === true) return <Navigate to="/primeiro-acesso" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -108,7 +127,11 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage onLogin={handleLogin} theme={theme} notice={sessionExpiredNotice} />} />
+      <Route path="/login" element={
+        <PublicOnlyRoute>
+          <LoginPage onLogin={handleLogin} theme={theme} notice={sessionExpiredNotice} />
+        </PublicOnlyRoute>
+      } />
       <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} theme={theme} />} />
       
       <Route
