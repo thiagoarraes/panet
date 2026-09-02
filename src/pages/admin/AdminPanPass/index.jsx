@@ -1,0 +1,1 @@
+export { AdminPanPass } from "./AdminPanPass.jsx";

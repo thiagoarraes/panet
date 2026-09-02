@@ -363,7 +363,9 @@
   .logo-image { width: 100%; max-width: 100px; height: auto; display: block; object-fit: contain; }
   .nav-section { padding: 16px 12px 8px; }
   .nav-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; padding: 0 8px 8px; font-weight: 500; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 400; color: var(--muted); transition: all 0.18s cubic-bezier(.4,0,.2,1); margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; }
+  /* text-decoration: none porque o Sidebar migrou de <button> para <a> do
+     react-router (Link) -- sem isso o link nativo sublinha o texto. */
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 400; color: var(--muted); transition: all 0.18s cubic-bezier(.4,0,.2,1); margin-bottom: 2px; border: none; background: transparent; width: 100%; text-align: left; text-decoration: none; }
   .nav-item:hover { background: var(--surface2); color: var(--text); padding-left: 16px; }
   .nav-item.active { background: rgba(17,231,231,0.1); color: var(--accent-text); font-weight: 500; }
   .nav-icon { font-size: 16px; width: 20px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }

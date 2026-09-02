@@ -50,6 +50,7 @@
         "npm:react-dom@^19.2.7",
         "npm:react-easy-crop@^6.2.2",
         "npm:react-icons@^5.7.0",
+        "npm:react-router-dom@^7.18.3",
         "npm:react@^19.2.7",
         "npm:rollup-plugin-visualizer@^7.0.1",
         "npm:tailwindcss@^4.3.3",

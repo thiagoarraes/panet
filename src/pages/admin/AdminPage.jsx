@@ -1,4 +1,5 @@
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, CalendarDays, Car, FileText, Images, KeyRound, Plane, Settings, Users } from "lucide-react";
 import { isSuperAdmin as checarSuperAdmin, temModulo } from "../../lib/permissoes.js";
 import "../../styles/admin-shared.css";
@@ -10,7 +11,7 @@ const AdminGaleria = lazy(() => import("./AdminGaleria").then((m) => ({ default:
 const AdminPresencial = lazy(() => import("./AdminPresencial").then((m) => ({ default: m.AdminPresencial })));
 const AdminEnquetes = lazy(() => import("./AdminEnquetes").then((m) => ({ default: m.AdminEnquetes })));
 const AdminCorridas = lazy(() => import("./AdminCorridas").then((m) => ({ default: m.AdminCorridas })));
-const AdminPanPass = lazy(() => import("./AdminPanPass").then((m) => ({ default: m.AdminPanPass })));
+const AdminPanPass = lazy(() => import("./AdminPanPass/index").then((m) => ({ default: m.AdminPanPass })));
 
 const AdminTabFallback = () => (
   <div className="pan-card">
@@ -32,11 +33,14 @@ const ALL_ABAS = [
 ];
 
 export function AdminPage({
-  aba = "postagens",
-  onChangeAba,
   currentProfile,
   currentUserId,
 }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const abaMatch = location.pathname.split('/')[2];
+  const aba = abaMatch || 'postagens';
+  const onChangeAba = useCallback((newAba) => navigate(`/admin/${newAba}`), [navigate]);
   // checarSuperAdmin (ao contrario do `admin_modulos === null` que estava aqui
   // antes) exige perfil === "admin" e ativo !== false. Um colaborador comum
   // tambem tem admin_modulos === null (o campo so existe para quem e admin),

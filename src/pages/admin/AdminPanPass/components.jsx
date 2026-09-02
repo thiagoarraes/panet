@@ -1,24 +1,18 @@
 import { useMemo, useState } from "react";
 import { Button, ListBox, Modal, Select, toast } from "@heroui/react";
-import { PanDatePicker } from "../../components/ui/PanDatePicker.jsx";
 import {
-  Activity, AlertTriangle, Check, Clock, Download, Eye, Globe2, KeyRound,
-  Pencil, Plus, Search, ShieldCheck, Trash2, UserCheck, Users, X,
+  AlertTriangle, Check, Eye, KeyRound,
+  Pencil, Plus, Search, Trash2, UserCheck, Users, X,
 } from "lucide-react";
-import { Avatar } from "../../components/Avatar";
-import {
-  useAdminPanPassAcessos,
-  useAdminPanPassServicos,
-} from "../../hooks/queries/admin/useAdminPanPass";
+import { Avatar } from "../../../components/Avatar";
 import {
   useExcluirServicoPanPass,
   useSalvarServicoPanPass,
-} from "../../hooks/mutations/usePanPassMutations";
-import { useColaboradores } from "../../hooks/queries/useColaboradores";
-import "../../styles/panpass.css";
-import { PanTooltip } from "../../components/ui/PanTooltip";
+} from "../../../hooks/mutations/usePanPassMutations";
+import "../../../styles/panpass.css";
+import { PanTooltip } from "../../../components/ui/PanTooltip";
 
-const VAZIO = {
+export const VAZIO = {
   id: null,
   nome: "",
   categoria: "",
@@ -32,7 +26,7 @@ const VAZIO = {
 
 // "totp"/"codigo_email" só aparecem em registros antigos de auditoria (a
 // funcionalidade de MFA foi removida do PanPass — hoje só existe "senha").
-const ACAO = {
+export const ACAO = {
   senha: { label: "Senha", Icon: Eye },
   totp: { label: "Código TOTP (descontinuado)", Icon: KeyRound },
   codigo_email: { label: "Código por e-mail (descontinuado)", Icon: KeyRound },
@@ -40,16 +34,16 @@ const ACAO = {
 
 // Frase natural da auditoria — sem badge de ação, já que hoje só existe
 // "revelar senha". Os verbos de totp/codigo_email só aparecem em histórico.
-const ACAO_VERBO = {
+export const ACAO_VERBO = {
   senha: "revelou a senha de",
   totp: "gerou o código de",
   codigo_email: "buscou o código de",
 };
 
-const formatarData = (iso) =>
+export const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-const iniciais = (nome) =>
+export const iniciais = (nome) =>
   (nome || "?")
     .split(" ")
     .filter(Boolean)
@@ -58,7 +52,7 @@ const iniciais = (nome) =>
     .join("")
     .toUpperCase();
 
-function StatTile({ Icon, valor, rotulo, tom }) {
+export function StatTile({ Icon, valor, rotulo, tom }) {
   return (
     <div className={`pp-stat ${tom ? `is-${tom}` : ""}`}>
       <span className="pp-stat-icone"><Icon size={15} /></span>
@@ -73,7 +67,7 @@ function StatTile({ Icon, valor, rotulo, tom }) {
 // Substitui o `select multiple` (que ocupava seis linhas fixas) por dois modos:
 // "toda a equipe" não gasta espaço nenhum; "escolher pessoas" abre chips com
 // avatar e uma busca que só cresce conforme o uso.
-function SeletorColaboradores({ colaboradores, selecionados, onChange }) {
+export function SeletorColaboradores({ colaboradores, selecionados, onChange }) {
   const [busca, setBusca] = useState("");
   const restrito = selecionados.length > 0;
 
@@ -197,7 +191,7 @@ function SeletorColaboradores({ colaboradores, selecionados, onChange }) {
 // Combobox flutuante pro filtro de auditoria: mostra avatar+nome do
 // selecionado no gatilho, painel com busca reaproveita o mesmo padrão de
 // SeletorColaboradores (lista com avatar+nome+cargo).
-function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
+export function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
   // O painel antigo era renderizado inline, sem portal: dentro da toolbar da
   // auditoria ficava sujeito ao overflow do conteiner. O Select usa popover em
   // portal, o que resolve o clipping, e traz navegacao por setas, Escape e
@@ -255,7 +249,7 @@ function FiltroColaborador({ colaboradores, selecionadoId, onChange }) {
   );
 }
 
-function ServicoModal({ inicial, colaboradores, onFechar }) {
+export function ServicoModal({ inicial, colaboradores, onFechar }) {
   const salvar = useSalvarServicoPanPass();
   const [form, setForm] = useState(inicial);
   const [erro, setErro] = useState("");
@@ -394,7 +388,7 @@ function ServicoModal({ inicial, colaboradores, onFechar }) {
   );
 }
 
-function ConfirmarExclusao({ servico, onFechar }) {
+export function ConfirmarExclusao({ servico, onFechar }) {
   const excluir = useExcluirServicoPanPass();
   return (
     <Modal.Backdrop
@@ -449,7 +443,7 @@ function ConfirmarExclusao({ servico, onFechar }) {
   );
 }
 
-function ServicoCard({ servico, onEditar, onExcluir }) {
+export function ServicoCard({ servico, onEditar, onExcluir }) {
   return (
     <article className={`pp-servico ${servico.ativo ? "" : "is-inativo"}`}>
       <div className="pp-servico-topo">
@@ -491,264 +485,3 @@ function ServicoCard({ servico, onEditar, onExcluir }) {
   );
 }
 
-export function AdminPanPass({ currentUserId }) {
-  const servicosQuery = useAdminPanPassServicos();
-  const acessosQuery = useAdminPanPassAcessos();
-  const colaboradoresQuery = useColaboradores(currentUserId, { summaryOnly: true });
-  const [modal, setModal] = useState(null);
-  const [excluindo, setExcluindo] = useState(null);
-  const [busca, setBusca] = useState("");
-  const [filtroColaboradorId, setFiltroColaboradorId] = useState(null);
-  const [filtroDataDe, setFiltroDataDe] = useState("");
-  const [filtroDataAte, setFiltroDataAte] = useState("");
-  const [buscaAuditoria, setBuscaAuditoria] = useState("");
-  // Instante fixo da montagem: a janela de "7 dias" não pode mudar a cada render.
-  const [montadoEm] = useState(() => Date.now());
-
-  // Os `|| []` viram useMemo próprios: sem isso a identidade muda a cada render
-  // e invalida os useMemo abaixo.
-  const servicosTodos = useMemo(() => servicosQuery.data || [], [servicosQuery.data]);
-  const acessos = useMemo(() => acessosQuery.data || [], [acessosQuery.data]);
-  const colaboradores = useMemo(() => colaboradoresQuery.data || [], [colaboradoresQuery.data]);
-  const colaboradoresPorId = useMemo(
-    () => new Map(colaboradores.map((c) => [c.id, c])),
-    [colaboradores],
-  );
-
-  const servicos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return servicosTodos;
-    return servicosTodos.filter((s) =>
-      `${s.nome} ${s.categoria || ""} ${s.usuario}`.toLowerCase().includes(termo),
-    );
-  }, [servicosTodos, busca]);
-
-  const acessosFiltrados = useMemo(() => {
-    // Até inclui o dia inteiro: comparação por string yyyy-mm-dd evita fuso
-    // horário estragar o "hoje" do filtro.
-    const dataDe = filtroDataDe || null;
-    const dataAte = filtroDataAte || null;
-    const termo = buscaAuditoria.trim().toLowerCase();
-    return acessos.filter((a) => {
-      if (filtroColaboradorId && a.colaborador_id !== filtroColaboradorId) return false;
-      const dia = a.created_at.slice(0, 10);
-      if (dataDe && dia < dataDe) return false;
-      if (dataAte && dia > dataAte) return false;
-      if (termo) {
-        const alvo = `${a.colaborador?.nome || ""} ${a.servico?.nome || ""} ${a.ip || ""}`.toLowerCase();
-        if (!alvo.includes(termo)) return false;
-      }
-      return true;
-    });
-  }, [acessos, filtroColaboradorId, filtroDataDe, filtroDataAte, buscaAuditoria]);
-
-  const stats = useMemo(() => {
-    const seteDias = montadoEm - 7 * 24 * 60 * 60 * 1000;
-    return {
-      ativos: servicosTodos.filter((s) => s.ativo).length,
-      total: servicosTodos.length,
-      recentes: acessos.filter((a) => new Date(a.created_at).getTime() >= seteDias).length,
-      falhas: acessos.filter((a) => !a.sucesso).length,
-    };
-  }, [servicosTodos, acessos, montadoEm]);
-
-  const baixarCsv = () => {
-    const linhas = [
-      ["Data", "Colaborador", "Servico", "Acao", "Sucesso", "IP"].join(";"),
-      ...acessosFiltrados.map((a) =>
-        [
-          formatarData(a.created_at),
-          a.colaborador?.nome || "-",
-          a.servico?.nome || "-",
-          ACAO[a.acao]?.label || a.acao,
-          a.sucesso ? "sim" : "nao",
-          a.ip || "-",
-        ].join(";"),
-      ),
-    ];
-    const url = URL.createObjectURL(
-      new Blob([linhas.join("\n")], { type: "text/csv;charset=utf-8" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `panpass-acessos-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="fade-up pp-admin">
-      <header className="pp-hero">
-        <div className="pp-hero-texto">
-          <span className="pp-hero-selo"><ShieldCheck size={12} /> Cofre auditado</span>
-          <h2 className="pp-hero-titulo">PanPass</h2>
-          <p className="pp-hero-sub">
-            Credenciais dos serviços contratados. As senhas ficam cifradas no banco e só
-            saem por função autenticada — cada consulta vira registro.
-          </p>
-        </div>
-        <div className="pp-stats">
-          <StatTile Icon={KeyRound} valor={stats.ativos} rotulo="serviços ativos" />
-          <StatTile Icon={Activity} valor={stats.recentes} rotulo="consultas em 7 dias" />
-          <StatTile
-            Icon={AlertTriangle}
-            valor={stats.falhas}
-            rotulo="tentativas negadas"
-            tom={stats.falhas > 0 ? "alerta" : null}
-          />
-        </div>
-      </header>
-
-      <section className="pp-secao">
-        <div className="pp-secao-cabeca">
-          <div>
-            <h3 className="pp-secao-titulo">Serviços</h3>
-            <span className="pp-secao-sub">
-              {stats.total} {stats.total === 1 ? "cadastrado" : "cadastrados"}
-            </span>
-          </div>
-          <div className="pp-secao-acoes">
-            <div className="pp-busca">
-              <Search size={14} />
-              <input
-                placeholder="Buscar serviço..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
-            <button className="btn-primary pp-btn-novo" onClick={() => setModal(VAZIO)}>
-              <Plus size={14} /> Novo serviço
-            </button>
-          </div>
-        </div>
-
-        {servicos.length === 0 ? (
-          <div className="pp-vazio">
-            <span className="pp-vazio-icone"><KeyRound size={20} /></span>
-            <div className="pp-vazio-titulo">
-              {busca ? "Nenhum serviço encontrado" : "Nenhum serviço cadastrado"}
-            </div>
-            <div className="pp-vazio-sub">
-              {busca
-                ? "Tente outro termo de busca."
-                : "Cadastre o primeiro serviço para a equipe parar de pedir senha no chat."}
-            </div>
-          </div>
-        ) : (
-          <div className="pp-servicos-grid">
-            {servicos.map((s) => (
-              <ServicoCard
-                key={s.id}
-                servico={s}
-                onEditar={(sv) =>
-                  setModal({ ...VAZIO, ...sv, senha: "", restrito_a: sv.restrito_a || [] })
-                }
-                onExcluir={setExcluindo}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="pp-secao">
-        <div className="pp-secao-cabeca">
-          <div>
-            <h3 className="pp-secao-titulo">Auditoria</h3>
-            <span className="pp-secao-sub">
-              últimos 30 dias · {acessosFiltrados.length} {acessosFiltrados.length === 1 ? "registro" : "registros"}
-            </span>
-          </div>
-          <div className="pp-secao-acoes">
-            <div className="pp-busca">
-              <Search size={14} />
-              <input
-                placeholder="Buscar por nome, serviço ou IP..."
-                value={buscaAuditoria}
-                onChange={(e) => setBuscaAuditoria(e.target.value)}
-              />
-            </div>
-            <div className="pp-filtro-data">
-              <div className="form-group">
-                <label className="form-label">DE</label>
-                <PanDatePicker
-                  value={filtroDataDe}
-                  onChange={setFiltroDataDe}
-                  maxValue={filtroDataAte}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">ATÉ</label>
-                <PanDatePicker
-                  value={filtroDataAte}
-                  onChange={setFiltroDataAte}
-                  minValue={filtroDataDe}
-                />
-              </div>
-            </div>
-            <FiltroColaborador
-              colaboradores={colaboradores}
-              selecionadoId={filtroColaboradorId}
-              onChange={setFiltroColaboradorId}
-            />
-            <button className="btn-ghost pp-btn-csv" onClick={baixarCsv} disabled={acessosFiltrados.length === 0}>
-              <Download size={14} /> CSV
-            </button>
-          </div>
-        </div>
-
-        {acessosFiltrados.length === 0 ? (
-          <div className="pp-vazio">
-            <span className="pp-vazio-icone"><Activity size={20} /></span>
-            <div className="pp-vazio-titulo">Nenhum acesso registrado</div>
-            <div className="pp-vazio-sub">Toda consulta de credencial aparece aqui, com autor, horário e IP.</div>
-          </div>
-        ) : (
-          <ul className="pp-log">
-            {acessosFiltrados.map((a) => {
-              const verbo = ACAO_VERBO[a.acao] || "acessou";
-              const colaboradorAvatar = colaboradoresPorId.get(a.colaborador_id) || {
-                nome: a.colaborador?.nome,
-              };
-              return (
-                <li key={a.id} className={`pp-log-item ${a.sucesso ? "" : "is-falha"}`}>
-                  <Avatar col={colaboradorAvatar} size={34} />
-                  <div className="pp-log-corpo">
-                    <div className="pp-log-linha">
-                      <strong>{a.colaborador?.nome || "Colaborador removido"}</strong>
-                      <span className="pp-log-conector">{a.sucesso ? verbo : `tentou ${verbo}`}</span>
-                      <strong className="pp-log-servico">{a.servico?.nome || "serviço removido"}</strong>
-                    </div>
-                    {!a.sucesso && (
-                      <div className="pp-log-detalhe">
-                        <AlertTriangle size={11} /> Negado — {a.detalhe || "sem detalhe"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="pp-log-meta">
-                    <span className="pp-log-quando">
-                      <Clock size={11} />
-                      {formatarData(a.created_at)}
-                    </span>
-                    {a.ip && (
-                      <span className="pp-log-ip">
-                        <Globe2 size={10} />
-                        {a.ip}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      {modal && (
-        <ServicoModal inicial={modal} colaboradores={colaboradores} onFechar={() => setModal(null)} />
-      )}
-      {excluindo && (
-        <ConfirmarExclusao servico={excluindo} onFechar={() => setExcluindo(null)} />
-      )}
-    </div>
-  );
-}

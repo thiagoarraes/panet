@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
 
 const validatePassword = (password) => {
@@ -11,6 +12,7 @@ const validatePassword = (password) => {
 };
 
 export function PrimeiroAcessoPage({ onConcluir, theme }) {
+  const navigate = useNavigate();
   const [nova, setNova] = useState("");
   const [confirma, setConfirma] = useState("");
   const [erro, setErro] = useState("");
@@ -38,6 +40,10 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
       setErro("");
       await onConcluir(nova);
       setOk(true);
+      // O texto ja diz "Redirecionando...": aqui esta o navigate que faltava
+      // -- antes so trocava um estado (tela) que nao controla mais as rotas
+      // desde a migracao para react-router, entao a tela ficava presa aqui.
+      setTimeout(() => navigate("/", { replace: true }), 700);
     } catch (err) {
       setErro(err?.message || "Não foi possível atualizar a senha.");
     } finally {

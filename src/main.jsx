@@ -3,6 +3,7 @@
 import "./styles/heroui.css";
 import "./styles/global.css";
 import React from "react";
+import { BrowserRouter } from "react-router-dom";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider, Toast } from "@heroui/react";
@@ -29,7 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <I18nProvider locale="pt-BR">
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary mensagem="Não foi possível carregar o Panet. Recarregue a página.">
-        <App />
+        <BrowserRouter><App /></BrowserRouter>
       </ErrorBoundary>
       {/* Fila unica de toasts. Fica na raiz, fora do ErrorBoundary e do
           AuthProvider, para continuar de pe mesmo se uma pagina quebrar.

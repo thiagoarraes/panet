@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Settings, ChevronDown, ChevronUp, User, Sun, Moon, LogOut } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Avatar } from "./Avatar";
 import { useAuth } from "../context/AuthContext.jsx";
 import { NAV_ITEMS, PAGE_PATHS } from "../lib/router.js";
 
 export function Sidebar() {
   const {
-    pagina, navigateTo,
     isAdmin,
     eu, theme,
     handleToggleTheme, handleLogout,
-    mobileNavOpen,
+    mobileNavOpen, setMobileNavOpen
   } = useAuth();
+  
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -37,30 +40,35 @@ export function Sidebar() {
 
       <div className="nav-section">
         <div className="nav-label">MENU</div>
-        {NAV_ITEMS.map((n) => (
-          <button
-            key={n.id}
-            data-icon={n.id}
-            className={`nav-item ${pagina === n.id || (n.id === "postagens" && pagina === "post_detalhe") ? "active" : ""}`}
-            onClick={() => navigateTo(n.id)}
-          >
-            <span className="nav-icon"><n.icon size={16} /></span>
-            {n.label}
-          </button>
-        ))}
+        {NAV_ITEMS.map((n) => {
+          const isActive = location.pathname === PAGE_PATHS[n.id] || (n.id === "postagens" && location.pathname.startsWith("/posts/")) || (n.id === "dashboard" && location.pathname === "/");
+          return (
+            <NavLink
+              key={n.id}
+              to={PAGE_PATHS[n.id]}
+              data-icon={n.id}
+              className={`nav-item ${isActive ? "active" : ""}`}
+              onClick={() => { if (setMobileNavOpen) setMobileNavOpen(false); }}
+            >
+              <span className="nav-icon"><n.icon size={16} /></span>
+              {n.label}
+            </NavLink>
+          );
+        })}
       </div>
 
       {isAdmin && (
         <div className="nav-section">
           <div className="nav-label">Administração</div>
-          <button
+          <NavLink
+            to={PAGE_PATHS.admin}
             data-icon="admin"
-            className={`nav-item ${pagina === "admin" ? "active" : ""}`}
-            onClick={() => navigateTo("admin", "colaboradores", { path: PAGE_PATHS.admin })}
+            className={({ isActive }) => `nav-item ${isActive || location.pathname.startsWith("/admin") ? "active" : ""}`}
+            onClick={() => { if (setMobileNavOpen) setMobileNavOpen(false); }}
           >
             <span className="nav-icon"><Settings size={16} /></span>
             Painel Administrativo
-          </button>
+          </NavLink>
         </div>
       )}
 
@@ -70,7 +78,7 @@ export function Sidebar() {
             <button
               className="user-menu-item"
               style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-              onClick={() => { navigateTo("perfil"); setUserMenuOpen(false); }}
+              onClick={() => { navigate("/perfil"); setUserMenuOpen(false); if (setMobileNavOpen) setMobileNavOpen(false); }}
             >
               <User size={14} />
               Editar perfil
