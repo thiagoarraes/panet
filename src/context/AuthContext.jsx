@@ -5,7 +5,6 @@ import { supabase, isSupabaseEnabled, SUPABASE_URL, SUPABASE_ANON_KEY } from "..
 import { USE_SECURE_COOKIES, apiLogin, apiLogout, apiGetSession, apiSyncSession } from "../lib/authApi.js";
 import { getAvatarStoragePathFromUrl, optimizeImageToWebp } from "../lib/imageUtils.js";
 import { timeQuery } from "../lib/queryTiming.js";
-import { toPostSlug } from "../lib/postRouting.js";
 import {
   AUTH_TIMEOUT_MS,
   PROFILE_DEDUP_WINDOW_MS,
@@ -23,7 +22,6 @@ import {
   writeCachedProfile,
   toAvatar,
 } from "../lib/authUtils.js";
-import { PAGE_PATHS, ADMIN_TAB_PATHS, resolveRoute } from "../lib/router.js";
 import { getDashboardSnapshotQueryOptions } from "../hooks/queries/useDashboardSnapshot.js";
 import { DASHBOARD_SNAPSHOT_INITIAL_LIMITS, DASHBOARD_SNAPSHOT_FULL_LIMITS } from "../lib/dashboardLimits.js";
 
@@ -67,11 +65,7 @@ export function AuthProvider({ children }) {
   const queryClient = useQueryClient();
 
   // ─── State ─────────────────────────────────────────────────────────────────
-  const [tela, setTela] = useState("login");
-  const [pagina, setPagina] = useState("dashboard");
-  const [adminAba, setAdminAba] = useState("colaboradores");
-  const [postSlug, setPostSlug] = useState("");
-  const [authLoading, setAuthLoading] = useState(isSupabaseEnabled);
+  const [tela, setTela] = useState("login");  const [authLoading, setAuthLoading] = useState(isSupabaseEnabled);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [sessionUserId, setSessionUserId] = useState(null);
   const [adminServerConfirmed, setAdminServerConfirmed] = useState(false);
@@ -97,27 +91,6 @@ export function AuthProvider({ children }) {
     return { ...mockMe, id: effectiveUserId || mockMe.id };
   }, [currentProfile, effectiveUserId]);
   const isAdmin = currentProfile?.perfil === "admin";
-
-  // ─── Navigation ────────────────────────────────────────────────────────────
-  const getPathForState = useCallback((nextPagina, nextAdminAba) => {
-    if (nextPagina === "admin") return ADMIN_TAB_PATHS[nextAdminAba] || PAGE_PATHS.admin;
-    return PAGE_PATHS[nextPagina] || PAGE_PATHS.dashboard;
-  }, []);
-
-  const navigateTo = useCallback((nextPagina, nextAdminAba, options = {}) => {
-    const aba = nextAdminAba || adminAba;
-    setPagina(nextPagina);
-    if (nextPagina === "post_detalhe") setPostSlug(String(options.postSlug || ""));
-    else setPostSlug("");
-    setMobileNavOpen(false);
-    if (nextPagina === "admin") setAdminAba(aba);
-    const nextPath = options.path || getPathForState(nextPagina, aba);
-    if (typeof window !== "undefined" && window.location.pathname !== nextPath) {
-      if (options.replace) window.history.replaceState({}, "", nextPath);
-      else window.history.pushState({}, "", nextPath);
-    }
-  }, [adminAba, getPathForState]);
-
   // ─── Profile loader ────────────────────────────────────────────────────────
   const loadProfileAndRoute = useCallback(async (activeSession) => {
     if (!activeSession?.user?.id) {
@@ -390,20 +363,7 @@ export function AuthProvider({ children }) {
 
   // ─── Route resolution ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (tela !== "app" || typeof window === "undefined") return;
-    const applyLocation = () => {
-      const { pagina: nextPagina, adminAba: nextAdminAba, known, postSlug: nextPostSlug } = resolveRoute(window.location.pathname);
-      if (!known) { navigateTo("dashboard", "colaboradores", { replace: true }); return; }
-      if (nextPagina === "admin" && !isAdmin) { navigateTo("dashboard", "colaboradores", { replace: true }); return; }
-      if (nextPagina === "admin" && !adminServerConfirmed) { setPagina("dashboard"); return; }
-      setPagina(nextPagina);
-      setAdminAba(nextAdminAba);
-      setPostSlug(nextPagina === "post_detalhe" ? String(nextPostSlug || "") : "");
-    };
-    applyLocation();
-    window.addEventListener("popstate", applyLocation);
-    return () => window.removeEventListener("popstate", applyLocation);
-  }, [isAdmin, adminServerConfirmed, navigateTo, tela]);
+    if (tela !== "app" || typeof window === "undefined") return;  }, [isAdmin, adminServerConfirmed, tela]);
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -610,13 +570,6 @@ export function AuthProvider({ children }) {
     writeCachedProfile(updatedProfile);
     queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
   };
-
-  const handleOpenPost = (post) => {
-    const slug = toPostSlug(post?.titulo || "");
-    if (!slug) return;
-    navigateTo("post_detalhe", "colaboradores", { path: `/${slug}`, postSlug: slug });
-  };
-
   const handleLogout = (notice = "") => {
     setSessionExpiredNotice(notice);
     initialDataLoadRef.current = { userId: null, at: 0 };
@@ -633,11 +586,9 @@ export function AuthProvider({ children }) {
     setCurrentProfile(null);
     writeCachedProfile(null);
     setAdminServerConfirmed(false);
-    setTela("login");
-    setPagina("dashboard");
-    setAdminAba("colaboradores");
+    setTela("login");    
     setMobileNavOpen(false);
-    if (typeof window !== "undefined") window.history.replaceState({}, "", PAGE_PATHS.dashboard);
+    
     if (isSupabaseEnabled) {
       supabase.auth.signOut({ scope: "local" }).catch(() => {});
       setTimeout(() => { supabase.auth.signOut().catch(() => {}); }, 0);
@@ -663,14 +614,13 @@ export function AuthProvider({ children }) {
 
   // ─── Context value ─────────────────────────────────────────────────────────
   const value = {
-    tela, pagina, adminAba, postSlug,
     authLoading, currentProfile, sessionUserId, adminServerConfirmed, sessionExpiredNotice,
     mobileNavOpen, setMobileNavOpen, theme,
     eu, isAdmin, effectiveUserId,
-    navigateTo,
+    
     handleLogin, handleLogout,
     handleConcluirPrimeiroAcesso, handleSalvarPerfil,
-    handleOpenPost, handleToggleTheme,
+     handleToggleTheme,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
