@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Heart, MessageCircle, Send, Pencil, Trash2 } from "lucide-react";
 import { Avatar } from "../components/Avatar";
 import { RichContent } from "../components/RichContent";
@@ -51,10 +52,14 @@ const daysUntilBirthday = (isoDate) => {
 export function PostDetalhePage({
   currentUser,
   currentUserId,
-  postSlug,
   onOpenAniversarios,
   onOpenFolgas,
 }) {
+  // O route param vem da rota "posts/:postSlug" (Layout.jsx). Antes era prop,
+  // sobra do estado tela/pagina/postSlug de antes da migracao pro
+  // react-router -- nada montava a rota passando postSlug, entao a pagina
+  // nunca encontrava o post (comparava contra undefined).
+  const { postSlug } = useParams();
   const [texto, setTexto] = useState("");
   const [loadingComentario, setLoadingComentario] = useState(false);
   const [editandoId, setEditandoId] = useState(null);

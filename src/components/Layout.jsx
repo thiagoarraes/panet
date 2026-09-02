@@ -1,12 +1,13 @@
 import { Suspense, lazy } from "react";
 import { Menu, X } from "lucide-react";
+import { Routes, Route, Outlet, useNavigate, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthContext.jsx";
 import { AppShellSkeleton } from "./AppShellSkeleton.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { LoginPage } from "../pages/LoginPage";
 import { PrimeiroAcessoPage } from "../pages/PrimeiroAcesso";
+import { toPostSlug } from "../lib/postRouting.js";
 
-// ─── Lazy pages ───────────────────────────────────────────────────────────────
 const DashboardPage     = lazy(() => import("../pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const PostagensPage     = lazy(() => import("../pages/PostagensPage").then((m) => ({ default: m.PostagensPage })));
 const PostDetalhePage   = lazy(() => import("../pages/PostDetalhePage").then((m) => ({ default: m.PostDetalhePage })));
@@ -28,58 +29,11 @@ const PageFallback = () => (
   </div>
 );
 
-// ─── Inner app — precisa do AuthProvider acima ─────────────────────────────────
-function AppContent() {
+function AppShell() {
   const {
-    tela, pagina, adminAba, postSlug,
-    authLoading, currentProfile, theme, sessionExpiredNotice,
-    eu, effectiveUserId,
+    theme,
     mobileNavOpen, setMobileNavOpen,
-    navigateTo,
-    handleLogin, handleConcluirPrimeiroAcesso, handleSalvarPerfil, handleOpenPost,
   } = useAuth();
-
-  if (authLoading) return <AppShellSkeleton theme={theme} />;
-  if (tela === "login") return <LoginPage onLogin={handleLogin} theme={theme} notice={sessionExpiredNotice} />;
-  if (tela === "primeiro_acesso") return <PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} theme={theme} />;
-
-  const PAGINAS = {
-    dashboard: (
-      <DashboardPage
-        onOpenPost={handleOpenPost}
-        onOpenAniversarios={() => navigateTo("aniversarios")}
-        onOpenFolgas={() => navigateTo("ferias")}
-        currentUser={eu}
-        currentUserId={effectiveUserId}
-      />
-    ),
-    postagens:    <PostagensPage onOpen={handleOpenPost} currentUserId={effectiveUserId} />,
-    post_detalhe: (
-      <PostDetalhePage
-        currentUser={eu}
-        currentUserId={effectiveUserId}
-        postSlug={postSlug}
-        onOpenAniversarios={() => navigateTo("aniversarios")}
-        onOpenFolgas={() => navigateTo("ferias")}
-      />
-    ),
-    colaboradores: <ColaboradoresPage currentUserId={effectiveUserId} currentProfile={currentProfile} />,
-    aniversarios:  <AniversariosPage currentUserId={effectiveUserId} />,
-    ferias:        <FeriasPage currentUserId={effectiveUserId} />,
-    presencial:    <PresencialPage currentUserId={effectiveUserId} />,
-    galeria:       <GaleriaPage currentUserId={effectiveUserId} />,
-    jogos:         <JogosPage currentUser={eu} currentUserId={effectiveUserId} />,
-    panpass:       <PanPassPage />,
-    perfil:        <PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />,
-    admin: (
-      <AdminPage
-        aba={adminAba}
-        onChangeAba={(aba) => navigateTo("admin", aba)}
-        currentProfile={currentProfile}
-        currentUserId={effectiveUserId}
-      />
-    ),
-  };
 
   return (
     <>
@@ -103,14 +57,109 @@ function AppContent() {
           </button>
         </div>
         <div className="content">
-          <Suspense fallback={<PageFallback />}>{PAGINAS[pagina]}</Suspense>
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
       </div>
     </>
   );
 }
 
-// ─── Root — mantém compatibilidade com panet.jsx → App.jsx → main.jsx ─────────
+function PrivateRoute({ children }) {
+  const { authLoading, currentProfile, sessionUserId, theme } = useAuth();
+  
+  if (authLoading) return <AppShellSkeleton theme={theme} />;
+  
+  if (!currentProfile && !sessionUserId) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Primeiro acesso flow: manda para a troca de senha obrigatoria quem ainda
+  // nao concluiu (true), nao quem ja concluiu. Estava invertido -- deixava
+  // colaborador novo (senha temporaria) entrar direto, e prendia quem acabou
+  // de trocar a senha num loop de volta pra /primeiro-acesso.
+  if (currentProfile && currentProfile.primeiro_acesso === true) {
+    return <Navigate to="/primeiro-acesso" replace />;
+  }
+
+  return children;
+}
+
+function AppContent() {
+  const {
+    authLoading, currentProfile, theme, sessionExpiredNotice,
+    eu, effectiveUserId,
+    handleLogin, handleConcluirPrimeiroAcesso, handleSalvarPerfil,
+  } = useAuth();
+
+  const navigate = useNavigate();
+
+  // handleOpenPost saiu do AuthContext na migracao pro react-router (ele so
+  // fazia navigateTo com o estado antigo tela/pagina/postSlug). O componente
+  // que ja tem `navigate` em escopo assume o proprio roteamento.
+  const handleOpenPost = (post) => {
+    const slug = toPostSlug(post?.titulo || "");
+    if (!slug) return;
+    navigate(`/posts/${slug}`);
+  };
+
+  if (authLoading) return <AppShellSkeleton theme={theme} />;
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage onLogin={handleLogin} theme={theme} notice={sessionExpiredNotice} />} />
+      <Route path="/primeiro-acesso" element={<PrimeiroAcessoPage onConcluir={handleConcluirPrimeiroAcesso} theme={theme} />} />
+      
+      <Route
+        path="/"
+        element={
+          <PrivateRoute>
+            <AppShell />
+          </PrivateRoute>
+        }
+      >
+        <Route index element={
+          <DashboardPage
+            onOpenPost={handleOpenPost}
+            onOpenAniversarios={() => navigate("/aniversarios")}
+            onOpenFolgas={() => navigate("/folgas")}
+            currentUser={eu}
+            currentUserId={effectiveUserId}
+          />
+        } />
+        <Route path="pannews" element={<PostagensPage onOpen={handleOpenPost} currentUserId={effectiveUserId} />} />
+        <Route path="posts/:postSlug" element={
+          <PostDetalhePage
+            currentUser={eu}
+            currentUserId={effectiveUserId}
+            onOpenAniversarios={() => navigate("/aniversarios")}
+            onOpenFolgas={() => navigate("/folgas")}
+          />
+        } />
+        <Route path="colaboradores" element={<ColaboradoresPage currentUserId={effectiveUserId} currentProfile={currentProfile} />} />
+        <Route path="aniversarios" element={<AniversariosPage currentUserId={effectiveUserId} />} />
+        <Route path="folgas" element={<FeriasPage currentUserId={effectiveUserId} />} />
+        <Route path="eventos" element={<PresencialPage currentUserId={effectiveUserId} />} />
+        <Route path="galerias/*" element={<GaleriaPage currentUserId={effectiveUserId} />} />
+        <Route path="jogos" element={<JogosPage currentUser={eu} currentUserId={effectiveUserId} />} />
+        <Route path="panpass" element={<PanPassPage />} />
+        <Route path="perfil" element={<PerfilPage profile={currentProfile} onSalvar={handleSalvarPerfil} />} />
+        
+        {/* The AdminPage will handle its own sub-routes or state for now, we just route everything under /admin/* to it */}
+        <Route path="admin/*" element={
+          <AdminPage
+            currentProfile={currentProfile}
+            currentUserId={effectiveUserId}
+          />
+        } />
+        
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  );
+}
+
 export default function PanetApp() {
   return (
     <AuthProvider>
