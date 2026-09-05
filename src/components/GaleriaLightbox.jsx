@@ -16,20 +16,21 @@ export function GaleriaLightbox({ eventoAberto, fotoIdx, onClose, onPrev, onNext
   if (!eventoAberto) return null;
 
   return (
-    <div className="lightbox" onClick={onClose}>
+    <div className="lightbox" role="presentation" onClick={onClose}>
       <button className="lightbox-close" onClick={onClose}>
         <X size={18} />
       </button>
       <button className="lightbox-prev lightbox-nav" onClick={(e) => { e.stopPropagation(); onPrev?.(); }}>
         <ChevronLeft size={20} />
       </button>
-      <img
-        key={fotoIdx}
-        className="lightbox-img"
-        src={eventoAberto.fotos[fotoIdx].src}
-        alt={eventoAberto.fotos[fotoIdx].legenda}
-        onClick={(e) => e.stopPropagation()}
-      />
+      <div className="lightbox-img-wrap" role="presentation" onClick={(e) => e.stopPropagation()}>
+        <img
+          key={fotoIdx}
+          className="lightbox-img"
+          src={eventoAberto.fotos[fotoIdx].src}
+          alt={eventoAberto.fotos[fotoIdx].legenda}
+        />
+      </div>
       <button className="lightbox-next lightbox-nav" onClick={(e) => { e.stopPropagation(); onNext?.(); }}>
         <ChevronRight size={20} />
       </button>
@@ -37,9 +38,17 @@ export function GaleriaLightbox({ eventoAberto, fotoIdx, onClose, onPrev, onNext
         <div>{eventoAberto.fotos[fotoIdx].legenda}</div>
         <div>{fotoIdx + 1}/{eventoAberto.fotos.length}</div>
       </div>
-      <div className="lightbox-strip" onClick={(e) => e.stopPropagation()}>
+      <div className="lightbox-strip" role="presentation" onClick={(e) => e.stopPropagation()}>
         {eventoAberto.fotos.map((f, i) => (
-          <img key={i} src={f.src} className={`lightbox-thumb ${i === fotoIdx ? "active" : ""}`} onClick={() => onSetFotoIdx?.(i)} alt="" />
+          <button
+            key={i}
+            type="button"
+            className="lightbox-thumb-btn"
+            onClick={() => onSetFotoIdx?.(i)}
+            aria-label={`Foto ${i + 1}`}
+          >
+            <img src={f.src} className={`lightbox-thumb ${i === fotoIdx ? "active" : ""}`} alt="" />
+          </button>
         ))}
       </div>
     </div>

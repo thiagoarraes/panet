@@ -84,6 +84,7 @@ export function AdminPage({
         style={{ marginBottom: 24 }}
         role="tablist"
         aria-label="Seções do painel administrativo"
+        tabIndex={-1}
         onKeyDown={(e) => {
           const passo = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
           if (!passo && e.key !== "Home" && e.key !== "End") return;

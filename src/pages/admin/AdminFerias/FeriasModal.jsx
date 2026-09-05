@@ -33,7 +33,7 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
 
           {sub === "dayoff" ? (
             <div className="form-group">
-              <label className="form-label">DAY OFF *</label>
+              <span className="form-label">DAY OFF *</span>
               <PanDatePicker
                 value={form.inicio}
                 onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso, fim: iso }))}
@@ -42,14 +42,14 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
           ) : (
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label">INÍCIO *</label>
+                <span className="form-label">INÍCIO *</span>
                 <PanDatePicker
                   value={form.inicio}
                   onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso }))}
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">FIM *</label>
+                <span className="form-label">FIM *</span>
                 <PanDatePicker
                   value={form.fim}
                   onChange={(iso) => setForm((prev) => ({ ...prev, fim: iso }))}
@@ -61,8 +61,9 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
 
           {sub === "dayoff" && (
             <div className="form-group">
-              <label className="form-label">MOTIVO</label>
+              <label className="form-label" htmlFor="ferias-motivo">MOTIVO</label>
               <input
+                id="ferias-motivo"
                 className="form-input"
                 placeholder="Ex: consulta, compromisso pessoal, resolver documento..."
                 value={form.motivoReal || ""}
@@ -76,8 +77,9 @@ export function FeriasModal({ modal, sub, form, setForm, saving, colaboradoresOp
 
           {sub === "ferias" && (
             <div className="form-group">
-              <label className="form-label">STATUS</label>
+              <label className="form-label" htmlFor="ferias-status">STATUS</label>
               <select
+                id="ferias-status"
                 className="form-input"
                 value={form.status || "marcado"}
                 onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}

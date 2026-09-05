@@ -56,9 +56,9 @@ export function PostCard({ post, onOpen, curtido, onToggleCurtida, showVerMais =
             <div className="post-meta" style={{ marginBottom: 4 }}>
               <Badge cat={post.categoria} />
             </div>
-            <div className="post-title" onClick={() => onOpen(post)} style={{ marginBottom: 0 }}>
+            <button type="button" className="post-title" onClick={() => onOpen(post)} style={{ marginBottom: 0 }}>
               {post.titulo}
-            </div>
+            </button>
           </div>
         </div>
         <div className="post-desc">{stripHtml(post.descricao)}</div>

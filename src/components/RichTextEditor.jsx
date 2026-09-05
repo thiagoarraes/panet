@@ -13,6 +13,16 @@ import { PanTooltip } from "./ui/PanTooltip";
 
 const EmojiPicker = lazy(() => import("emoji-picker-react"));
 
+// Só aceita esquemas navegáveis — bloqueia javascript:/data: digitados no modal de link.
+function safeUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:", "mailto:"].includes(parsed.protocol) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 const EMOJI_W = 320;
 const EMOJI_H = 380;
 const GIF_W = 300;
@@ -184,9 +194,12 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
     const url = linkUrl.trim();
     if (!url) {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
-    } else {
-      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+      setLinkModalOpen(false);
+      return;
     }
+    const safeHref = safeUrl(url);
+    if (!safeHref) return;
+    editor.chain().focus().extendMarkRange("link").setLink({ href: safeHref }).run();
     setLinkModalOpen(false);
   };
 
@@ -352,11 +365,11 @@ export function RichTextEditor({ value = "", onChange, placeholder = "Escreva aq
             </Modal.Header>
             <Modal.Body>
               <div className="form-group">
-                <label className="form-label">URL</label>
+                <label className="form-label" htmlFor="rte-link-url">URL</label>
                 <input
+                  id="rte-link-url"
                   className="form-input"
                   type="url"
-                  autoFocus
                   placeholder="https://..."
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}

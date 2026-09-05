@@ -86,15 +86,15 @@ function SecretSantaSuggestionModal({ state, onClose, onChange, onSubmit, isSavi
           </div>
 
           <div className="presencial-suggestion-field">
-            <label className="form-label">SUGESTÃO DE PRESENTE</label>
+            <label className="form-label" htmlFor="presencial-sugestao">SUGESTÃO DE PRESENTE</label>
             <textarea
+              id="presencial-sugestao"
               className="form-input presencial-suggestion-textarea"
               value={state.draft}
               onChange={(e) => onChange(e.target.value)}
               placeholder="Ex: gosto de itens de papelaria, canecas criativas, chocolate amargo..."
               rows={5}
               maxLength={SECRET_SANTA_SUGGESTION_LIMIT}
-              autoFocus
             />
             <div className="presencial-suggestion-meta">
               <span>

@@ -188,7 +188,7 @@ export function AdminPanPass({ currentUserId }) {
             </div>
             <div className="pp-filtro-data">
               <div className="form-group">
-                <label className="form-label">DE</label>
+                <span className="form-label">DE</span>
                 <PanDatePicker
                   value={filtroDataDe}
                   onChange={setFiltroDataDe}
@@ -196,7 +196,7 @@ export function AdminPanPass({ currentUserId }) {
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">ATÉ</label>
+                <span className="form-label">ATÉ</span>
                 <PanDatePicker
                   value={filtroDataAte}
                   onChange={setFiltroDataAte}

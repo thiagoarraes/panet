@@ -52,8 +52,9 @@ export function LoginPage({ onLogin, theme, notice }) {
         {notice && <div style={{ color: "var(--warning, #b45309)", fontSize: 13, marginBottom: 14 }}>{notice}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">SEU E-MAIL DA PAN</label>
+            <label className="form-label" htmlFor="login-email">SEU E-MAIL DA PAN</label>
             <input
+              id="login-email"
               className="form-input"
               type="email"
               placeholder="seu.nome@agenciapan.com"
@@ -66,8 +67,9 @@ export function LoginPage({ onLogin, theme, notice }) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">SENHA</label>
+            <label className="form-label" htmlFor="login-senha">SENHA</label>
             <input
+              id="login-senha"
               className="form-input"
               type="password"
               placeholder="••••••••"

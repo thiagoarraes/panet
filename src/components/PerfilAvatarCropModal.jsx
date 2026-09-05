@@ -71,8 +71,8 @@ export function PerfilAvatarCropModal({ open, avatarSrc, onClose, onApply, onErr
   };
 
   return (
-    <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
-      <div className="pan-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" role="presentation" style={{ alignItems: "center", justifyItems: "center" }} onClick={onClose}>
+      <div className="pan-modal" role="presentation" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Ajustar avatar</div>
           <button className="modal-close" onClick={onClose}>
@@ -94,8 +94,9 @@ export function PerfilAvatarCropModal({ open, avatarSrc, onClose, onApply, onErr
             />
           </div>
           <div style={{ marginTop: 14 }}>
-            <label className="form-label">ZOOM</label>
+            <label className="form-label" htmlFor="avatar-crop-zoom">ZOOM</label>
             <input
+              id="avatar-crop-zoom"
               type="range"
               min={1}
               max={3}

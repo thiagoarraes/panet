@@ -316,7 +316,6 @@ export function PostDetalhePage({
                                   if (e.key === "Enter") salvarEdicao();
                                   if (e.key === "Escape") cancelarEdicao();
                                 }}
-                                autoFocus
                               />
                               <div className="comment-edit-actions">
                                 <button className="btn-primary" style={{ fontSize: 11, padding: "4px 10px" }} onClick={salvarEdicao} disabled={loadingEdicao}>Salvar</button>

@@ -116,13 +116,13 @@ export function GaleriaPage({ currentUserId }) {
       ) : (
       <div className="galeria-grid stagger">
         {eventos.map((g) => (
-          <div key={g.id} className="galeria-card" onClick={() => abrirEvento(g, { syncUrl: true })}>
+          <button key={g.id} type="button" className="galeria-card" onClick={() => abrirEvento(g, { syncUrl: true })}>
             <img src={g.capa} alt={g.evento} />
             <div className="galeria-overlay">
               <div className="galeria-title">{g.evento}</div>
               <div className="galeria-sub">{g.mes} · {Array.isArray(g.fotos) ? g.fotos.length : 0} fotos</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
       )}

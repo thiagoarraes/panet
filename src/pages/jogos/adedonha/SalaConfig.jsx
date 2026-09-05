@@ -89,24 +89,24 @@ export function SalaConfig({ sala, jogadores, meuJogador, mut, onlineIds, onSair
           <div className="card-body" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 18 }}>
             <div className="ade-config-grid">
               <div className="ade-field">
-                <label>Rodadas</label>
-                <select value={config.rodadas} onChange={(e) => setCampo("rodadas", Number(e.target.value))}>
+                <label htmlFor="sala-config-rodadas">Rodadas</label>
+                <select id="sala-config-rodadas" value={config.rodadas} onChange={(e) => setCampo("rodadas", Number(e.target.value))}>
                   {RODADAS_OPCOES.map((n) => (
                     <option key={n} value={n}>{n} rodadas</option>
                   ))}
                 </select>
               </div>
               <div className="ade-field">
-                <label>Modo STOP</label>
-                <select value={config.modoStop} onChange={(e) => setCampo("modoStop", e.target.value)}>
+                <label htmlFor="sala-config-modo-stop">Modo STOP</label>
+                <select id="sala-config-modo-stop" value={config.modoStop} onChange={(e) => setCampo("modoStop", e.target.value)}>
                   {MODO_STOP_OPCOES.map((m) => (
                     <option key={m.id} value={m.id}>{m.label}</option>
                   ))}
                 </select>
               </div>
               <div className="ade-field">
-                <label>Tempo</label>
-                <select value={config.tempo} onChange={(e) => setCampo("tempo", e.target.value)}>
+                <label htmlFor="sala-config-tempo">Tempo</label>
+                <select id="sala-config-tempo" value={config.tempo} onChange={(e) => setCampo("tempo", e.target.value)}>
                   {TEMPO_OPCOES.map((t) => (
                     <option key={t.id} value={t.id}>{t.label} ({t.segundos}s)</option>
                   ))}

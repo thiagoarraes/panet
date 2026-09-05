@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser, Pencil, Trash2 } from "lucide-react";
 import { useCanvasBroadcast } from "../../../hooks/queries/useCanvasBroadcast.js";
 import { PanTooltip } from "../../../components/ui/PanTooltip";
@@ -73,11 +73,11 @@ export function GarticCanvas({ salaId, isDesenhista, enabled = true }) {
   });
 
   // Snapshot JPEG leve do canvas (efemero, via broadcast — nunca vai ao banco).
-  const emitirSnapshot = () => {
+  const emitirSnapshot = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     emitSync({ dataUrl: canvas.toDataURL("image/jpeg", 0.5) });
-  };
+  }, [emitSync]);
 
   // Inicializa o contexto e pinta o fundo.
   useEffect(() => {
@@ -99,8 +99,7 @@ export function GarticCanvas({ salaId, isDesenhista, enabled = true }) {
     }
     const t = setTimeout(() => emitSyncRequest(), 800);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, isDesenhista]);
+  }, [enabled, isDesenhista, emitirSnapshot, emitSyncRequest]);
 
   const pontoNormalizado = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();

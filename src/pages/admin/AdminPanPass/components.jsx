@@ -307,12 +307,12 @@ export function ServicoModal({ inicial, colaboradores, onFechar }) {
             <div className="pp-fieldset-titulo">Identificação</div>
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label">NOME *</label>
-                <input className="form-input" value={form.nome} onChange={set("nome")} required placeholder="Claude" />
+                <label className="form-label" htmlFor="pp-servico-nome">NOME *</label>
+                <input id="pp-servico-nome" className="form-input" value={form.nome} onChange={set("nome")} required placeholder="Claude" />
               </div>
               <div className="form-group">
-                <label className="form-label">URL DE LOGIN</label>
-                <input className="form-input" type="url" value={form.url_login} onChange={set("url_login")} placeholder="https://claude.ai/login" />
+                <label className="form-label" htmlFor="pp-servico-url-login">URL DE LOGIN</label>
+                <input id="pp-servico-url-login" className="form-input" type="url" value={form.url_login} onChange={set("url_login")} placeholder="https://claude.ai/login" />
               </div>
             </div>
           </div>
@@ -321,8 +321,8 @@ export function ServicoModal({ inicial, colaboradores, onFechar }) {
             <div className="pp-fieldset-titulo">Credencial</div>
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label">LOGIN / E-MAIL *</label>
-                <input className="form-input" value={form.usuario} onChange={set("usuario")} required />
+                <label className="form-label" htmlFor="pp-servico-usuario">LOGIN / E-MAIL *</label>
+                <input id="pp-servico-usuario" className="form-input" value={form.usuario} onChange={set("usuario")} required />
               </div>
               <div className="form-group">
                 <label className="form-label">
@@ -349,7 +349,7 @@ export function ServicoModal({ inicial, colaboradores, onFechar }) {
               onChange={(ids) => setForm((f) => ({ ...f, restrito_a: ids }))}
             />
 
-            <label className="pp-switch-linha">
+            <label className="pp-switch-linha" aria-label="Serviço ativo">
               <span className="pp-switch-texto">
                 <span className="pp-switch-titulo">Serviço ativo</span>
                 <span className="pp-switch-desc">

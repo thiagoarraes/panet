@@ -95,7 +95,18 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
 
   return (
     <>
-      <div
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          onSelectFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      <button
+        type="button"
         className={`upload-zone ${drag ? "drag" : ""}`}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
@@ -109,16 +120,6 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
           onSelectFile(e.dataTransfer.files?.[0]);
         }}
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            onSelectFile(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
         {value ? (
           <img src={value} alt="Imagem de destaque" className="upload-preview" />
         ) : (
@@ -130,11 +131,11 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
             <div style={{ fontSize: 12, color: "var(--border)", marginTop: 4 }}>JPG, PNG, WebP - otimizada em WebP automaticamente</div>
           </div>
         )}
-      </div>
+      </button>
 
       {cropModalOpen && (
-        <div className="modal-overlay" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setCropModalOpen(false)}>
-          <div className="pan-modal" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" role="presentation" style={{ alignItems: "center", justifyItems: "center" }} onClick={() => setCropModalOpen(false)}>
+          <div className="pan-modal" role="presentation" style={{ maxWidth: 680 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 17 }}>Ajustar imagem de destaque</div>
               <button className="modal-close" onClick={() => setCropModalOpen(false)}>
@@ -155,8 +156,9 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
                 />
               </div>
               <div style={{ marginTop: 14 }}>
-                <label className="form-label">ZOOM</label>
+                <label className="form-label" htmlFor="post-image-crop-zoom">ZOOM</label>
                 <input
+                  id="post-image-crop-zoom"
                   type="range"
                   min={1}
                   max={3}

@@ -59,8 +59,9 @@ export function AdminAusenciaModal({
           </div>
 
           <div className="form-group">
-            <label className="form-label">MOTIVO *</label>
+            <label className="form-label" htmlFor="ausencia-motivo">MOTIVO *</label>
             <input
+              id="ausencia-motivo"
               className="form-input"
               placeholder="Ex: Médico, problema no carro, buscar filho..."
               value={form.motivo || ""}
@@ -70,9 +71,9 @@ export function AdminAusenciaModal({
           </div>
 
           <div className="form-group admin-ausencia-panel">
-            <label className="form-label" style={{ marginBottom: 0 }}>
+            <span className="form-label" style={{ marginBottom: 0 }}>
               INÍCIO
-            </label>
+            </span>
             <div className="admin-ausencia-start-options">
               <label className={`admin-ausencia-return-option admin-ausencia-start-option ${!form.diaTodo ? "is-active" : ""}`}>
                 <input
@@ -98,7 +99,7 @@ export function AdminAusenciaModal({
 
             {form.diaTodo ? (
               <div className="admin-ausencia-inline-field">
-                <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
+                <span className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</span>
                 <PanDatePicker
                   value={form.inicio}
                   onChange={(iso) => setForm((prev) => ({ ...prev, inicio: iso }))}
@@ -107,7 +108,7 @@ export function AdminAusenciaModal({
             ) : (
               <div className="admin-ausencia-date-time-row">
                 <div className="admin-ausencia-inline-field">
-                  <label className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</label>
+                  <span className="form-label admin-ausencia-inline-label">DATA DE INÍCIO *</span>
                   <PanDatePicker
                     value={form.inicio}
                     onChange={(iso) =>
@@ -119,8 +120,9 @@ export function AdminAusenciaModal({
                   />
                 </div>
                 <div className="admin-ausencia-inline-field is-time">
-                  <label className="form-label admin-ausencia-inline-label">Hora</label>
+                  <label className="form-label admin-ausencia-inline-label" htmlFor="ausencia-inicio-hora">Hora</label>
                   <select
+                    id="ausencia-inicio-hora"
                     className="form-input"
                     value={inicioTimePart || "00:00"}
                     onChange={(event) =>
@@ -145,9 +147,9 @@ export function AdminAusenciaModal({
           </div>
 
           <div className="form-group admin-ausencia-panel">
-            <label className="form-label" style={{ marginBottom: 0 }}>
+            <span className="form-label" style={{ marginBottom: 0 }}>
               RETORNO
-            </label>
+            </span>
             <div className="admin-ausencia-return-options">
               <label className={`admin-ausencia-return-option ${form.tipoTempo === "especifico" ? "is-active" : ""}`}>
                 <input
@@ -177,9 +179,9 @@ export function AdminAusenciaModal({
               <>
                 {form.diaTodo ? (
                   <>
-                    <label className="form-label" style={{ marginBottom: 6 }}>
+                    <span className="form-label" style={{ marginBottom: 6 }}>
                       DATA DE RETORNO
-                    </label>
+                    </span>
                     <PanDatePicker
                       value={form.fim}
                       onChange={(iso) => setForm((prev) => ({ ...prev, fim: iso }))}
@@ -189,8 +191,8 @@ export function AdminAusenciaModal({
                 ) : (
                   <>
                     <div className="admin-ausencia-date-time-row admin-ausencia-date-time-head">
-                      <label className="form-label admin-ausencia-inline-label">DATA DE RETORNO</label>
-                      <label className="form-label admin-ausencia-inline-label">Hora</label>
+                      <span className="form-label admin-ausencia-inline-label">DATA DE RETORNO</span>
+                      <span className="form-label admin-ausencia-inline-label">Hora</span>
                     </div>
                     <div className="admin-ausencia-date-time-row">
                       <div className="admin-ausencia-inline-field">

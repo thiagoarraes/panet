@@ -240,10 +240,11 @@ export function PerfilPage({ profile, onSalvar }) {
           ))}
 
           <div className="form-group">
-            <label className="form-label">ANIVERSÁRIO (DIA E MÊS)</label>
+            <span className="form-label">ANIVERSÁRIO (DIA E MÊS)</span>
             <div className="grid-2 perfil-aniversario-grid">
               <select
                 className="form-input"
+                aria-label="Dia do aniversário"
                 value={form.aniversarioDia}
                 onChange={(e) => {
                   setIsDirty(true);
@@ -257,6 +258,7 @@ export function PerfilPage({ profile, onSalvar }) {
               </select>
               <select
                 className="form-input"
+                aria-label="Mês do aniversário"
                 value={form.aniversarioMes}
                 onChange={(e) => {
                   setIsDirty(true);

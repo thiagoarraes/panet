@@ -101,7 +101,7 @@ export function Sidebar() {
             </button>
           </div>
         )}
-        <div className="sidebar-user" onClick={() => setUserMenuOpen((prev) => !prev)}>
+        <button type="button" className="sidebar-user" onClick={() => setUserMenuOpen((prev) => !prev)}>
           <Avatar col={eu} size={34} />
           <div className="user-info">
             <div className="user-name">{eu.nome}</div>
@@ -110,7 +110,7 @@ export function Sidebar() {
           <span style={{ fontSize: 12, color: "var(--muted)" }}>
             {userMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
-        </div>
+        </button>
       </div>
     </nav>
   );

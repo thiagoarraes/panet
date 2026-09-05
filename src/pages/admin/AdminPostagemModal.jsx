@@ -26,12 +26,13 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
           </Modal.Header>
           <Modal.Body>
           <div className="form-group">
-            <label className="form-label">IMAGEM DE DESTAQUE</label>
+            <span className="form-label">IMAGEM DE DESTAQUE</span>
             <PostImageUploadCrop value={form.imagem} onChange={(v) => setForm((p) => ({ ...p, imagem: v }))} />
           </div>
           <div className="form-group">
-            <label className="form-label">TÍTULO *</label>
+            <label className="form-label" htmlFor="postagem-titulo">TÍTULO *</label>
             <input
+              id="postagem-titulo"
               className="form-input"
               value={form.titulo || ""}
               onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))}
@@ -40,15 +41,15 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
           </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">CATEGORIA</label>
-              <select className="form-input" value={form.categoria || "Notícia"} onChange={(e) => setForm((p) => ({ ...p, categoria: e.target.value }))}>
+              <label className="form-label" htmlFor="postagem-categoria">CATEGORIA</label>
+              <select id="postagem-categoria" className="form-input" value={form.categoria || "Notícia"} onChange={(e) => setForm((p) => ({ ...p, categoria: e.target.value }))}>
                 {categorias.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">DATA</label>
+              <span className="form-label">DATA</span>
               <PanDatePicker
                 value={form.data}
                 onChange={(iso) => setForm((p) => ({ ...p, data: iso }))}
@@ -56,7 +57,7 @@ export function AdminPostagemModal({ modal, form, setForm, setModal, onSalvar, s
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">DESCRIÇÃO *</label>
+            <span className="form-label">DESCRIÇÃO *</span>
             <RichTextEditor
               value={form.descricao || ""}
               onChange={(html) => setForm((p) => ({ ...p, descricao: html }))}

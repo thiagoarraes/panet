@@ -94,8 +94,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
         )}
 
         <div className="form-group">
-          <label className="form-label">NOME COMPLETO</label>
+          <label className="form-label" htmlFor="rh-nome-completo">NOME COMPLETO</label>
           <input
+            id="rh-nome-completo"
             className="form-input"
             value={form.nomeCompleto}
             onChange={(e) => setCampo("nomeCompleto", e.target.value)}
@@ -105,14 +106,14 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row">
           <div className="form-group">
-            <label className="form-label">DATA DE NASCIMENTO</label>
+            <span className="form-label">DATA DE NASCIMENTO</span>
             <PanDatePicker
               value={form.dataNascimento}
               onChange={(iso) => setCampo("dataNascimento", iso)}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">DATA DE ADMISSÃO</label>
+            <span className="form-label">DATA DE ADMISSÃO</span>
             <PanDatePicker
               value={form.dataAdmissao}
               onChange={(iso) => setCampo("dataAdmissao", iso)}
@@ -122,16 +123,18 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row">
           <div className="form-group">
-            <label className="form-label">RG</label>
+            <label className="form-label" htmlFor="rh-rg">RG</label>
             <input
+              id="rh-rg"
               className="form-input"
               value={form.rg}
               onChange={(e) => setCampo("rg", e.target.value)}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">CPF</label>
+            <label className="form-label" htmlFor="rh-cpf">CPF</label>
             <input
+              id="rh-cpf"
               className="form-input"
               value={form.cpf}
               onChange={(e) => setCampo("cpf", formatCpf(e.target.value))}
@@ -141,8 +144,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
         </div>
 
         <div className="form-group rh-row">
-          <label className="form-label">CNPJ</label>
+          <label className="form-label" htmlFor="rh-cnpj">CNPJ</label>
           <input
+            id="rh-cnpj"
             className="form-input"
             value={form.cnpj}
             onChange={(e) => setCampo("cnpj", formatCnpj(e.target.value))}
@@ -152,8 +156,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row--grupo">
           <div className="form-group">
-            <label className="form-label">E-MAIL PESSOAL</label>
+            <label className="form-label" htmlFor="rh-email-pessoal">E-MAIL PESSOAL</label>
             <input
+              id="rh-email-pessoal"
               className="form-input"
               type="email"
               value={form.emailPessoal}
@@ -161,8 +166,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">E-MAIL PAN</label>
+            <label className="form-label" htmlFor="rh-email-pan">E-MAIL PAN</label>
             <input
+              id="rh-email-pan"
               className="form-input"
               type="email"
               value={form.emailPan}
@@ -173,8 +179,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row--grupo">
           <div className="form-group">
-            <label className="form-label">CEP</label>
+            <label className="form-label" htmlFor="rh-cep">CEP</label>
             <input
+              id="rh-cep"
               className="form-input"
               value={form.enderecoCep}
               onChange={(e) => setCampo("enderecoCep", formatCep(e.target.value))}
@@ -189,8 +196,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             )}
           </div>
           <div className="form-group">
-            <label className="form-label">LOGRADOURO</label>
+            <label className="form-label" htmlFor="rh-logradouro">LOGRADOURO</label>
             <input
+              id="rh-logradouro"
               className="form-input"
               value={form.enderecoLogradouro}
               onChange={(e) => setCampo("enderecoLogradouro", e.target.value)}
@@ -201,16 +209,18 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row">
           <div className="form-group">
-            <label className="form-label">NÚMERO</label>
+            <label className="form-label" htmlFor="rh-numero">NÚMERO</label>
             <input
+              id="rh-numero"
               className="form-input"
               value={form.enderecoNumero}
               onChange={(e) => setCampo("enderecoNumero", e.target.value)}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">COMPLEMENTO (APTO/BLOCO)</label>
+            <label className="form-label" htmlFor="rh-complemento">COMPLEMENTO (APTO/BLOCO)</label>
             <input
+              id="rh-complemento"
               className="form-input"
               value={form.enderecoComplemento}
               onChange={(e) => setCampo("enderecoComplemento", e.target.value)}
@@ -221,8 +231,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row">
           <div className="form-group">
-            <label className="form-label">BAIRRO</label>
+            <label className="form-label" htmlFor="rh-bairro">BAIRRO</label>
             <input
+              id="rh-bairro"
               className="form-input"
               value={form.enderecoBairro}
               onChange={(e) => setCampo("enderecoBairro", e.target.value)}
@@ -230,7 +241,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">CIDADE / UF</label>
+            <span className="form-label">CIDADE / UF</span>
             <div className="rh-cidade-uf">
               <input
                 className="form-input rh-cidade"
@@ -263,16 +274,18 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row">
           <div className="form-group">
-            <label className="form-label">AGÊNCIA</label>
+            <label className="form-label" htmlFor="rh-agencia">AGÊNCIA</label>
             <input
+              id="rh-agencia"
               className="form-input"
               value={form.bancoAgencia}
               onChange={(e) => setCampo("bancoAgencia", e.target.value)}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">CONTA</label>
+            <label className="form-label" htmlFor="rh-conta">CONTA</label>
             <input
+              id="rh-conta"
               className="form-input"
               value={form.bancoConta}
               onChange={(e) => setCampo("bancoConta", e.target.value)}
@@ -280,8 +293,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
           </div>
         </div>
         <div className="form-group rh-row">
-          <label className="form-label">CHAVE PIX</label>
+          <label className="form-label" htmlFor="rh-chave-pix">CHAVE PIX</label>
           <input
+            id="rh-chave-pix"
             className="form-input"
             value={form.bancoPix}
             onChange={(e) => setCampo("bancoPix", e.target.value)}
@@ -290,8 +304,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row--grupo">
           <div className="form-group">
-            <label className="form-label">PLANO DE SAÚDE</label>
+            <label className="form-label" htmlFor="rh-plano-saude">PLANO DE SAÚDE</label>
             <select
+              id="rh-plano-saude"
               className="form-input"
               value={form.planoSaude ? "sim" : "nao"}
               onChange={(e) => setCampo("planoSaude", e.target.value === "sim")}
@@ -301,8 +316,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             </select>
           </div>
           <div className="form-group">
-            <label className="form-label">QUAL</label>
+            <label className="form-label" htmlFor="rh-plano-saude-qual">QUAL</label>
             <input
+              id="rh-plano-saude-qual"
               className="form-input"
               value={form.planoSaudeQual}
               onChange={(e) => setCampo("planoSaudeQual", e.target.value)}
@@ -313,8 +329,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
         </div>
 
         <div className="form-group rh-row">
-          <label className="form-label">TIPO SANGUÍNEO</label>
+          <label className="form-label" htmlFor="rh-tipo-sanguineo">TIPO SANGUÍNEO</label>
           <select
+            id="rh-tipo-sanguineo"
             className="form-input"
             value={form.tipoSanguineo}
             onChange={(e) => setCampo("tipoSanguineo", e.target.value)}
@@ -328,8 +345,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
 
         <div className="grid-2 rh-row--grupo">
           <div className="form-group">
-            <label className="form-label">CONTATO DE EMERGÊNCIA</label>
+            <label className="form-label" htmlFor="rh-emergencia-nome">CONTATO DE EMERGÊNCIA</label>
             <input
+              id="rh-emergencia-nome"
               className="form-input"
               value={form.emergenciaNome}
               onChange={(e) => setCampo("emergenciaNome", e.target.value)}
@@ -337,8 +355,9 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">TELEFONE</label>
+            <label className="form-label" htmlFor="rh-emergencia-telefone">TELEFONE</label>
             <input
+              id="rh-emergencia-telefone"
               className="form-input"
               value={form.emergenciaTelefone}
               onChange={(e) => setCampo("emergenciaTelefone", formatTelefone(e.target.value))}

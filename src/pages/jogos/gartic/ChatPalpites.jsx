@@ -65,6 +65,7 @@ export function ChatPalpites({ jogadores, meuJogador, isDesenhista, rodada, palp
               value={texto}
               maxLength={60}
               placeholder="Digite seu chute"
+              aria-label="Digite seu chute"
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && enviar()}
               disabled={!podeChutar}

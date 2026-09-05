@@ -234,7 +234,7 @@ export function ColaboradoresPage({ currentUserId, currentProfile }) {
       ) : (
         <div className="grid-4 stagger">
           {colaboradores.map((col) => (
-            <div key={col.id} className="collab-card" onClick={() => setSelected(col)}>
+            <button key={col.id} type="button" className="collab-card" onClick={() => setSelected(col)}>
               {col.isMe && <span className="collab-ribbon">VOCÊ</span>}
               <div style={{ display: "flex", justifyContent: "center" }}>
                 <Avatar col={col} size={64} />
@@ -245,7 +245,7 @@ export function ColaboradoresPage({ currentUserId, currentProfile }) {
                 Ver detalhes
                 <ArrowUpRight size={14} />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

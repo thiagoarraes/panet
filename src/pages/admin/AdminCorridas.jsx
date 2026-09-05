@@ -224,14 +224,14 @@ function ClienteModal({ endereco, clienteAtual, onClose }) {
             <MapPin size={13} /> {endereco}
           </div>
           <div className="form-group" style={{ marginTop: 12 }}>
-            <label className="form-label">Nome do cliente</label>
+            <label className="form-label" htmlFor="corrida-cliente-nome">Nome do cliente</label>
             <input
+              id="corrida-cliente-nome"
               className="form-input"
               placeholder="Ex: Cliente Acme"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSalvar()}
-              autoFocus
             />
           </div>
           <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>

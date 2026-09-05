@@ -24,8 +24,8 @@ export function EntrarSalaModal({ titulo, nomePadrao, onConfirmar, onCancelar, c
   };
 
   return (
-    <div className="ade-modal-backdrop" onClick={onCancelar}>
-      <div className="ade-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="ade-modal-backdrop" role="presentation" onClick={onCancelar}>
+      <div className="ade-modal" role="presentation" onClick={(e) => e.stopPropagation()}>
         <h3 style={{ fontSize: 18 }}>{titulo}</h3>
         <div className="ade-field">
           <label htmlFor="ade-apelido">Apelido no jogo</label>
@@ -36,7 +36,6 @@ export function EntrarSalaModal({ titulo, nomePadrao, onConfirmar, onCancelar, c
             placeholder="Como você quer aparecer"
             onChange={(e) => setApelido(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && confirmar()}
-            autoFocus
           />
         </div>
         <label className="ade-toggle">

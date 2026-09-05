@@ -21,8 +21,9 @@ export function EventoModal({ modal, eventoForm, setEventoForm, filesLote, setFi
           </Modal.Header>
           <Modal.Body>
             <div className="form-group">
-              <label className="form-label">TÍTULO *</label>
+              <label className="form-label" htmlFor="evento-titulo">TÍTULO *</label>
               <input
+                id="evento-titulo"
                 className="form-input"
                 value={eventoForm.titulo}
                 onChange={(e) => setEventoForm((p) => ({ ...p, titulo: e.target.value }))}
@@ -31,8 +32,9 @@ export function EventoModal({ modal, eventoForm, setEventoForm, filesLote, setFi
             </div>
             <div className="grid-2">
               <div className="form-group">
-                <label className="form-label">MÊS</label>
+                <label className="form-label" htmlFor="evento-mes">MÊS</label>
                 <select
+                  id="evento-mes"
                   className="form-input"
                   value={eventoForm.mes}
                   onChange={(e) => setEventoForm((p) => ({ ...p, mes: e.target.value }))}
@@ -44,8 +46,9 @@ export function EventoModal({ modal, eventoForm, setEventoForm, filesLote, setFi
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">ANO</label>
+                <label className="form-label" htmlFor="evento-ano">ANO</label>
                 <input
+                  id="evento-ano"
                   className="form-input"
                   value={eventoForm.ano}
                   onChange={(e) =>
@@ -57,9 +60,10 @@ export function EventoModal({ modal, eventoForm, setEventoForm, filesLote, setFi
             </div>
             {modal === "novo" && (
               <div className="form-group">
-                <label className="form-label">FOTOS DO EVENTO (ENVIO MÚLTIPLO)</label>
+                <label className="form-label" htmlFor="evento-fotos">FOTOS DO EVENTO (ENVIO MÚLTIPLO)</label>
                 <div className="upload-zone" style={{ padding: 18, textAlign: "left" }}>
                   <input
+                    id="evento-fotos"
                     type="file"
                     accept="image/*"
                     multiple

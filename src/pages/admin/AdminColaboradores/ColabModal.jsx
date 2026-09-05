@@ -36,8 +36,9 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
           )}
 
           <div className="form-group">
-            <label className="form-label">NOME COMPLETO *</label>
+            <label className="form-label" htmlFor="colab-nome">NOME COMPLETO *</label>
             <input
+              id="colab-nome"
               className="form-input"
               value={form.nome || ""}
               onChange={(e) => setForm((p) => ({ ...p, nome: e.target.value }))}
@@ -46,8 +47,9 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
           </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">E-MAIL CORPORATIVO *</label>
+              <label className="form-label" htmlFor="colab-email">E-MAIL CORPORATIVO *</label>
               <input
+                id="colab-email"
                 className="form-input"
                 value={form.email || ""}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
@@ -55,8 +57,9 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
               />
             </div>
             <div className="form-group">
-              <label className="form-label">PERFIL</label>
+              <label className="form-label" htmlFor="colab-perfil">PERFIL</label>
               <select
+                id="colab-perfil"
                 className="form-input"
                 value={form.perfil || "colaborador"}
                 onChange={(e) => setForm((p) => ({ ...p, perfil: e.target.value }))}
@@ -68,8 +71,9 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
           </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">CARGO *</label>
+              <label className="form-label" htmlFor="colab-cargo">CARGO *</label>
               <input
+                id="colab-cargo"
                 className="form-input"
                 value={form.cargo || ""}
                 onChange={(e) => setForm((p) => ({ ...p, cargo: e.target.value }))}
@@ -77,7 +81,7 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
               />
             </div>
             <div className="form-group">
-              <label className="form-label">ANIVERSÁRIO (DIA E MÊS)</label>
+              <span className="form-label">ANIVERSÁRIO (DIA E MÊS)</span>
               <div className="grid-2 perfil-aniversario-grid">
                 <select
                   className="form-input"
@@ -108,8 +112,8 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
 
           {modal === "novo" && (
             <div className="form-group">
-              <label className="form-label">SENHA TEMPORÁRIA</label>
-              <input className="form-input" type="text" value="Gerada automaticamente ao cadastrar" readOnly />
+              <label className="form-label" htmlFor="colab-senha-temp">SENHA TEMPORÁRIA</label>
+              <input id="colab-senha-temp" className="form-input" type="text" value="Gerada automaticamente ao cadastrar" readOnly />
               <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
                 O colaborador será obrigado a trocar no primeiro acesso.
               </div>
@@ -118,7 +122,7 @@ export function ColabModal({ modal, form, setForm, errorMsg, loading, isSuperAdm
 
           {isSuperAdmin && form.perfil === "admin" && (
             <div className="form-group" style={{ marginTop: 8 }}>
-              <label className="form-label">ACESSO AOS MÓDULOS</label>
+              <span className="form-label">ACESSO AOS MÓDULOS</span>
               <div
                 style={{
                   display: "flex",

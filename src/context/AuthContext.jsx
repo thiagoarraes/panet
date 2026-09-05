@@ -361,10 +361,6 @@ export function AuthProvider({ children }) {
     };
   }, [loadProfileAndRoute, queryClient]);
 
-  // ─── Route resolution ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (tela !== "app" || typeof window === "undefined") return;  }, [isAdmin, adminServerConfirmed, tela]);
-
   // ─── Theme ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
@@ -432,7 +428,7 @@ export function AuthProvider({ children }) {
     }
   }, [queryClient]);
 
-  const handleLogin = async (email, password) => {
+  const handleLogin = useCallback(async (email, password) => {
     setSessionExpiredNotice("");
     if (!isSupabaseEnabled) { setTela("primeiro_acesso"); return; }
 
@@ -496,9 +492,9 @@ export function AuthProvider({ children }) {
     if (!activeSession) throw new Error("Sessão não iniciada. Tente novamente.");
     setSessionUserId(String(activeSession.user?.id || ""));
     await loadProfileAndRoute(activeSession);
-  };
+  }, [hydrateLoginInBackground, loadProfileAndRoute, queryClient]);
 
-  const handleConcluirPrimeiroAcesso = async (novaSenha) => {
+  const handleConcluirPrimeiroAcesso = useCallback(async (novaSenha) => {
     if (!isSupabaseEnabled) { setTela("app"); return; }
     const fallbackUserId = currentProfile?.id || null;
     const { error: authError } = await supabase.auth.updateUser({ password: novaSenha });
@@ -519,9 +515,9 @@ export function AuthProvider({ children }) {
         .catch(() => {});
     }
     supabase.auth.getSession().catch(() => {});
-  };
+  }, [currentProfile]);
 
-  const handleSalvarPerfil = async (payload) => {
+  const handleSalvarPerfil = useCallback(async (payload) => {
     if (!currentProfile?.id) return;
     const updatePayload = {
       nome: payload.nome || currentProfile.nome || "",
@@ -569,8 +565,9 @@ export function AuthProvider({ children }) {
     setCurrentProfile(updatedProfile);
     writeCachedProfile(updatedProfile);
     queryClient.invalidateQueries({ queryKey: ["colaboradores"] });
-  };
-  const handleLogout = (notice = "") => {
+  }, [currentProfile, queryClient]);
+
+  const handleLogout = useCallback((notice = "") => {
     setSessionExpiredNotice(notice);
     initialDataLoadRef.current = { userId: null, at: 0 };
     profileLoadInFlightRef.current = { userId: null, promise: null };
@@ -594,11 +591,9 @@ export function AuthProvider({ children }) {
       setTimeout(() => { supabase.auth.signOut().catch(() => {}); }, 0);
     }
     if (USE_SECURE_COOKIES) apiLogout();
-  };
+  }, []);
 
   // ─── Sessão expirada (token rejeitado pelo Supabase em pleno uso) ─────────
-  // Fica depois de handleLogout de proposito: o listener monta uma unica vez e
-  // handleLogout so usa setters e refs estaveis, entao a closure inicial serve.
   useEffect(() => {
     if (!isSupabaseEnabled) return;
     const onSessionExpired = () => {
@@ -608,20 +603,23 @@ export function AuthProvider({ children }) {
     };
     window.addEventListener("panet:session-expired", onSessionExpired);
     return () => window.removeEventListener("panet:session-expired", onSessionExpired);
-  }, []);
+  }, [handleLogout]);
 
-  const handleToggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  const handleToggleTheme = useCallback(() => setTheme((prev) => (prev === "dark" ? "light" : "dark")), []);
 
   // ─── Context value ─────────────────────────────────────────────────────────
-  const value = {
+  const value = useMemo(() => ({
     authLoading, currentProfile, sessionUserId, adminServerConfirmed, sessionExpiredNotice,
     mobileNavOpen, setMobileNavOpen, theme,
     eu, isAdmin, effectiveUserId,
-    
     handleLogin, handleLogout,
     handleConcluirPrimeiroAcesso, handleSalvarPerfil,
-     handleToggleTheme,
-  };
+    handleToggleTheme,
+  }), [
+    authLoading, currentProfile, sessionUserId, adminServerConfirmed, sessionExpiredNotice,
+    mobileNavOpen, theme, eu, isAdmin, effectiveUserId,
+    handleLogin, handleLogout, handleConcluirPrimeiroAcesso, handleSalvarPerfil, handleToggleTheme,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

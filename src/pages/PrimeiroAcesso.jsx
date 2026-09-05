@@ -93,8 +93,9 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">NOVA SENHA</label>
+            <label className="form-label" htmlFor="primeiro-acesso-senha">NOVA SENHA</label>
             <input
+              id="primeiro-acesso-senha"
               className="form-input"
               type="password"
               placeholder="Mínimo 8 caracteres"
@@ -128,8 +129,9 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
           )}
 
           <div className="form-group">
-            <label className="form-label">CONFIRMAR SENHA</label>
+            <label className="form-label" htmlFor="primeiro-acesso-confirmar">CONFIRMAR SENHA</label>
             <input
+              id="primeiro-acesso-confirmar"
               className="form-input"
               type="password"
               placeholder="Repita a nova senha"

@@ -49,16 +49,16 @@ export function GarticConfig({ sala, jogadores, meuJogador, mut, onlineIds, onSa
           <div className="card-body" style={{ padding: 18, display: "flex", flexDirection: "column", gap: 18 }}>
             <div className="ade-config-grid">
               <div className="ade-field">
-                <label>Voltas (cada um desenha)</label>
-                <select value={config.voltas} onChange={(e) => setCampo("voltas", Number(e.target.value))}>
+                <label htmlFor="gartic-config-voltas">Voltas (cada um desenha)</label>
+                <select id="gartic-config-voltas" value={config.voltas} onChange={(e) => setCampo("voltas", Number(e.target.value))}>
                   {RODADAS_OPCOES.map((n) => (
                     <option key={n} value={n}>{n} {n === 1 ? "volta" : "voltas"}</option>
                   ))}
                 </select>
               </div>
               <div className="ade-field">
-                <label>Tempo de desenho</label>
-                <select value={config.tempo} onChange={(e) => setCampo("tempo", e.target.value)}>
+                <label htmlFor="gartic-config-tempo">Tempo de desenho</label>
+                <select id="gartic-config-tempo" value={config.tempo} onChange={(e) => setCampo("tempo", e.target.value)}>
                   {TEMPO_OPCOES.map((t) => (
                     <option key={t.id} value={t.id}>{t.label} ({t.segundos}s)</option>
                   ))}

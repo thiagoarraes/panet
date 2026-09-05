@@ -54,8 +54,9 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
           </Modal.Header>
           <Modal.Body>
           <div className="form-group">
-            <label className="form-label">PERGUNTA *</label>
+            <label className="form-label" htmlFor="enquete-pergunta">PERGUNTA *</label>
             <textarea
+              id="enquete-pergunta"
               className="form-input"
               style={{ minHeight: 84, resize: "vertical" }}
               value={form.question || ""}
@@ -66,9 +67,9 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
 
           <div className="form-group">
             <div className="admin-enquete-options-head">
-              <label className="form-label" style={{ marginBottom: 0 }}>
+              <span className="form-label" style={{ marginBottom: 0 }}>
                 OPÇÕES (2 A 6) *
-              </label>
+              </span>
               <button
                 className="btn-ghost"
                 type="button"
@@ -112,7 +113,7 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
 
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">ENCERRAR AUTOMATICAMENTE</label>
+              <span className="form-label">ENCERRAR AUTOMATICAMENTE</span>
               <PanDatePicker
                 comHora
                 value={dateParaIsoLocal(form.endsAtDate)}
@@ -123,7 +124,7 @@ export function EnqueteModal({ modal, form, setForm, errorMsg, saving, onClose, 
               <div className="admin-enquete-form-note">Deixe vazio para encerrar manualmente.</div>
             </div>
             <div className="form-group">
-              <label className="form-label">MOSTRAR RESULTADO PARCIAL</label>
+              <span className="form-label">MOSTRAR RESULTADO PARCIAL</span>
               <div className="filter-tabs">
                 <button
                   type="button"
