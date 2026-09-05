@@ -127,7 +127,6 @@ const main = async () => {
 
   for (const bucket of bucketNames) {
     const existing = await listBucketObjectPaths(bucket);
-    const existingSet = new Set(existing);
     const refSet = referenced[bucket];
     const orphaned = existing.filter((path) => !refSet.has(path));
     summary.push({

@@ -125,7 +125,7 @@ const issues = [];
 
 for (const filePath of listFiles()) {
   const raw = fs.readFileSync(filePath);
-  let content = "";
+  let content;
 
   try {
     content = UTF8_DECODER.decode(raw);
