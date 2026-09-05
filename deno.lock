@@ -40,6 +40,7 @@
         "npm:@vitest/mocker@^4.1.10",
         "npm:dompurify@^3.4.12",
         "npm:emoji-picker-react@^4.19.1",
+        "npm:eslint-plugin-jsx-a11y@^6.10.2",
         "npm:eslint-plugin-react-hooks@^7.1.1",
         "npm:eslint-plugin-react@^7.37.5",
         "npm:eslint@^10.7.0",
