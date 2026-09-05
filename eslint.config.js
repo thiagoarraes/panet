@@ -13,7 +13,7 @@ export default [
     },
   },
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["**/*.{js,jsx,mjs}"],
     plugins: {
       "react-hooks": reactHooks,
       "jsx-a11y": jsxA11y,
@@ -34,6 +34,6 @@ export default [
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**"],
+    ignores: ["dist/**", "node_modules/**", ".claire/**"],
   },
 ];
