@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Modal } from "@heroui/react";
 import { useColaboradorDados } from "../../../hooks/queries/useColaboradorDados.js";
 import { useBancosCadastrados } from "../../../hooks/queries/useBancosCadastrados.js";
 import { useSalvarColaboradorDados } from "../../../hooks/mutations/useColaboradorDadosMutations.js";
-import { formatCpf, formatCnpj, formatTelefone, formatCep, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
+import { formatCpf, formatCnpj, formatTelefone, formatCep, soDigitos, isCpfValido, isCnpjValido } from "../../../lib/documentos.js";
 import { useBuscaCep } from "../../../hooks/queries/useBuscaCep.js";
 import { PanDatePicker } from "../../../components/ui/PanDatePicker.jsx";
 import { PanComboBox } from "../../../components/ui/PanComboBox.jsx";
@@ -51,21 +51,30 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
   const cepLookup = useBuscaCep();
   const [erro, setErro] = useState("");
   const salvar = useSalvarColaboradorDados();
+  const numeroRef = useRef(null);
 
   const setCampo = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
 
   // So sobrescreve logradouro/bairro/cidade/uf -- numero e complemento (predio)
   // continuam sob responsabilidade de quem preenche, o ViaCEP nao sabe disso.
-  const handleCepBlur = async () => {
-    const endereco = await cepLookup.buscar(form.enderecoCep);
-    if (!endereco) return;
-    setForm((prev) => ({
-      ...prev,
-      enderecoLogradouro: endereco.logradouro || prev.enderecoLogradouro,
-      enderecoBairro: endereco.bairro || prev.enderecoBairro,
-      enderecoCidade: endereco.cidade || prev.enderecoCidade,
-      enderecoUf: endereco.uf || prev.enderecoUf,
-    }));
+  // Dispara assim que o 8o digito e digitado (nao espera o blur), e joga o
+  // foco pro NUMERO -- proximo campo que so a pessoa sabe preencher.
+  const handleCepChange = async (valor) => {
+    const formatado = formatCep(valor);
+    setCampo("enderecoCep", formatado);
+    if (soDigitos(formatado).length !== 8) return;
+
+    const endereco = await cepLookup.buscar(formatado);
+    if (endereco) {
+      setForm((prev) => ({
+        ...prev,
+        enderecoLogradouro: endereco.logradouro || prev.enderecoLogradouro,
+        enderecoBairro: endereco.bairro || prev.enderecoBairro,
+        enderecoCidade: endereco.cidade || prev.enderecoCidade,
+        enderecoUf: endereco.uf || prev.enderecoUf,
+      }));
+    }
+    numeroRef.current?.focus();
   };
 
   const handleSalvar = async () => {
@@ -184,8 +193,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
               id="rh-cep"
               className="form-input"
               value={form.enderecoCep}
-              onChange={(e) => setCampo("enderecoCep", formatCep(e.target.value))}
-              onBlur={handleCepBlur}
+              onChange={(e) => handleCepChange(e.target.value)}
               placeholder="00000-000"
             />
             {cepLookup.buscando && (
@@ -212,6 +220,7 @@ function DadosRhForm({ colaborador, dadosIniciais, onClose }) {
             <label className="form-label" htmlFor="rh-numero">NÚMERO</label>
             <input
               id="rh-numero"
+              ref={numeroRef}
               className="form-input"
               value={form.enderecoNumero}
               onChange={(e) => setCampo("enderecoNumero", e.target.value)}
