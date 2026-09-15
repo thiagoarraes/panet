@@ -75,7 +75,7 @@
     --space-8: 20px;
   }
   .theme-light {
-    --bg: color-mix(in srgb, #00a09d 7%, #f5f9fd); --surface: #ffffff; --surface2: color-mix(in srgb, #00a09d 8%, #edf4fb); --border: #c7d6e4;
+    --bg: color-mix(in srgb, #00a09d 7%, #f5f9fd); --surface: #ffffff; --surface2: color-mix(in srgb, #00a09d 5%, #e4ecf4); --border: #c7d6e4;
     --accent: #00a09d; --accent2: #007d7b; --text: #102437; --muted: #486079;
     /* No claro o accent precisa ESCURECER para virar texto legivel: #00a09d
        sobre o card branco dava 2.67:1. #00706d sobe para 4.91:1. */
@@ -356,6 +356,7 @@
 
   /* Date picker pt-BR feel */
   input[type="date"] { color-scheme: dark; }
+  .theme-light input[type="date"] { color-scheme: light; }
 
   /* Sidebar */
   .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; transition: transform 0.3s; }

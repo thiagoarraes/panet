@@ -8,6 +8,9 @@
   background: var(--accent); color: #fff; font-weight: 800;
   padding: 4px 12px; border-radius: 999px; font-size: 14px;
 }
+.theme-light .gartic-timer-badge {
+  background: var(--accent2); color: #fff;
+}
 .gartic-opcoes { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 .gartic-opcao {
   background: var(--surface2); color: var(--text); border: 1px solid var(--border);

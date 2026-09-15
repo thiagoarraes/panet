@@ -895,6 +895,43 @@
   0% { transform: translateY(-70%) scaleY(1.5); opacity: 0.2; filter: blur(3px); }
   100% { transform: translateY(-0.03em) scaleY(1); opacity: 1; filter: blur(0); }
 }
+/* ── Tema claro: overrides de contraste ──────────────────────────────── */
+.theme-light .jogo-card {
+  box-shadow:
+    0 4px 16px rgba(16, 36, 55, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.theme-light .jogo-card:hover {
+  box-shadow:
+    0 12px 32px rgba(16, 36, 55, 0.14),
+    0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.theme-light .ade-modal-backdrop {
+  background: rgba(16, 36, 55, 0.35);
+}
+.theme-light .ade-modal {
+  box-shadow: 0 16px 48px rgba(16, 36, 55, 0.18);
+}
+.theme-light .ade-overlay {
+  background: radial-gradient(circle at center, rgba(16, 36, 55, 0.45), rgba(16, 36, 55, 0.65));
+}
+.theme-light .ade-hex-inner {
+  background: linear-gradient(160deg, #dce8f4, #c4d6e8);
+}
+.theme-light .ade-vote-btn.valido {
+  box-shadow: 0 2px 0 #2a8a3a;
+}
+.theme-light .ade-vote-btn.invalido {
+  box-shadow: 0 2px 0 #b82040;
+}
+.theme-light .ade-vote-btn.valido.active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 50%, transparent), 0 2px 0 #2a8a3a;
+}
+.theme-light .ade-vote-btn.invalido.active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ade-red) 50%, transparent), 0 2px 0 #b82040;
+}
+
 .ade-hex-letra.lock {
   font-size: 128px;
   color: #fff;

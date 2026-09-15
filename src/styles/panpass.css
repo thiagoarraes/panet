@@ -178,6 +178,9 @@
   width: 260px; max-height: 320px; overflow-y: auto;
   box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
 }
+.theme-light .pp-filtro-colab-painel {
+  box-shadow: 0 8px 24px rgba(16, 36, 55, 0.12);
+}
 .pp-filtro-colab-painel .pp-sugestoes { max-height: 220px; overflow-y: auto; }
 .pp-filtro-colab-todos-icone {
   display: inline-flex; align-items: center; justify-content: center;
