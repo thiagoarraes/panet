@@ -290,13 +290,14 @@ export function PerfilPage({ profile, onSalvar }) {
 
           {/* Aniversário */}
           <div className="perfil-field">
-            <label className="perfil-field-label">
+            <label className="perfil-field-label" htmlFor="perfil-aniversario-dia">
               <span className="perfil-field-icon"><IconCake /></span>
               Aniversário
             </label>
             <div className="perfil-birthday-row">
               <div className="perfil-select-wrap">
                 <select
+                  id="perfil-aniversario-dia"
                   className="perfil-select"
                   aria-label="Dia do aniversário"
                   value={form.aniversarioDia}
