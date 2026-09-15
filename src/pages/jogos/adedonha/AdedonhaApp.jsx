@@ -1,5 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+
+// ponytail: Fredoka lazy-loaded aqui porque só o jogo Adedonha usa.
+// Removida do <link> bloqueante em index.html para não pesar first paint.
+if (typeof document !== "undefined" && !document.getElementById("fredoka-font")) {
+  const link = document.createElement("link");
+  link.id = "fredoka-font";
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Fredoka:wght@400..700&display=swap";
+  document.head.appendChild(link);
+}
 import { useJogoSala } from "../../../hooks/queries/useJogoSala.js";
 import { usePresencaSala } from "../../../hooks/queries/usePresencaSala.js";
 import { useJogoMutations } from "../../../hooks/mutations/useJogoMutations.js";

@@ -121,7 +121,7 @@ export function PostImageUploadCrop({ value, onChange, aspect = 2 }) {
         }}
       >
         {value ? (
-          <img src={value} alt="Imagem de destaque" className="upload-preview" />
+          <img src={value} alt="Imagem de destaque" className="upload-preview" loading="lazy" />
         ) : (
           <div>
             <div style={{ marginBottom: 8, display: "inline-flex", color: "var(--muted)" }}>

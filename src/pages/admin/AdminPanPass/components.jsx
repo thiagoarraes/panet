@@ -448,7 +448,7 @@ export function ServicoCard({ servico, onEditar, onExcluir }) {
     <article className={`pp-servico ${servico.ativo ? "" : "is-inativo"}`}>
       <div className="pp-servico-topo">
         {servico.logo_url ? (
-          <img className="pp-servico-logo" src={servico.logo_url} alt="" width={38} height={38} />
+          <img className="pp-servico-logo" src={servico.logo_url} alt="" width={38} height={38} loading="lazy" />
         ) : (
           <span className="pp-servico-logo pp-servico-logo-vazio">{iniciais(servico.nome)}</span>
         )}

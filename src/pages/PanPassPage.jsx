@@ -75,7 +75,7 @@ function ServicoCard({ servico }) {
       <div className="panpass-v2-card-head">
         <div className="panpass-v2-logo-wrap">
           {servico.logo_url ? (
-            <img className="panpass-v2-logo" src={servico.logo_url} alt="" width={44} height={44} />
+            <img className="panpass-v2-logo" src={servico.logo_url} alt="" width={44} height={44} loading="lazy" />
           ) : (
             <span className="panpass-v2-logo panpass-v2-logo-fallback" aria-hidden="true">
               <KeyRound size={20} />

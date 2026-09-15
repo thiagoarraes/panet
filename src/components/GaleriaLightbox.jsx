@@ -47,7 +47,7 @@ export function GaleriaLightbox({ eventoAberto, fotoIdx, onClose, onPrev, onNext
             onClick={() => onSetFotoIdx?.(i)}
             aria-label={`Foto ${i + 1}`}
           >
-            <img src={f.src} className={`lightbox-thumb ${i === fotoIdx ? "active" : ""}`} alt="" />
+            <img src={f.src} className={`lightbox-thumb ${i === fotoIdx ? "active" : ""}`} alt="" loading="lazy" />
           </button>
         ))}
       </div>

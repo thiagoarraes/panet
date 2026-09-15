@@ -132,7 +132,7 @@ export function CorridaModal({ corrida, cliente = null, onDefinirCliente = null,
                 </a>
               ) : (
                 <a href={reciboUrl} target="_blank" rel="noopener noreferrer" className="corrida-modal-recibo-link">
-                  <img src={reciboUrl} alt="Recibo da corrida" className="corrida-modal-recibo" />
+                  <img src={reciboUrl} alt="Recibo da corrida" className="corrida-modal-recibo" loading="lazy" />
                 </a>
               )
             ) : (

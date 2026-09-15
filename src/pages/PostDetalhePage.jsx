@@ -248,7 +248,7 @@ export function PostDetalhePage({
           ) : (
             <div className="pan-card" style={{ overflow: "hidden" }}>
               <div style={{ width: "100%", aspectRatio: "2 / 1", overflow: "hidden" }}>
-                <img src={post.imagem} alt={post.titulo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <img src={post.imagem} alt={post.titulo} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
               </div>
               <div className="card-body" style={{ padding: 20 }}>
                 <div className="post-detalhe-head">

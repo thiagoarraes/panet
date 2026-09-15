@@ -142,7 +142,7 @@ export function AdminPostagens({ currentUserId }) {
         {rows.map((post) => (
           <div key={post.id} className="pan-card admin-lista-card">
             <div className="admin-post-row">
-              <img src={post.imagem} alt={post.titulo} className="admin-post-thumb" />
+              <img src={post.imagem} alt={post.titulo} className="admin-post-thumb" loading="lazy" />
               <div className="admin-post-main">
                 <div className="admin-post-meta">
                   <Badge cat={post.categoria} />
