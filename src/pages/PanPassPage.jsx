@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, ExternalLink, Eye, KeyRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, ExternalLink, Eye, KeyRound, ShieldCheck, Lock, AlertCircle } from "lucide-react";
+import "../styles/panpass.css";
 import { usePanPassServicos } from "../hooks/queries/usePanPassServicos";
 import { useRevelarCredencial } from "../hooks/mutations/usePanPassMutations";
 import { PanTooltip } from "../components/ui/PanTooltip";
@@ -16,16 +17,16 @@ function BotaoCopiar({ valor, titulo = "Copiar" }) {
   }, [copiado]);
 
   return (
-    <PanTooltip texto={titulo}>
+    <PanTooltip texto={copiado ? "Copiado!" : titulo}>
       <button
-        className="btn-ghost panpass-copy"
+        className="panpass-v2-copy"
         aria-label={titulo}
         onClick={async () => {
           await navigator.clipboard.writeText(valor);
           setCopiado(true);
         }}
       >
-        {copiado ? <Check size={14} /> : <Copy size={14} />}
+        {copiado ? <Check size={13} /> : <Copy size={13} />}
       </button>
     </PanTooltip>
   );
@@ -33,12 +34,10 @@ function BotaoCopiar({ valor, titulo = "Copiar" }) {
 
 function ServicoCard({ servico }) {
   const revelar = useRevelarCredencial();
-  const [segredo, setSegredo] = useState(null); // { valor, expiraEm }
+  const [segredo, setSegredo] = useState(null);
   const [agora, setAgora] = useState(() => Date.now());
   const [erro, setErro] = useState("");
 
-  // Um timer descarta o segredo no vencimento; outro só faz a contagem andar.
-  // Nenhum setState no corpo do efeito — tudo acontece em callback de timer.
   useEffect(() => {
     if (!segredo) return undefined;
     const fim = setTimeout(() => setSegredo(null), Math.max(0, segredo.expiraEm - Date.now()));
@@ -51,6 +50,7 @@ function ServicoCard({ servico }) {
 
   const restante = segredo ? Math.max(0, Math.ceil((segredo.expiraEm - agora) / 1000)) : 0;
   const percentRestante = segredo ? Math.max(0, Math.min(100, (restante / SEGUNDOS_VISIVEL) * 100)) : 0;
+  const isUrgente = restante <= 10 && restante > 0;
 
   const pedir = () => {
     setErro("");
@@ -69,123 +69,189 @@ function ServicoCard({ servico }) {
   const carregando = revelar.isPending;
 
   return (
-    <div className="pan-card panpass-card">
-      <div className="panpass-card-glow" aria-hidden="true" />
-      <div className="card-body">
-        <div className="panpass-card-head">
+    <div className="panpass-v2-card">
+      <div className="panpass-v2-card-glow" aria-hidden="true" />
+
+      <div className="panpass-v2-card-head">
+        <div className="panpass-v2-logo-wrap">
           {servico.logo_url ? (
-            <img className="panpass-logo" src={servico.logo_url} alt="" width={40} height={40} />
+            <img className="panpass-v2-logo" src={servico.logo_url} alt="" width={44} height={44} />
           ) : (
-            <span className="panpass-logo panpass-logo-fallback" aria-hidden="true">
-              <KeyRound size={19} />
+            <span className="panpass-v2-logo panpass-v2-logo-fallback" aria-hidden="true">
+              <KeyRound size={20} />
             </span>
           )}
-          <div className="panpass-titulo-wrap">
-            <h3 className="panpass-nome">{servico.nome}</h3>
-            {servico.categoria && <span className="panpass-categoria">{servico.categoria}</span>}
-          </div>
-          {servico.url_login && (
-            <PanTooltip texto="Abrir o site do serviço">
-              <a
-                className="panpass-abrir"
-                href={servico.url_login}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Abrir o site do serviço"
-              >
-                <ExternalLink size={13} />
-              </a>
-            </PanTooltip>
+        </div>
+        <div className="panpass-v2-titulo-wrap">
+          <h3 className="panpass-v2-nome">{servico.nome}</h3>
+          {servico.categoria && (
+            <span className="panpass-v2-categoria">{servico.categoria}</span>
           )}
         </div>
+        {servico.url_login && (
+          <PanTooltip texto="Abrir o site do serviço">
+            <a
+              className="panpass-v2-abrir"
+              href={servico.url_login}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Abrir o site do serviço"
+            >
+              <ExternalLink size={14} />
+            </a>
+          </PanTooltip>
+        )}
+      </div>
 
-        <div className="panpass-credencial">
-          <div className="panpass-linha">
-            <span className="panpass-rotulo">Login</span>
-            <code className="panpass-valor">{servico.usuario}</code>
-            <BotaoCopiar valor={servico.usuario} titulo="Copiar login" />
+      <div className="panpass-v2-creds">
+        <div className="panpass-v2-linha">
+          <div className="panpass-v2-linha-info">
+            <span className="panpass-v2-rotulo">Login</span>
+            <code className="panpass-v2-valor">{servico.usuario}</code>
           </div>
+          <BotaoCopiar valor={servico.usuario} titulo="Copiar login" />
+        </div>
 
-          {segredo && (
-            <div className="panpass-linha panpass-revelado">
-              <span className="panpass-rotulo">Senha</span>
-              <code className="panpass-valor panpass-segredo">{segredo.valor}</code>
+        {segredo ? (
+          <div className={`panpass-v2-linha panpass-v2-revelado ${isUrgente ? "panpass-v2-urgente" : ""}`}>
+            <div className="panpass-v2-linha-info">
+              <span className="panpass-v2-rotulo">Senha</span>
+              <code className="panpass-v2-valor panpass-v2-segredo">{segredo.valor}</code>
+            </div>
+            <div className="panpass-v2-linha-acoes">
               <BotaoCopiar valor={segredo.valor} titulo="Copiar senha" />
-              <PanTooltip texto="Some automaticamente">
-                <span className="panpass-contagem" style={{ "--pct": percentRestante }}>
-                  <span className="panpass-contagem-anel" aria-hidden="true" />
-                  <span className="panpass-contagem-num">{restante}</span>
+              <PanTooltip texto={isUrgente ? "Expira em breve!" : "Some automaticamente"}>
+                <span
+                  className={`panpass-v2-contagem ${isUrgente ? "panpass-v2-contagem--alerta" : ""}`}
+                  style={{ "--pct": percentRestante }}
+                >
+                  <span className="panpass-v2-contagem-anel" aria-hidden="true" />
+                  <span className="panpass-v2-contagem-num">{restante}</span>
                 </span>
               </PanTooltip>
             </div>
-          )}
-        </div>
-
-        {erro && <div className="section-sub panpass-erro">{erro}</div>}
-
-        <div className="panpass-acoes">
-          <button className="btn-primary" onClick={pedir} disabled={carregando}>
-            <Eye size={14} /> Revelar senha
-          </button>
-        </div>
+          </div>
+        ) : (
+          <div className="panpass-v2-linha panpass-v2-oculto">
+            <div className="panpass-v2-linha-info">
+              <span className="panpass-v2-rotulo">Senha</span>
+              <span className="panpass-v2-mascarado">
+                <Lock size={12} />
+                ••••••••
+              </span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {erro && (
+        <div className="panpass-v2-erro">
+          <AlertCircle size={14} />
+          {erro}
+        </div>
+      )}
+
+      <button
+        className={`panpass-v2-btn-reveal ${segredo ? "panpass-v2-btn-reveal--ativo" : ""}`}
+        onClick={pedir}
+        disabled={carregando || !!segredo}
+        type="button"
+      >
+        {carregando ? (
+          <>
+            <span className="panpass-v2-spinner" />
+            Revelando...
+          </>
+        ) : segredo ? (
+          <>
+            <ShieldCheck size={14} />
+            Senha visível · {restante}s
+          </>
+        ) : (
+          <>
+            <Eye size={14} />
+            Revelar senha
+          </>
+        )}
+      </button>
     </div>
   );
 }
 
 export function PanPassPage() {
   const servicosQuery = usePanPassServicos();
-  const [busca, setBusca] = useState("");
 
-  const servicos = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    const todos = servicosQuery.data || [];
-    if (!termo) return todos;
-    return todos.filter((s) =>
-      `${s.nome} ${s.categoria || ""}`.toLowerCase().includes(termo),
-    );
-  }, [servicosQuery.data, busca]);
+  const servicos = servicosQuery.data || [];
+  const totalServicos = servicos.length;
 
   return (
-    <div className="fade-up panpass-page">
-      <div className="section-header">
-        <div>
-          <div className="section-title">PanPass</div>
-          <div className="section-sub">
-            Acessos dos serviços contratados pela empresa.
+    <div className="panpass-v2-page">
+      {/* Hero Banner */}
+      <div className="panpass-v2-hero">
+        <div className="panpass-v2-hero-bg" aria-hidden="true" />
+        <div className="panpass-v2-hero-content">
+          <div className="panpass-v2-hero-text">
+            <div className="panpass-v2-hero-badge">
+              <ShieldCheck size={12} />
+              Acesso seguro
+            </div>
+            <h1 className="panpass-v2-hero-titulo">PanPass</h1>
+            <p className="panpass-v2-hero-sub">
+              Acesse as credenciais dos serviços que a Pan utiliza no dia a dia.
+              Por segurança, as senhas ficam visíveis por apenas 60 segundos.
+            </p>
           </div>
-        </div>
-        <input
-          className="search-input"
-          placeholder="Buscar serviço..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          style={{ width: 220 }}
-        />
-      </div>
-
-      {servicosQuery.isError && (
-        <div className="pan-card" style={{ marginBottom: 14 }}>
-          <div className="card-body">
-            <div className="section-title" style={{ fontSize: 16 }}>Falha ao carregar o PanPass</div>
-            <div className="section-sub">{servicosQuery.error?.message}</div>
-          </div>
-        </div>
-      )}
-
-      {!servicosQuery.isLoading && servicos.length === 0 && (
-        <div className="pan-card">
-          <div className="card-body">
-            <div className="section-sub">
-              {busca ? "Nenhum serviço encontrado." : "Nenhum serviço liberado para você ainda."}
+          <div className="panpass-v2-hero-stats">
+            <div className="panpass-v2-stat">
+              <span className="panpass-v2-stat-num">{totalServicos}</span>
+              <span className="panpass-v2-stat-label">Serviços disponíveis</span>
+            </div>
+            <div className="panpass-v2-stat">
+              <span className="panpass-v2-stat-num">{SEGUNDOS_VISIVEL}s</span>
+              <span className="panpass-v2-stat-label">Tempo de visibilidade</span>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Erro global */}
+      {servicosQuery.isError && (
+        <div className="panpass-v2-error-banner">
+          <AlertCircle size={18} />
+          <div>
+            <strong>Falha ao carregar o PanPass</strong>
+            <p>{servicosQuery.error?.message}</p>
+          </div>
+        </div>
       )}
 
-      <div className="grid-3 stagger panpass-grid">
-        {servicos.map((s) => <ServicoCard key={s.id} servico={s} />)}
-      </div>
+      {/* Loading */}
+      {servicosQuery.isLoading && (
+        <div className="panpass-v2-loading">
+          <div className="panpass-v2-loading-spinner" />
+          <span>Carregando serviços...</span>
+        </div>
+      )}
+
+      {/* Estado vazio */}
+      {!servicosQuery.isLoading && servicos.length === 0 && (
+        <div className="panpass-v2-empty">
+          <div className="panpass-v2-empty-icon">
+            <KeyRound size={28} />
+          </div>
+          <h3 className="panpass-v2-empty-titulo">Nenhum serviço disponível</h3>
+          <p className="panpass-v2-empty-sub">
+            Você ainda não tem acesso a nenhum serviço. Fale com o administrador.
+          </p>
+        </div>
+      )}
+
+      {/* Grid de cards */}
+      {servicos.length > 0 && (
+        <div className="panpass-v2-grid">
+          {servicos.map((s) => <ServicoCard key={s.id} servico={s} />)}
+        </div>
+      )}
     </div>
   );
 }
