@@ -56,6 +56,7 @@
         "npm:rollup-plugin-visualizer@^7.0.1",
         "npm:tailwindcss@^4.3.3",
         "npm:vite-node@6",
+        "npm:vite-plugin-compression2@^2.5.3",
         "npm:vite@^8.1.5",
         "npm:vitest@^4.1.10"
       ]
