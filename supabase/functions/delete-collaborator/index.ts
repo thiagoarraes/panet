@@ -27,15 +27,28 @@ const extractAvatarPathFromUrl = (rawUrl: string) => {
   }
 };
 
+// Procura em auth.users, NAO em colaboradores.
+//
+// Esta funcao so e chamada quando o perfil nao foi encontrado -- ou seja,
+// exatamente no caso do usuario orfao (auth user vivo, perfil ja removido por
+// uma exclusao que falhou no meio). A versao antiga consultava `colaboradores`,
+// onde por definicao nao ha nada a achar nesse cenario: devolvia null, o
+// deleteUser era pulado e a function respondia ok:true sem excluir ninguem.
 // deno-lint-ignore-next-line no-explicit-any
 async function findAuthUserIdByEmail(adminClient: SupabaseClient<any>, email: string) {
-  const { data, error } = await adminClient
-    .from("colaboradores")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-  if (error) throw error;
-  return data?.id || null;
+  const alvo = String(email || "").trim().toLowerCase();
+  if (!alvo) return null;
+
+  const perPage = 200;
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const users = data?.users || [];
+    const achado = users.find((u) => String(u?.email || "").trim().toLowerCase() === alvo);
+    if (achado?.id) return achado.id;
+    if (users.length < perPage) break;
+  }
+  return null;
 }
 
 serve(async (req) => {
@@ -204,9 +217,16 @@ if (!supabaseUrl || !serviceRoleKey) {
       }
     }
 
-    let authUserId = targetProfileId;
+    let authUserId: string | null = targetProfileId;
     if (!authUserId && targetEmail) {
       authUserId = await findAuthUserIdByEmail(adminClient, targetEmail);
+    }
+
+    // Sem perfil E sem auth user nao ha o que excluir. Responder ok:true aqui
+    // mascarava exclusoes que nao aconteceram -- a tela dizia "excluido" e o
+    // usuario seguia de pe, so invisivel na listagem.
+    if (!authUserId && !targetProfile) {
+      return jsonError(req, 404, "Colaborador não encontrado.");
     }
 
     if (authUserId) {
