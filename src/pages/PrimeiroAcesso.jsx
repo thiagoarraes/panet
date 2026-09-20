@@ -1,15 +1,65 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock } from "lucide-react";
+import { Lock, Check, X, Eye, EyeOff } from "lucide-react";
+import { REQUISITOS_SENHA, requisitosPendentes } from "../lib/senhaRequisitos";
 
-const validatePassword = (password) => {
-  if (password.length < 8) return "A senha deve ter pelo menos 8 caracteres.";
-  if (!/[a-z]/.test(password)) return "A senha precisa ter pelo menos uma letra minúscula.";
-  if (!/[A-Z]/.test(password)) return "A senha precisa ter pelo menos uma letra maiúscula.";
-  if (!/[0-9]/.test(password)) return "A senha precisa ter pelo menos um número.";
-  if (!/[^A-Za-z0-9]/.test(password)) return "A senha precisa ter pelo menos um caractere especial.";
-  return "";
+// O projeto nao tem utilitario .sr-only global (o .vibe-sr-only e de outro escopo).
+const SR_ONLY = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
 };
+
+function CampoSenha({ id, label, placeholder, valor, onChange, visivel, onToggleVisivel }) {
+  return (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <input
+          id={id}
+          className="form-input"
+          type={visivel ? "text" : "password"}
+          placeholder={placeholder}
+          autoComplete="new-password"
+          value={valor}
+          onChange={onChange}
+          style={{ paddingRight: 42, width: "100%" }}
+        />
+        <button
+          type="button"
+          onClick={onToggleVisivel}
+          aria-label={visivel ? "Ocultar senha" : "Mostrar senha"}
+          aria-pressed={visivel}
+          style={{
+            position: "absolute",
+            right: 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 28,
+            height: 28,
+            padding: 0,
+            border: "none",
+            borderRadius: 6,
+            background: "transparent",
+            color: "var(--muted)",
+            cursor: "pointer",
+          }}
+        >
+          {visivel ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function PrimeiroAcessoPage({ onConcluir, theme }) {
   const navigate = useNavigate();
@@ -18,19 +68,22 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
   const [erro, setErro] = useState("");
   const [ok, setOk] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verNova, setVerNova] = useState(false);
+  const [verConfirma, setVerConfirma] = useState(false);
 
-  const forca = nova.length === 0 ? 0 : nova.length < 4 ? 1 : nova.length < 6 ? 2 : nova.length < 8 ? 3 : 4;
-  const forcaLabel = ["", "Muito fraca", "Fraca", "Razoável", "Boa força"];
-  const forcaCor = ["", "#FF6B6B", "#E8B84B", "#E8955A", "var(--accent)"];
+  const pendentes = requisitosPendentes(nova);
+  const atendidos = REQUISITOS_SENHA.length - pendentes.length;
+  const senhaValida = pendentes.length === 0;
+  const confirmaTocado = confirma.length > 0;
+  const senhasIguais = nova === confirma;
 
   const salvar = async () => {
-    const passwordError = validatePassword(nova);
-    if (passwordError) {
-      setErro(passwordError);
+    if (!senhaValida) {
+      setErro("A senha ainda não atende aos requisitos abaixo do campo.");
       return;
     }
 
-    if (nova !== confirma) {
+    if (!senhasIguais) {
       setErro("As senhas não coincidem.");
       return;
     }
@@ -77,7 +130,7 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
             alignItems: "flex-start",
           }}
         >
-          <span style={{ display: "inline-flex" }}><Lock size={18} color="var(--accent)" /></span>
+          <span style={{ display: "inline-flex" }}><Lock size={18} color="var(--accent)" aria-hidden="true" /></span>
           <div>
             <div style={{ fontFamily: "'Sora', sans-serif", fontWeight: 600, fontSize: 13, marginBottom: 2 }}>Primeiro acesso detectado</div>
             <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
@@ -92,59 +145,111 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
         <div className="login-sub">Ela substituirá a senha temporária enviada pelo administrador.</div>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="primeiro-acesso-senha">NOVA SENHA</label>
-            <input
-              id="primeiro-acesso-senha"
-              className="form-input"
-              type="password"
-              placeholder="Mínimo 8 caracteres"
-              autoComplete="new-password"
-              value={nova}
-              onChange={(e) => {
-                setNova(e.target.value);
-                setErro("");
-              }}
-            />
+          <CampoSenha
+            id="primeiro-acesso-senha"
+            label="NOVA SENHA"
+            placeholder="Crie uma senha"
+            valor={nova}
+            onChange={(e) => {
+              setNova(e.target.value);
+              setErro("");
+            }}
+            visivel={verNova}
+            onToggleVisivel={() => setVerNova((v) => !v)}
+          />
+
+          {/* Requisitos sempre visiveis: a pessoa nao pode descobrir a regra so
+              depois de apanhar no submit. */}
+          <div style={{ marginTop: -6, marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }} aria-hidden="true">
+              {REQUISITOS_SENHA.map((r, i) => (
+                <div
+                  key={r.id}
+                  style={{
+                    flex: 1,
+                    height: 3,
+                    borderRadius: 2,
+                    background: i < atendidos ? (senhaValida ? "var(--success)" : "var(--accent)") : "var(--border)",
+                    transition: "background 0.3s",
+                  }}
+                />
+              ))}
+            </div>
+
+            <ul
+              aria-live="polite"
+              style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 4 }}
+            >
+              {REQUISITOS_SENHA.map((r) => {
+                const atende = r.teste(nova);
+                return (
+                  <li
+                    key={r.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                      color: atende ? "var(--success)" : "var(--muted)",
+                      transition: "color 0.2s",
+                    }}
+                  >
+                    <span style={{ display: "inline-flex", flexShrink: 0 }}>
+                      {atende
+                        ? <Check size={13} aria-hidden="true" />
+                        : <span style={{
+                            display: "inline-block",
+                            width: 13,
+                            height: 13,
+                            borderRadius: "50%",
+                            border: "1.5px solid var(--border)",
+                          }} />}
+                    </span>
+                    <span>{r.label}</span>
+                    <span style={SR_ONLY}>{atende ? " — requisito atendido" : " — pendente"}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          {nova.length > 0 && (
-            <div style={{ marginBottom: 14, marginTop: -8 }}>
-              <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      flex: 1,
-                      height: 3,
-                      borderRadius: 2,
-                      background: forca >= i ? forcaCor[forca] : "var(--border)",
-                      transition: "background 0.3s",
-                    }}
-                  />
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: forcaCor[forca], transition: "color 0.3s" }}>{forcaLabel[forca]}</div>
+          <CampoSenha
+            id="primeiro-acesso-confirmar"
+            label="CONFIRMAR SENHA"
+            placeholder="Repita a nova senha"
+            valor={confirma}
+            onChange={(e) => {
+              setConfirma(e.target.value);
+              setErro("");
+            }}
+            visivel={verConfirma}
+            onToggleVisivel={() => setVerConfirma((v) => !v)}
+          />
+
+          {confirmaTocado && (
+            <div
+              aria-live="polite"
+              style={{
+                marginTop: -8,
+                marginBottom: 12,
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: senhasIguais ? "var(--success)" : "var(--danger)",
+              }}
+            >
+              {senhasIguais ? <Check size={13} aria-hidden="true" /> : <X size={13} aria-hidden="true" />}
+              <span>{senhasIguais ? "As senhas coincidem." : "As senhas não coincidem."}</span>
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="primeiro-acesso-confirmar">CONFIRMAR SENHA</label>
-            <input
-              id="primeiro-acesso-confirmar"
-              className="form-input"
-              type="password"
-              placeholder="Repita a nova senha"
-              autoComplete="new-password"
-              value={confirma}
-              onChange={(e) => {
-                setConfirma(e.target.value);
-                setErro("");
-              }}
-            />
-          </div>
-
-          {erro && <div style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12 }}>{erro}</div>}
+          {erro && (
+            <div role="alert" style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12 }}>
+              {erro}
+            </div>
+          )}
 
           {ok ? (
             <div
@@ -171,4 +276,3 @@ export function PrimeiroAcessoPage({ onConcluir, theme }) {
     </div>
   );
 }
-
