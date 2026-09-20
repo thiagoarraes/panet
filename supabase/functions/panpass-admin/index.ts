@@ -7,18 +7,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encrypt } from "../_shared/crypto.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const jsonResponse = (body: Record<string, unknown>, status: number) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
 const textoOuNull = (v: unknown): string | null => {
   const s = String(v ?? "").trim();
@@ -34,17 +24,17 @@ const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
+  if (req.method !== "POST") return jsonError(req, 405, "Method not allowed");
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase env vars are missing.");
+ try {
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
+    if (!supabaseUrl || !serviceRoleKey) return jsonError(req, 503, "Serviço não configurado.");
 
     const authHeader = req.headers.get("Authorization");
     const callerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    if (!callerToken) return jsonResponse({ error: "Missing bearer token" }, 401);
+    if (!callerToken) return jsonError(req, 401, "Não autenticado.");
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
@@ -54,35 +44,35 @@ serve(async (req) => {
       data: { user: callerUser },
       error: callerError,
     } = await adminClient.auth.getUser(callerToken);
-    if (callerError || !callerUser) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (callerError || !callerUser) return jsonError(req, 401, "Não autenticado.");
 
     const { data: perfil } = await adminClient
       .from("colaboradores")
       .select("perfil, admin_modulos, ativo")
       .eq("id", callerUser.id)
       .maybeSingle();
-    if (!hasRequiredAdminModule(perfil)) return jsonResponse({ error: "Acesso restrito." }, 403);
+    if (!hasRequiredAdminModule(perfil)) return jsonError(req, 403, "Acesso restrito.");
 
     const body = await req.json();
     const acao = String(body?.acao || "").trim();
 
     if (acao === "delete") {
       const id = String(body?.id || "").trim();
-      if (!id) return jsonResponse({ error: "id é obrigatório." }, 400);
+      if (!id) return jsonError(req, 400, "id é obrigatório.");
       const { error } = await adminClient.from("panpass_servicos").delete().eq("id", id);
-      if (error) throw new Error(error.message);
-      return jsonResponse({ ok: true }, 200);
+      if (error) return jsonError(req, 500, "Erro ao remover o serviço.", error.message);
+      return jsonOk(req, { ok: true });
     }
 
-    if (acao !== "upsert") return jsonResponse({ error: "ação inválida." }, 400);
+    if (acao !== "upsert") return jsonError(req, 400, "Ação inválida.");
 
     const s = body?.servico || {};
     const id = textoOuNull(s.id);
     const nome = textoOuNull(s.nome);
     const usuario = textoOuNull(s.usuario);
 
-    if (!nome) return jsonResponse({ error: "nome é obrigatório." }, 400);
-    if (!usuario) return jsonResponse({ error: "usuário/e-mail é obrigatório." }, 400);
+    if (!nome) return jsonError(req, 400, "nome é obrigatório.");
+    if (!usuario) return jsonError(req, 400, "usuário/e-mail é obrigatório.");
 
     // deno-lint-ignore no-explicit-any
     const registro: Record<string, any> = {
@@ -107,22 +97,21 @@ serve(async (req) => {
 
     if (id) {
       const { error } = await adminClient.from("panpass_servicos").update(registro).eq("id", id);
-      if (error) throw new Error(error.message);
-      return jsonResponse({ ok: true, id }, 200);
+      if (error) return jsonError(req, 500, "Erro ao salvar o serviço.", error.message);
+      return jsonOk(req, { ok: true, id });
     }
 
-    if (!registro.senha_cifrada) return jsonResponse({ error: "senha é obrigatória." }, 400);
+    if (!registro.senha_cifrada) return jsonError(req, 400, "senha é obrigatória.");
 
     const { data, error } = await adminClient
       .from("panpass_servicos")
       .insert(registro)
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
-    return jsonResponse({ ok: true, id: data.id }, 200);
+    if (error) return jsonError(req, 500, "Erro ao criar o serviço.", error.message);
+    return jsonOk(req, { ok: true, id: data.id });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Erro inesperado.";
-    console.error("[panpass-admin]", msg);
-    return jsonResponse({ error: msg }, 500);
+    console.error("[panpass-admin]", error);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });

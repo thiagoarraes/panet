@@ -9,6 +9,7 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "check:classes": "node scripts/check-legacy-classes.mjs --check",
     "check:functions": "node scripts/run-deno.mjs task check:functions",
+    "deploy:functions": "supabase functions deploy",
     "build:app": "vite build",
     "build:analyze": "vite build --mode analyze",
     "build": "node scripts/build.mjs",

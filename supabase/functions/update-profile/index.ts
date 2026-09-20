@@ -1,35 +1,37 @@
-﻿import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+
+const isSafeUrl = (value: string) => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError(req, 405, "Method not allowed");
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase env vars are missing.");
+try {
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
+if (!supabaseUrl || !serviceRoleKey) {
+      return jsonError(req, 503, "Serviço não configurado.");
+    }
 
     const authHeader = req.headers.get("Authorization");
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
     const callerToken = bearerToken.trim();
     if (!callerToken) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Nao autenticado.");
     }
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
@@ -41,10 +43,7 @@ serve(async (req) => {
     } = await adminClient.auth.getUser(callerToken);
 
     if (callerError || !callerUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Nao autenticado.");
     }
 
     const body = await req.json();
@@ -56,11 +55,14 @@ serve(async (req) => {
     const aniversario = body?.aniversario ? String(body.aniversario).trim() : null;
     const fotoUrl = body?.foto_url ? String(body.foto_url).trim() : null;
 
+    for (const [campo, valor] of [["foto_url", fotoUrl], ["instagram", instagram], ["linkedin", linkedin]] as const) {
+      if (valor && !isSafeUrl(valor)) {
+        return jsonError(req, 400, `${campo} deve ser uma URL http(s) valida.`);
+      }
+    }
+
     if (!nome || !cargo) {
-      return new Response(JSON.stringify({ error: "nome e cargo sao obrigatorios." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "nome e cargo sao obrigatorios.");
     }
 
     const updateData: Record<string, string | null> = {
@@ -84,21 +86,12 @@ serve(async (req) => {
       .maybeSingle();
 
     if (updateError) {
-      return new Response(JSON.stringify({ error: updateError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 500, "Erro ao salvar o perfil.", updateError.message);
     }
 
-    return new Response(JSON.stringify({ ok: true, profile }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonOk(req, { ok: true, profile });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[update-profile]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });
-

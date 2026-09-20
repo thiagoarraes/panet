@@ -1,93 +1,70 @@
-﻿import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
 
-const extractAvatarPathFromUrl = (fotoUrl: string) => {
-  const trimmed = String(fotoUrl || "").trim();
-  if (!trimmed) return "";
-  try {
-    const parsed = new URL(trimmed);
-    const path = decodeURIComponent(parsed.pathname || "");
-    const markers = [
-      "/storage/v1/object/public/avatares/",
-      "/storage/v1/object/sign/avatares/",
-      "/storage/v1/object/authenticated/avatares/",
-    ];
-    for (const marker of markers) {
-      const idx = path.indexOf(marker);
-      if (idx >= 0) {
-        return path.slice(idx + marker.length);
-      }
-    }
-    return "";
-  } catch (_err) {
-    return "";
-  }
-};
-
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
-const hasRequiredAdminModule = (profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null) => {
+const hasRequiredAdminModule = (
+  profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null
+) => {
   if (!profile || profile.perfil !== "admin" || profile.ativo === false) return false;
   if (profile.admin_modulos === null || profile.admin_modulos === undefined) return true;
   return Array.isArray(profile.admin_modulos) && profile.admin_modulos.includes(REQUIRED_ADMIN_MODULE);
 };
 
-const findAuthUserIdByEmail = async (
-  adminClient: { auth: { admin: { listUsers: (params: { page: number; perPage: number }) => Promise<{ data?: { users?: Array<{ id?: string; email?: string | null }> }; error?: { message?: string } | null }> } } },
-  email: string,
-) => {
-  const normalized = normalizeEmail(email);
-  if (!normalized) return "";
-  let page = 1;
-  const perPage = 200;
-  for (let i = 0; i < 10; i += 1) {
-    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
-    if (error) return "";
-    const users = data?.users || [];
-    const hit = users.find((user) => normalizeEmail(user?.email) === normalized);
-    if (hit?.id) return hit.id;
-    if (users.length < perPage) break;
-    page += 1;
+const extractAvatarPathFromUrl = (rawUrl: string) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    if (!parsed.pathname.includes("/storage/v1/object/")) return "";
+    return decodeURIComponent(parsed.pathname.split("/storage/v1/object/")[1] || "").replace(/^avatares\//, "");
+  } catch (_err) {
+    return "";
   }
-  return "";
 };
+
+// deno-lint-ignore-next-line no-explicit-any
+async function findAuthUserIdByEmail(adminClient: SupabaseClient<any>, email: string) {
+  const { data, error } = await adminClient
+    .from("colaboradores")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id || null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError(req, 405, "Method not allowed");
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error("Supabase env vars are missing.");
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
+if (!supabaseUrl || !serviceRoleKey) {
+      return jsonError(req, 503, "Serviço não configurado.");
     }
 
+    // Accept bearer token from Authorization header or apikey header.
     const authHeader = req.headers.get("Authorization");
-    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
-    const candidateTokens = bearerToken.trim() ? [bearerToken.trim()] : [];
+    const candidateTokens = [
+      authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "",
+      req.headers.get("apikey") || "",
+    ]
+      .map((token) => token.trim())
+      .filter(Boolean);
 
     if (candidateTokens.length === 0) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -107,10 +84,7 @@ serve(async (req) => {
     }
 
     if (!callerUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const { data: callerProfile, error: profileError } = await adminClient
@@ -120,27 +94,18 @@ serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !hasRequiredAdminModule(callerProfile)) {
-      return new Response(JSON.stringify({ error: "Only admins with colaboradores access can delete users." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 403, "Apenas admins com acesso ao módulo colaboradores podem excluir usuários.");
     }
 
     const body = await req.json();
     const userId = String(body?.user_id || "").trim();
     const providedEmail = normalizeEmail(body?.email);
     if (!userId && !providedEmail) {
-      return new Response(JSON.stringify({ error: "user_id ou email é obrigatório." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "user_id ou email é obrigatório.");
     }
 
     if (userId && userId === callerUser.id) {
-      return new Response(JSON.stringify({ error: "Você não pode excluir seu próprio usuário." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "Você não pode excluir seu próprio usuário.");
     }
 
     let targetProfile:
@@ -158,10 +123,7 @@ serve(async (req) => {
         .eq("id", userId)
         .maybeSingle();
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao localizar o colaborador.", error.message);
       }
       targetProfile = data;
     }
@@ -173,10 +135,7 @@ serve(async (req) => {
         .eq("email", providedEmail)
         .maybeSingle();
       if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao localizar o colaborador por e-mail.", error.message);
       }
       targetProfile = data;
     }
@@ -185,10 +144,7 @@ serve(async (req) => {
     const targetEmail = normalizeEmail(targetProfile?.email || providedEmail);
 
     if (targetProfileId && targetProfileId === callerUser.id) {
-      return new Response(JSON.stringify({ error: "Você não pode excluir seu próprio usuário." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "Você não pode excluir seu próprio usuário.");
     }
 
     const [{ error: reassignPostsError }, avatarListResult] = await Promise.all([
@@ -197,9 +153,9 @@ serve(async (req) => {
         : Promise.resolve({ error: null }),
       targetProfileId
         ? adminClient.storage.from("avatares").list(targetProfileId, {
-          limit: 1000,
-          offset: 0,
-        })
+            limit: 1000,
+            offset: 0,
+          })
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -207,17 +163,11 @@ serve(async (req) => {
     const listAvatarError = avatarListResult?.error || null;
 
     if (reassignPostsError) {
-      return new Response(JSON.stringify({ error: reassignPostsError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 500, "Erro ao reatribuir postagens.", reassignPostsError.message);
     }
 
     if (listAvatarError) {
-      return new Response(JSON.stringify({ error: listAvatarError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 500, "Erro ao listar avatares.", listAvatarError.message);
     }
 
     const avatarPaths = new Set<string>();
@@ -232,15 +182,11 @@ serve(async (req) => {
     if (avatarPaths.size > 0) {
       const { error: removeAvatarError } = await adminClient.storage.from("avatares").remove(Array.from(avatarPaths));
       if (removeAvatarError) {
-        return new Response(JSON.stringify({ error: removeAvatarError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao remover avatares.", removeAvatarError.message);
       }
     }
 
     // Ensure collaborator-linked data is removed before deleting auth user.
-    // This avoids stale cards/filters and handles schemas without full FK cascade.
     const cleanupTasks = await Promise.all([
       targetProfileId ? adminClient.from("curtidas").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
       targetProfileId ? adminClient.from("comentarios").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
@@ -254,10 +200,7 @@ serve(async (req) => {
 
     for (const result of cleanupTasks) {
       if (result.error) {
-        return new Response(JSON.stringify({ error: result.error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao limpar dados vinculados.", result.error.message);
       }
     }
 
@@ -269,24 +212,13 @@ serve(async (req) => {
     if (authUserId) {
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(authUserId);
       if (deleteError && !String(deleteError.message || "").toLowerCase().includes("not found")) {
-        return new Response(JSON.stringify({ error: deleteError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao excluir o usuário de autenticação.", deleteError.message);
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, deleted_auth_user_id: authUserId || null }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonOk(req, { ok: true, deleted_auth_user_id: authUserId || null });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    console.error("[delete-collaborator]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });

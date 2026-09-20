@@ -1,15 +1,9 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
-
-const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
 const hasRequiredAdminModule = (
   profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null
@@ -21,30 +15,24 @@ const hasRequiredAdminModule = (
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError(req, 405, "Method not allowed");
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error("Supabase env vars are missing.");
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
+if (!supabaseUrl || !serviceRoleKey) {
+      return jsonError(req, 503, "Serviço não configurado.");
     }
 
     const authHeader = req.headers.get("Authorization");
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
     if (!bearerToken.trim()) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -56,10 +44,7 @@ serve(async (req) => {
       await adminClient.auth.getUser(bearerToken.trim());
 
     if (callerError || !callerUser?.id) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     // Verify caller has colaboradores admin module
@@ -70,9 +55,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !hasRequiredAdminModule(callerProfile)) {
-      return new Response(
-        JSON.stringify({ error: "Apenas admins com acesso ao módulo colaboradores podem executar esta ação." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return jsonError(
+        req,
+        403,
+        "Apenas admins com acesso ao módulo colaboradores podem executar esta ação."
       );
     }
 
@@ -82,19 +68,13 @@ serve(async (req) => {
     const action = String(body?.action || "deactivate") === "reactivate" ? "reactivate" : "deactivate";
 
     if (!targetId) {
-      return new Response(JSON.stringify({ error: "user_id é obrigatório." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "user_id é obrigatório.");
     }
 
     // Prevent acting on self
     if (targetId === callerUser.id) {
       const label = action === "deactivate" ? "desativar" : "reativar";
-      return new Response(
-        JSON.stringify({ error: `Você não pode ${label} seu próprio usuário.` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonError(req, 400, `Você não pode ${label} seu próprio usuário.`);
     }
 
     // Verify target exists
@@ -105,16 +85,10 @@ serve(async (req) => {
       .maybeSingle();
 
     if (targetError) {
-      return new Response(JSON.stringify({ error: targetError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 500, "Erro ao localizar o colaborador.", targetError.message);
     }
     if (!targetProfile) {
-      return new Response(JSON.stringify({ error: "Colaborador não encontrado." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 404, "Colaborador não encontrado.");
     }
 
     if (action === "deactivate") {
@@ -125,10 +99,7 @@ serve(async (req) => {
         .eq("id", targetId);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao desativar o colaborador.", updateError.message);
       }
 
       // 2. Ban the auth user (~100 years = effectively permanent)
@@ -139,10 +110,7 @@ serve(async (req) => {
       if (banError && !String(banError.message || "").toLowerCase().includes("not found")) {
         // Roll back the ativo change if auth ban fails
         await adminClient.from("colaboradores").update({ ativo: true }).eq("id", targetId);
-        return new Response(JSON.stringify({ error: banError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao banir o usuário de autenticação.", banError.message);
       }
     } else {
       // Reactivate: set ativo = true + remove ban
@@ -152,10 +120,7 @@ serve(async (req) => {
         .eq("id", targetId);
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao reativar o colaborador.", updateError.message);
       }
 
       // Remove ban from auth user
@@ -166,21 +131,13 @@ serve(async (req) => {
       if (unbanError && !String(unbanError.message || "").toLowerCase().includes("not found")) {
         // Roll back the ativo change if unban fails
         await adminClient.from("colaboradores").update({ ativo: false }).eq("id", targetId);
-        return new Response(JSON.stringify({ error: unbanError.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonError(req, 500, "Erro ao desbanir o usuário de autenticação.", unbanError.message);
       }
     }
 
-    return new Response(
-      JSON.stringify({ ok: true, action, user_id: targetId }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk(req, { ok: true, action, user_id: targetId });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[deactivate-collaborator]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });

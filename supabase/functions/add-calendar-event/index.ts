@@ -1,15 +1,14 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
 
 function base64url(data: ArrayBuffer | string): string {
-  const bytes =
-    typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
   let str = "";
   for (const byte of bytes) str += String.fromCharCode(byte);
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
@@ -19,7 +18,7 @@ async function createServiceAccountJwt(
   serviceAccountEmail: string,
   privateKeyPem: string,
   userEmail: string,
-  scope: string
+  scope: string,
 ): Promise<string> {
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const now = Math.floor(Date.now() / 1000);
@@ -31,7 +30,7 @@ async function createServiceAccountJwt(
       aud: "https://oauth2.googleapis.com/token",
       iat: now,
       exp: now + 3600,
-    })
+    }),
   );
 
   const signingInput = `${header}.${claims}`;
@@ -46,13 +45,13 @@ async function createServiceAccountJwt(
     keyBytes,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const signatureBytes = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     cryptoKey,
-    new TextEncoder().encode(signingInput)
+    new TextEncoder().encode(signingInput),
   );
 
   return `${signingInput}.${base64url(signatureBytes)}`;
@@ -73,18 +72,15 @@ async function getAccessToken(jwt: string): Promise<string> {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError(req, 405, "Method not allowed");
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
     const googleJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
 
     if (!supabaseUrl || !serviceRoleKey || !googleJson) {
@@ -98,10 +94,7 @@ serve(async (req) => {
     const callerToken = bearerToken.trim();
 
     if (!callerToken) {
-      return new Response(JSON.stringify({ error: "Missing bearer token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -114,10 +107,7 @@ serve(async (req) => {
     } = await adminClient.auth.getUser(callerToken);
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const { data: profile } = await adminClient
@@ -133,37 +123,47 @@ serve(async (req) => {
     const { titulo, dataIso, horaIso, local, observacao } = body;
 
     if (!titulo || !dataIso) {
-      return new Response(JSON.stringify({ error: "titulo e dataIso são obrigatórios" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "titulo e dataIso são obrigatórios");
+    }
+    if (!DATE_RE.test(String(dataIso)) || Number.isNaN(Date.parse(String(dataIso)))) {
+      return jsonError(req, 400, "dataIso deve ser uma data ISO (YYYY-MM-DD) válida.");
+    }
+    const horaStr = horaIso === undefined || horaIso === null ? "" : String(horaIso);
+    if (horaStr !== "") {
+      if (!TIME_RE.test(horaStr)) {
+        return jsonError(req, 400, "horaIso deve estar no formato HH:MM.");
+      }
+      const [h, m] = horaStr.split(":").map(Number);
+      if (h > 23 || m > 59) {
+        return jsonError(req, 400, "horaIso inválida.");
+      }
     }
 
-    const hasTime = Boolean(horaIso);
-    const startDateTime = hasTime ? `${dataIso}T${horaIso}:00` : dataIso;
+    const hasTime = horaStr !== "";
+    const startDateTime = hasTime ? `${dataIso}T${horaStr}:00` : String(dataIso);
     let endDateTime: string;
 
     if (hasTime) {
-      const [h, m] = horaIso.split(":").map(Number);
+      const [h, m] = horaStr.split(":").map(Number);
       const endH = String(h + 1).padStart(2, "0");
       endDateTime = `${dataIso}T${endH}:${String(m).padStart(2, "0")}:00`;
     } else {
-      endDateTime = dataIso;
+      endDateTime = String(dataIso);
     }
 
     const jwt = await createServiceAccountJwt(
       serviceAccount.client_email,
       serviceAccount.private_key,
       userEmail,
-      "https://www.googleapis.com/auth/calendar.events"
+      "https://www.googleapis.com/auth/calendar.events",
     );
 
     const accessToken = await getAccessToken(jwt);
 
     const event = {
-      summary: titulo,
-      ...(local ? { location: local } : {}),
-      ...(observacao ? { description: observacao } : {}),
+      summary: String(titulo),
+      ...(local ? { location: String(local) } : {}),
+      ...(observacao ? { description: String(observacao) } : {}),
       ...(hasTime
         ? {
             start: { dateTime: startDateTime, timeZone: "America/Sao_Paulo" },
@@ -184,7 +184,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(event),
-      }
+      },
     );
 
     if (!calendarResponse.ok) {
@@ -193,14 +193,10 @@ serve(async (req) => {
 
     const createdEvent = await calendarResponse.json();
 
-    return new Response(
-      JSON.stringify({ success: true, eventId: createdEvent.id, htmlLink: createdEvent.htmlLink }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonOk(req, { success: true, eventId: createdEvent.id, htmlLink: createdEvent.htmlLink });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[add-calendar-event]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });
+

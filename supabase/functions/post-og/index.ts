@@ -1,11 +1,8 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-};
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
 const DEFAULT_DESCRIPTION = "Intranet da Agencia Pan.";
 const SIGNED_IMAGE_TTL_SECONDS = 60 * 60;
@@ -70,27 +67,21 @@ const extractStoragePath = (rawValue: string) => {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
 
   if (req.method !== "GET") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError(req, 405, "Method not allowed");
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase env vars are missing.");
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
+    if (!supabaseUrl || !serviceRoleKey) return jsonError(req, 503, "Serviço não configurado.");
 
     const url = new URL(req.url);
     const slug = String(url.searchParams.get("slug") || "").trim();
     if (!slug) {
-      return new Response(JSON.stringify({ error: "Missing slug" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 400, "Missing slug");
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
@@ -105,18 +96,12 @@ serve(async (req) => {
       .limit(1000);
 
     if (postsError) {
-      return new Response(JSON.stringify({ error: postsError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 500, "Erro ao consultar postagens.", postsError.message);
     }
 
     const post = (posts || []).find((item) => toPostSlug(String(item?.titulo || "")) === slug);
     if (!post) {
-      return new Response(JSON.stringify({ found: false }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonError(req, 404, "Post não encontrado.");
     }
 
     let imageUrl = "";
@@ -148,16 +133,14 @@ serve(async (req) => {
       {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...corsHeaders(req),
           "Content-Type": "application/json",
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
         },
-      }
+      },
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unexpected error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("[post-og]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });

@@ -1,18 +1,17 @@
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
+import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const jsonResponse = (body: Record<string, unknown>, status: number) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+const ALLOWED_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "application/pdf",
+]);
+const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
 const EXTRACTION_PROMPT = `Você recebe um documento enviado por um colaborador que deveria ser o recibo/comprovante de uma corrida de aplicativo (Uber, 99 ou similar). Analise o documento e responda APENAS com um JSON válido, sem cercas de código, exatamente com estas chaves:
 {
@@ -41,22 +40,23 @@ const parseExtraction = (text: string): Record<string, any> => {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders(req) });
   }
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
+    return jsonError(req, 405, "Method not allowed");
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = getSupabaseUrl();
+    const serviceRoleKey = getServiceRoleKey();
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase env vars are missing.");
-    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY não configurada.");
+    if (!supabaseUrl || !serviceRoleKey || !anthropicKey) {
+      return jsonError(req, 503, "Serviço não configurado.");
+    }
 
     const authHeader = req.headers.get("Authorization");
     const callerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-    if (!callerToken) return jsonResponse({ error: "Missing bearer token" }, 401);
+    if (!callerToken) return jsonError(req, 401, "Não autenticado.");
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
@@ -64,18 +64,19 @@ serve(async (req) => {
       data: { user: callerUser },
       error: callerError,
     } = await adminClient.auth.getUser(callerToken);
-    if (callerError || !callerUser) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (callerError || !callerUser) return jsonError(req, 401, "Não autenticado.");
 
     const body = await req.json();
     const corridaId = String(body?.corrida_id || "").trim();
-    if (!corridaId) return jsonResponse({ error: "corrida_id é obrigatório." }, 400);
+    if (!corridaId) return jsonError(req, 400, "corrida_id é obrigatório.");
 
     const { data: corrida, error: corridaError } = await adminClient
       .from("corridas")
       .select("id, colaborador_id, recibo_path, recibo_mime, status_extracao")
       .eq("id", corridaId)
       .maybeSingle();
-    if (corridaError || !corrida) return jsonResponse({ error: "Corrida não encontrada." }, 404);
+    if (corridaError) return jsonError(req, 404, "Corrida não encontrada.");
+    if (!corrida) return jsonError(req, 404, "Corrida não encontrada.");
 
     // Dono da corrida ou admin pode disparar a extração.
     if (corrida.colaborador_id !== callerUser.id) {
@@ -84,7 +85,7 @@ serve(async (req) => {
         .select("perfil")
         .eq("id", callerUser.id)
         .maybeSingle();
-      if (profile?.perfil !== "admin") return jsonResponse({ error: "Forbidden" }, 403);
+      if (profile?.perfil !== "admin") return jsonError(req, 403, "Forbidden");
     }
 
     const markError = async (message: string) => {
@@ -94,15 +95,27 @@ serve(async (req) => {
         .eq("id", corridaId);
     };
 
+    if (!corrida.recibo_path) {
+      return jsonError(req, 400, "Corrida sem recibo anexado.");
+    }
+    if (!ALLOWED_MIME.has(String(corrida.recibo_mime || ""))) {
+      return jsonError(req, 400, "Formato de recibo não suportado.");
+    }
+
     const { data: fileBlob, error: downloadError } = await adminClient.storage
       .from("recibos")
       .download(corrida.recibo_path);
     if (downloadError || !fileBlob) {
       await markError(`Falha ao baixar recibo: ${downloadError?.message || "arquivo vazio"}`);
-      return jsonResponse({ ok: false, error: "Falha ao baixar o recibo do storage." }, 500);
+      return jsonError(req, 500, "Falha ao baixar o recibo do storage.", downloadError?.message);
     }
 
-    const base64Data = encodeBase64(new Uint8Array(await fileBlob.arrayBuffer()));
+    const fileBytes = new Uint8Array(await fileBlob.arrayBuffer());
+    if (fileBytes.length > MAX_BYTES) {
+      return jsonError(req, 413, "Recibo excede o tamanho máximo suportado (8 MB).");
+    }
+
+    const base64Data = encodeBase64(fileBytes);
     const isPdf = corrida.recibo_mime === "application/pdf";
     const mediaBlock = isPdf
       ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }
@@ -130,7 +143,7 @@ serve(async (req) => {
     if (!anthropicResponse.ok) {
       const errText = await anthropicResponse.text();
       await markError(`API de extração retornou ${anthropicResponse.status}: ${errText.slice(0, 300)}`);
-      return jsonResponse({ ok: false, error: "Falha na API de extração." }, 502);
+      return jsonError(req, 502, "Falha na API de extração.", errText.slice(0, 300));
     }
 
     const anthropicJson = await anthropicResponse.json();
@@ -141,17 +154,17 @@ serve(async (req) => {
       fields = parseExtraction(rawText);
     } catch (parseErr) {
       await markError(`Resposta inválida da IA: ${parseErr instanceof Error ? parseErr.message : "parse"}`);
-      return jsonResponse({ ok: false, error: "Não foi possível interpretar a resposta da IA." }, 502);
+      return jsonError(req, 502, "Não foi possível interpretar a resposta da IA.");
     }
 
     // Documento não é recibo de corrida: rejeita, apaga arquivo e a corrida.
     if (fields.eh_recibo_corrida === false) {
       await adminClient.storage.from("recibos").remove([corrida.recibo_path]).catch(() => {});
       await adminClient.from("corridas").delete().eq("id", corridaId);
-      return jsonResponse(
-        { ok: false, rejected: true, error: "O documento enviado não é um recibo de corrida de aplicativo (Uber/99)." },
-        200,
-      );
+ return jsonOk(
+ req,
+ { ok: false, rejected: true, error: "O documento enviado não é um recibo de corrida de aplicativo (Uber/99)." },
+ );
     }
 
     const toNumberOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -181,11 +194,12 @@ serve(async (req) => {
       .maybeSingle();
     if (updateError) {
       await markError(`Falha ao salvar extração: ${updateError.message}`);
-      return jsonResponse({ ok: false, error: updateError.message }, 500);
+      return jsonError(req, 500, "Erro ao salvar a extração.", updateError.message);
     }
 
-    return jsonResponse({ ok: true, corrida: updated }, 200);
+ return jsonOk(req, { ok: true, corrida: updated });
   } catch (err) {
-    return jsonResponse({ ok: false, error: err instanceof Error ? err.message : "Unexpected error" }, 500);
+    console.error("[extract-recibo]", err);
+    return jsonError(req, 500, "Erro interno. Tente novamente.");
   }
 });
