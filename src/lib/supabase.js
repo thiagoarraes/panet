@@ -1,9 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// Publishable primeiro; a anon legada e so fallback ate a migracao de chaves
+// terminar. Mesma ordem em middleware.js e api/auth/* -- de proposito.
 const supabaseAnon =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const SUPABASE_URL = supabaseUrl;
 export const SUPABASE_ANON_KEY = supabaseAnon;
 

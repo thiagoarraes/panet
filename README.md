@@ -113,11 +113,23 @@ Copie `.env.example` para `.env`. Resumo:
 | Variável | Onde | Descrição |
 |----------|------|-----------|
 | `VITE_SUPABASE_URL` | cliente | URL do projeto Supabase |
-| `VITE_SUPABASE_ANON_KEY` | cliente | Chave anon/publishable (exposta no bundle) |
-| `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | cliente | Alias opcional da chave acima |
+| `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | cliente | **Preferida.** Chave publishable (`sb_publishable_…`), exposta no bundle |
+| `VITE_SUPABASE_ANON_KEY` | cliente | Chave anon legada (JWT). Só fallback — some quando as legacy keys forem desativadas |
 | `SUPABASE_URL` | servidor | URL para as serverless de auth e scripts |
-| `SUPABASE_ANON_KEY` | servidor | Chave anon usada pelas serverless |
-| `SUPABASE_SERVICE_ROLE_KEY` | servidor | Service role (ignora RLS) — **só servidor/scripts** |
+| `SUPABASE_PUBLISHABLE_KEY` | servidor | **Preferida** pelas serverless de auth |
+| `SUPABASE_ANON_KEY` | servidor | Fallback legado das serverless |
+| `SUPABASE_SERVICE_ROLE_KEY` | servidor | Service role / secret key (ignora RLS) — **só servidor/scripts** |
+
+### Precedência de chave pública
+
+`src/lib/supabase.js`, `middleware.js` e `api/auth/*` resolvem a chave na
+**mesma ordem**: publishable primeiro, anon legada como fallback. Isso é
+deliberado — ordens divergentes entre arquivos já causaram incidente (partes do
+app usando chaves diferentes). Ao mexer em um, mexa nos três.
+
+> A migração para o esquema novo de API keys só termina quando o bundle publicado
+> deixar de carregar a anon legada. Para conferir qual chave está em produção,
+> procure o prefixo `sb_publishable_` nos assets servidos.
 
 > ⚠️ Nunca exponha a `SUPABASE_SERVICE_ROLE_KEY` no cliente nem a comite. Variáveis
 > `VITE_*` vão para o bundle público — use sempre a chave anon nelas.

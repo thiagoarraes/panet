@@ -2,10 +2,14 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+// Preferimos sempre a publishable (esquema novo de API keys). A anon legada
+// fica so como fallback: ela e desativada ao concluir a migracao de chaves, e
+// ter ordens de precedencia diferentes por arquivo ja causou incidente antes.
 const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
   process.env.SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  process.env.VITE_SUPABASE_ANON_KEY;
 
 function buildCookieHeader(name, value, options) {
   let cookie = `${name}=${value}`;
