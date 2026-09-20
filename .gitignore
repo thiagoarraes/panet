@@ -44,3 +44,5 @@ supabase/.temp/
 
 # Kilo Code (extensão do editor)
 .kilocode/
+
+.env*

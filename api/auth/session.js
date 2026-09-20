@@ -76,21 +76,25 @@ export default async function handler(req, res) {
     return res.status(200).json({ session: null });
   }
 
-  // Fast path: access token still valid (not expiring in < 30s).
-  // We skip the supabase.auth.getUser() network round-trip here on purpose:
-  // this endpoint only echoes back a token we ourselves stored in an httpOnly
-  // cookie, and Supabase verifies the token's signature on every actual API
-  // call the client makes with it. A tampered cookie grants nothing.
+  // Fast path: access token still valid (not expiring in < 30s) AND
+  // signature verified by Supabase. Sem a verificação, um cookie forjado
+  // com payload válido seria aceito sem checagem de assinatura.
   if (accessToken) {
     const payload = decodeJwtPayload(accessToken);
     const nowSec = Math.floor(Date.now() / 1000);
     if (payload && Number(payload.exp || 0) > nowSec + 30 && payload.sub) {
-      return res.status(200).json({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-        expires_at: Number(payload.exp || 0),
-        user: { id: payload.sub, email: payload.email || "" },
+      const supabaseVerify = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false },
       });
+      const { data: userData, error: userError } = await supabaseVerify.auth.getUser(accessToken);
+      if (!userError && userData?.user) {
+        return res.status(200).json({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_at: Number(payload.exp || 0),
+          user: { id: payload.sub, email: userData.user.email || "" },
+        });
+      }
     }
   }
 

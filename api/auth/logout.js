@@ -1,7 +1,45 @@
-export default function handler(req, res) {
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+function parseCookies(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader) return cookies;
+  cookieHeader.split(";").forEach((part) => {
+    const idx = part.indexOf("=");
+    if (idx < 0) return;
+    cookies[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
+  });
+  return cookies;
+}
+
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+ // Revoga a sessão no Supabase antes de limpar os cookies.
+ // Falhas de rede não impedem o logout local (best-effort).
+ const cookies = parseCookies(req.headers.cookie);
+ const accessToken = cookies.panet_at;
+ if (accessToken && SUPABASE_URL && SUPABASE_ANON_KEY) {
+ try {
+ await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/auth/v1/logout`, {
+ method: "POST",
+ headers: {
+ apikey: SUPABASE_ANON_KEY,
+ Authorization: `Bearer ${accessToken}`,
+ "Content-Type": "application/json",
+ },
+ body: JSON.stringify({ refresh_token: cookies.panet_rt || "" }),
+ });
+ } catch (_err) {
+ // Best-effort: cookies são limpos de qualquer forma.
+ }
+ }
 
   const isProd = process.env.NODE_ENV === "production";
   const base = `HttpOnly; ${isProd ? "Secure; " : ""}SameSite=Strict; Path=/; Max-Age=0`;
