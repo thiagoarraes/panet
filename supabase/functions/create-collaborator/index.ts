@@ -91,7 +91,7 @@ if (!supabaseUrl || !serviceRoleKey) {
  const perfil = body?.perfil === "admin" ? "admin" : "colaborador";
 
  if (!nome || !email) {
- return jsonError(req, 400, "nome e email sao obrigatorios.");
+ return jsonError(req, 400, "nome e e-mail são obrigatórios.");
  }
 
  for (const [campo, valor] of [["instagram", instagram], ["linkedin", linkedin], ["github", github]] as const) {
@@ -111,7 +111,7 @@ if (!supabaseUrl || !serviceRoleKey) {
  }
 
  if (existingProfile) {
- return jsonError(req, 409, "Ja existe colaborador com este e-mail.");
+ return jsonError(req, 409, "Já existe colaborador com este e-mail.");
  }
 
  const temporaryPassword = generateTemporaryPassword();

@@ -31,7 +31,7 @@ if (!supabaseUrl || !serviceRoleKey) {
     const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.replace("Bearer ", "") : "";
     const callerToken = bearerToken.trim();
     if (!callerToken) {
-      return jsonError(req, 401, "Nao autenticado.");
+      return jsonError(req, 401, "Não autenticado.");
     }
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
@@ -43,7 +43,7 @@ if (!supabaseUrl || !serviceRoleKey) {
     } = await adminClient.auth.getUser(callerToken);
 
     if (callerError || !callerUser) {
-      return jsonError(req, 401, "Nao autenticado.");
+      return jsonError(req, 401, "Não autenticado.");
     }
 
     const body = await req.json();
@@ -57,12 +57,12 @@ if (!supabaseUrl || !serviceRoleKey) {
 
     for (const [campo, valor] of [["foto_url", fotoUrl], ["instagram", instagram], ["linkedin", linkedin]] as const) {
       if (valor && !isSafeUrl(valor)) {
-        return jsonError(req, 400, `${campo} deve ser uma URL http(s) valida.`);
+        return jsonError(req, 400, `${campo} deve ser uma URL http(s) válida.`);
       }
     }
 
     if (!nome || !cargo) {
-      return jsonError(req, 400, "nome e cargo sao obrigatorios.");
+      return jsonError(req, 400, "nome e cargo são obrigatórios.");
     }
 
     const updateData: Record<string, string | null> = {
