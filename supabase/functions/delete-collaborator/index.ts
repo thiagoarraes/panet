@@ -199,21 +199,39 @@ if (!supabaseUrl || !serviceRoleKey) {
       }
     }
 
-    // Ensure collaborator-linked data is removed before deleting auth user.
-    const cleanupTasks = await Promise.all([
-      targetProfileId ? adminClient.from("curtidas").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("comentarios").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("mural").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("ferias").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("aniversario_parabenizacoes").delete().eq("colaborador_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("aniversario_parabenizacoes").delete().eq("aniversariante_id", targetProfileId) : Promise.resolve({ error: null }),
-      targetProfileId ? adminClient.from("colaboradores").delete().eq("id", targetProfileId) : Promise.resolve({ error: null }),
-      targetEmail ? adminClient.from("colaboradores").delete().eq("email", targetEmail) : Promise.resolve({ error: null }),
-    ]);
+    // Limpa o que aponta para o colaborador ANTES de remover o perfil.
+    //
+    // A tabela `mural` esteve nesta lista ate depois de ter sido dropada pela
+    // migration 20260719160000_remove_mural_panzap: o PostgREST devolvia
+    // PGRST205 e toda exclusao morria em "Erro ao limpar dados vinculados".
+    // Pior, o delete de `colaboradores` rodava no MESMO Promise.all -- ele
+    // passava, o mural falhava, a function retornava 500 e o auth user ficava
+    // para tras. Era essa a fabrica de usuarios orfaos. Por isso o perfil so
+    // sai depois que toda a limpeza deu certo, fora do lote paralelo.
+    const cleanupTasks = targetProfileId
+      ? await Promise.all([
+          adminClient.from("curtidas").delete().eq("colaborador_id", targetProfileId),
+          adminClient.from("comentarios").delete().eq("colaborador_id", targetProfileId),
+          adminClient.from("ferias").delete().eq("colaborador_id", targetProfileId),
+          adminClient.from("aniversario_parabenizacoes").delete().eq("colaborador_id", targetProfileId),
+          adminClient.from("aniversario_parabenizacoes").delete().eq("aniversariante_id", targetProfileId),
+        ])
+      : [];
 
     for (const result of cleanupTasks) {
       if (result.error) {
         return jsonError(req, 500, "Erro ao limpar dados vinculados.", result.error.message);
+      }
+    }
+
+    const perfilTasks = await Promise.all([
+      targetProfileId ? adminClient.from("colaboradores").delete().eq("id", targetProfileId) : Promise.resolve({ error: null }),
+      targetEmail ? adminClient.from("colaboradores").delete().eq("email", targetEmail) : Promise.resolve({ error: null }),
+    ]);
+
+    for (const result of perfilTasks) {
+      if (result.error) {
+        return jsonError(req, 500, "Erro ao remover o perfil do colaborador.", result.error.message);
       }
     }
 
