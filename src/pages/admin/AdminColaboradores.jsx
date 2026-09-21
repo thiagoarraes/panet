@@ -22,6 +22,7 @@ import { ConfirmarExcluirModal } from "./AdminColaboradores/ConfirmarExcluirModa
 import { ColabHistoricoModal } from "./AdminColaboradores/ColabHistoricoModal.jsx";
 import { ConfirmarDesativarModal } from "./AdminColaboradores/ConfirmarDesativarModal.jsx";
 import { DadosRhModal } from "./AdminColaboradores/DadosRhModal.jsx";
+import { copiarTexto } from "../../lib/clipboard";
 
 export function AdminColaboradores({ initialColaboradores = [], currentUserId = null, isSuperAdmin = false, podeVerRh = false, onDeleteColaborador }) {
   const [lista, setLista] = useState(() => {
@@ -384,25 +385,13 @@ export function AdminColaboradores({ initialColaboradores = [], currentUserId = 
 
   const copiarSenha = async () => {
     if (!senhaGerada?.senha) return;
-    try {
-      if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(senhaGerada.senha);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = senhaGerada.senha;
-        textarea.setAttribute("readonly", "true");
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
+    if (await copiarTexto(senhaGerada.senha)) {
       setSenhaCopiada(true);
       setTimeout(() => setSenhaCopiada(false), 1800);
-    } catch (_err) {
-      toast.danger("Não foi possível copiar a senha");
+      return;
     }
+    // A senha segue visível no modal, então dá pra copiar na mão.
+    toast.danger("Não foi possível copiar. Selecione a senha e copie manualmente.");
   };
 
   const FILTRO_TABS = [

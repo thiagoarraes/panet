@@ -4,29 +4,34 @@ import "../styles/panpass.css";
 import { usePanPassServicos } from "../hooks/queries/usePanPassServicos";
 import { useRevelarCredencial } from "../hooks/mutations/usePanPassMutations";
 import { PanTooltip } from "../components/ui/PanTooltip";
+import { copiarTexto } from "../lib/clipboard";
 
 const SEGUNDOS_VISIVEL = 60;
 
 function BotaoCopiar({ valor, titulo = "Copiar" }) {
-  const [copiado, setCopiado] = useState(false);
+  const [estado, setEstado] = useState("");
 
   useEffect(() => {
-    if (!copiado) return undefined;
-    const timer = setTimeout(() => setCopiado(false), 1500);
+    if (!estado) return undefined;
+    const timer = setTimeout(() => setEstado(""), 1500);
     return () => clearTimeout(timer);
-  }, [copiado]);
+  }, [estado]);
+
+  const copiado = estado === "ok";
+  const falhou = estado === "erro";
 
   return (
-    <PanTooltip texto={copiado ? "Copiado!" : titulo}>
+    <PanTooltip texto={copiado ? "Copiado!" : falhou ? "Não foi possível copiar" : titulo}>
       <button
         className="panpass-v2-copy"
         aria-label={titulo}
         onClick={async () => {
-          await navigator.clipboard.writeText(valor);
-          setCopiado(true);
+          // Antes era um writeText solto: quando o navegador rejeitava (foco,
+          // permissao), a promise virava unhandled e o botao nao fazia nada.
+          setEstado((await copiarTexto(valor)) ? "ok" : "erro");
         }}
       >
-        {copiado ? <Check size={13} /> : <Copy size={13} />}
+        {copiado ? <Check size={13} /> : falhou ? <AlertCircle size={13} /> : <Copy size={13} />}
       </button>
     </PanTooltip>
   );
