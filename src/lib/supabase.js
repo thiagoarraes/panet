@@ -29,12 +29,24 @@ const inMemoryStorage = {
 };
 
 // Detecta sessão zumbi: token que o app acha válido mas o Supabase já rejeita.
+//
 // PostgREST devolve 401 (não 403) em /rest/v1 quando a requisição chega sem role
 // "authenticated" — token expirado que não foi renovado. Avisamos o AuthContext
 // pra deslogar com uma mensagem clara em vez de deixar o usuário preso num erro genérico.
+//
+// /functions/v1 entra na mesma checagem porque existe um zumbi que o PostgREST
+// NÃO pega: sessão revogada no servidor com o access token ainda dentro da
+// validade. A assinatura continua boa, então o PostgREST aceita e a tela parece
+// logada; só o GoTrue confere a linha da sessão (session_not_found), e aí as
+// Edge Functions passam a responder 401 "Não autenticado." sem explicação.
+// 403 fica de fora de propósito: ali o usuário está autenticado e apenas não
+// tem permissão — deslogar seria errado.
+const CAMINHOS_COM_SESSAO = ["/rest/v1/", "/functions/v1/"];
+
 async function fetchWithSessionExpiryDetection(input, init) {
   const response = await fetch(input, init);
-  if (response.status === 401 && String(input).includes("/rest/v1/")) {
+  const url = String(input?.url || input);
+  if (response.status === 401 && CAMINHOS_COM_SESSAO.some((p) => url.includes(p))) {
     window.dispatchEvent(new Event("panet:session-expired"));
   }
   return response;
