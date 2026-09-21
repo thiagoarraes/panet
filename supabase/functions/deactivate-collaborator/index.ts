@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
+
+type Perfil = { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null };
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
 
@@ -35,24 +37,20 @@ if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 401, "Não autenticado.");
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
     // Verify caller identity
-    const { data: { user: callerUser }, error: callerError } =
-      await adminClient.auth.getUser(bearerToken.trim());
+    const { data: callerUser, error: callerError } = await rest.getUser(bearerToken.trim());
 
     if (callerError || !callerUser?.id) {
       return jsonError(req, 401, "Não autenticado.");
     }
 
     // Verify caller has colaboradores admin module
-    const { data: callerProfile, error: profileError } = await adminClient
-      .from("colaboradores")
-      .select("id, perfil, admin_modulos, ativo")
-      .eq("id", callerUser.id)
-      .maybeSingle();
+    const { data: callerProfile, error: profileError } = await rest.selectOne<Perfil>(
+      "colaboradores",
+      `id=eq.${callerUser.id}&select=id,perfil,admin_modulos,ativo`,
+    );
 
     if (profileError || !hasRequiredAdminModule(callerProfile)) {
       return jsonError(
@@ -78,11 +76,10 @@ if (!supabaseUrl || !serviceRoleKey) {
     }
 
     // Verify target exists
-    const { data: targetProfile, error: targetError } = await adminClient
-      .from("colaboradores")
-      .select("id, email, ativo")
-      .eq("id", targetId)
-      .maybeSingle();
+    const { data: targetProfile, error: targetError } = await rest.selectOne(
+      "colaboradores",
+      `id=eq.${targetId}&select=id,email,ativo`,
+    );
 
     if (targetError) {
       return jsonError(req, 500, "Erro ao localizar o colaborador.", targetError.message);
@@ -93,44 +90,34 @@ if (!supabaseUrl || !serviceRoleKey) {
 
     if (action === "deactivate") {
       // 1. Set ativo = false in colaboradores
-      const { error: updateError } = await adminClient
-        .from("colaboradores")
-        .update({ ativo: false })
-        .eq("id", targetId);
+      const { error: updateError } = await rest.update("colaboradores", `id=eq.${targetId}`, { ativo: false });
 
       if (updateError) {
         return jsonError(req, 500, "Erro ao desativar o colaborador.", updateError.message);
       }
 
       // 2. Ban the auth user (~100 years = effectively permanent)
-      const { error: banError } = await adminClient.auth.admin.updateUserById(targetId, {
-        ban_duration: "876000h",
-      });
+      const { error: banError } = await rest.adminUpdateUser(targetId, { ban_duration: "876000h" });
 
       if (banError && !String(banError.message || "").toLowerCase().includes("not found")) {
         // Roll back the ativo change if auth ban fails
-        await adminClient.from("colaboradores").update({ ativo: true }).eq("id", targetId);
+        await rest.update("colaboradores", `id=eq.${targetId}`, { ativo: true });
         return jsonError(req, 500, "Erro ao banir o usuário de autenticação.", banError.message);
       }
     } else {
       // Reactivate: set ativo = true + remove ban
-      const { error: updateError } = await adminClient
-        .from("colaboradores")
-        .update({ ativo: true })
-        .eq("id", targetId);
+      const { error: updateError } = await rest.update("colaboradores", `id=eq.${targetId}`, { ativo: true });
 
       if (updateError) {
         return jsonError(req, 500, "Erro ao reativar o colaborador.", updateError.message);
       }
 
       // Remove ban from auth user
-      const { error: unbanError } = await adminClient.auth.admin.updateUserById(targetId, {
-        ban_duration: "none",
-      });
+      const { error: unbanError } = await rest.adminUpdateUser(targetId, { ban_duration: "none" });
 
       if (unbanError && !String(unbanError.message || "").toLowerCase().includes("not found")) {
         // Roll back the ativo change if unban fails
-        await adminClient.from("colaboradores").update({ ativo: false }).eq("id", targetId);
+        await rest.update("colaboradores", `id=eq.${targetId}`, { ativo: false });
         return jsonError(req, 500, "Erro ao desbanir o usuário de autenticação.", unbanError.message);
       }
     }

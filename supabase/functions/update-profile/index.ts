@@ -1,8 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
 
 const isSafeUrl = (value: string) => {
   try {
@@ -33,15 +33,9 @@ if (!supabaseUrl || !serviceRoleKey) {
     if (!callerToken) {
       return jsonError(req, 401, "Não autenticado.");
     }
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: { user: callerUser },
-      error: callerError,
-    } = await adminClient.auth.getUser(callerToken);
-
+    const { data: callerUser, error: callerError } = await rest.getUser(callerToken);
     if (callerError || !callerUser) {
       return jsonError(req, 401, "Não autenticado.");
     }
@@ -78,12 +72,11 @@ if (!supabaseUrl || !serviceRoleKey) {
       updateData.foto_url = fotoUrl;
     }
 
-    const { data: profile, error: updateError } = await adminClient
-      .from("colaboradores")
-      .update(updateData)
-      .eq("id", callerUser.id)
-      .select("*")
-      .maybeSingle();
+    const { data: profile, error: updateError } = await rest.updateReturning(
+      "colaboradores",
+      `id=eq.${callerUser.id}&select=*`,
+      updateData,
+    );
 
     if (updateError) {
       return jsonError(req, 500, "Erro ao salvar o perfil.", updateError.message);

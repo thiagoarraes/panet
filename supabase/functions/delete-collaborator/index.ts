@@ -1,15 +1,16 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest, type Rest } from "../_shared/rest.ts";
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
 
+type Perfil = { id?: string; perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null };
+type PerfilAlvo = { id: string; foto_url: string | null; email: string | null };
+
 const normalizeEmail = (value: unknown) => String(value || "").trim().toLowerCase();
 
-const hasRequiredAdminModule = (
-  profile: { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null } | null
-) => {
+const hasRequiredAdminModule = (profile: Perfil | null) => {
   if (!profile || profile.perfil !== "admin" || profile.ativo === false) return false;
   if (profile.admin_modulos === null || profile.admin_modulos === undefined) return true;
   return Array.isArray(profile.admin_modulos) && profile.admin_modulos.includes(REQUIRED_ADMIN_MODULE);
@@ -34,15 +35,14 @@ const extractAvatarPathFromUrl = (rawUrl: string) => {
 // uma exclusao que falhou no meio). A versao antiga consultava `colaboradores`,
 // onde por definicao nao ha nada a achar nesse cenario: devolvia null, o
 // deleteUser era pulado e a function respondia ok:true sem excluir ninguem.
-// deno-lint-ignore-next-line no-explicit-any
-async function findAuthUserIdByEmail(adminClient: SupabaseClient<any>, email: string) {
+async function findAuthUserIdByEmail(rest: Rest, email: string) {
   const alvo = String(email || "").trim().toLowerCase();
   if (!alvo) return null;
 
   const perPage = 200;
   for (let page = 1; page <= 50; page += 1) {
-    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
+    const { data, error } = await rest.adminListUsers(page, perPage);
+    if (error) throw new Error(error.message);
     const users = data?.users || [];
     const achado = users.find((u) => String(u?.email || "").trim().toLowerCase() === alvo);
     if (achado?.id) return achado.id;
@@ -63,7 +63,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = getSupabaseUrl();
     const serviceRoleKey = getServiceRoleKey();
-if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 503, "Serviço não configurado.");
     }
 
@@ -80,16 +80,11 @@ if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 401, "Não autenticado.");
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
     let callerUser: { id: string } | null = null;
     for (const token of candidateTokens) {
-      const {
-        data: { user },
-        error,
-      } = await adminClient.auth.getUser(token);
+      const { data: user, error } = await rest.getUser(token);
       if (!error && user?.id) {
         callerUser = { id: user.id };
         break;
@@ -100,11 +95,10 @@ if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 401, "Não autenticado.");
     }
 
-    const { data: callerProfile, error: profileError } = await adminClient
-      .from("colaboradores")
-      .select("id, perfil, admin_modulos, ativo")
-      .eq("id", callerUser.id)
-      .maybeSingle();
+    const { data: callerProfile, error: profileError } = await rest.selectOne<Perfil>(
+      "colaboradores",
+      `id=eq.${callerUser.id}&select=id,perfil,admin_modulos,ativo`,
+    );
 
     if (profileError || !hasRequiredAdminModule(callerProfile)) {
       return jsonError(req, 403, "Apenas admins com acesso ao módulo colaboradores podem excluir usuários.");
@@ -121,20 +115,13 @@ if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 400, "Você não pode excluir seu próprio usuário.");
     }
 
-    let targetProfile:
-      | {
-          id: string;
-          foto_url: string | null;
-          email: string | null;
-        }
-      | null = null;
+    let targetProfile: PerfilAlvo | null = null;
 
     if (userId) {
-      const { data, error } = await adminClient
-        .from("colaboradores")
-        .select("id, foto_url, email")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data, error } = await rest.selectOne<PerfilAlvo>(
+        "colaboradores",
+        `id=eq.${userId}&select=id,foto_url,email`,
+      );
       if (error) {
         return jsonError(req, 500, "Erro ao localizar o colaborador.", error.message);
       }
@@ -142,11 +129,10 @@ if (!supabaseUrl || !serviceRoleKey) {
     }
 
     if (!targetProfile && providedEmail) {
-      const { data, error } = await adminClient
-        .from("colaboradores")
-        .select("id, foto_url, email")
-        .eq("email", providedEmail)
-        .maybeSingle();
+      const { data, error } = await rest.selectOne<PerfilAlvo>(
+        "colaboradores",
+        `email=eq.${encodeURIComponent(providedEmail)}&select=id,foto_url,email`,
+      );
       if (error) {
         return jsonError(req, 500, "Erro ao localizar o colaborador por e-mail.", error.message);
       }
@@ -160,23 +146,20 @@ if (!supabaseUrl || !serviceRoleKey) {
       return jsonError(req, 400, "Você não pode excluir seu próprio usuário.");
     }
 
-    const [{ error: reassignPostsError }, avatarListResult] = await Promise.all([
+    const [reassignPostsResult, avatarListResult] = await Promise.all([
       targetProfileId
-        ? adminClient.from("postagens").update({ autor_id: callerUser.id }).eq("autor_id", targetProfileId)
+        ? rest.update("postagens", `autor_id=eq.${targetProfileId}`, { autor_id: callerUser.id })
         : Promise.resolve({ error: null }),
       targetProfileId
-        ? adminClient.storage.from("avatares").list(targetProfileId, {
-            limit: 1000,
-            offset: 0,
-          })
+        ? rest.storageList("avatares", targetProfileId, 1000)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
     const userAvatarFiles = avatarListResult?.data || [];
     const listAvatarError = avatarListResult?.error || null;
 
-    if (reassignPostsError) {
-      return jsonError(req, 500, "Erro ao reatribuir postagens.", reassignPostsError.message);
+    if (reassignPostsResult.error) {
+      return jsonError(req, 500, "Erro ao reatribuir postagens.", reassignPostsResult.error.message);
     }
 
     if (listAvatarError) {
@@ -193,7 +176,7 @@ if (!supabaseUrl || !serviceRoleKey) {
     }
 
     if (avatarPaths.size > 0) {
-      const { error: removeAvatarError } = await adminClient.storage.from("avatares").remove(Array.from(avatarPaths));
+      const { error: removeAvatarError } = await rest.storageRemove("avatares", Array.from(avatarPaths));
       if (removeAvatarError) {
         return jsonError(req, 500, "Erro ao remover avatares.", removeAvatarError.message);
       }
@@ -210,11 +193,11 @@ if (!supabaseUrl || !serviceRoleKey) {
     // sai depois que toda a limpeza deu certo, fora do lote paralelo.
     const cleanupTasks = targetProfileId
       ? await Promise.all([
-          adminClient.from("curtidas").delete().eq("colaborador_id", targetProfileId),
-          adminClient.from("comentarios").delete().eq("colaborador_id", targetProfileId),
-          adminClient.from("ferias").delete().eq("colaborador_id", targetProfileId),
-          adminClient.from("aniversario_parabenizacoes").delete().eq("colaborador_id", targetProfileId),
-          adminClient.from("aniversario_parabenizacoes").delete().eq("aniversariante_id", targetProfileId),
+          rest.del("curtidas", `colaborador_id=eq.${targetProfileId}`),
+          rest.del("comentarios", `colaborador_id=eq.${targetProfileId}`),
+          rest.del("ferias", `colaborador_id=eq.${targetProfileId}`),
+          rest.del("aniversario_parabenizacoes", `colaborador_id=eq.${targetProfileId}`),
+          rest.del("aniversario_parabenizacoes", `aniversariante_id=eq.${targetProfileId}`),
         ])
       : [];
 
@@ -225,8 +208,8 @@ if (!supabaseUrl || !serviceRoleKey) {
     }
 
     const perfilTasks = await Promise.all([
-      targetProfileId ? adminClient.from("colaboradores").delete().eq("id", targetProfileId) : Promise.resolve({ error: null }),
-      targetEmail ? adminClient.from("colaboradores").delete().eq("email", targetEmail) : Promise.resolve({ error: null }),
+      targetProfileId ? rest.del("colaboradores", `id=eq.${targetProfileId}`) : Promise.resolve({ error: null }),
+      targetEmail ? rest.del("colaboradores", `email=eq.${encodeURIComponent(targetEmail)}`) : Promise.resolve({ error: null }),
     ]);
 
     for (const result of perfilTasks) {
@@ -237,7 +220,7 @@ if (!supabaseUrl || !serviceRoleKey) {
 
     let authUserId: string | null = targetProfileId;
     if (!authUserId && targetEmail) {
-      authUserId = await findAuthUserIdByEmail(adminClient, targetEmail);
+      authUserId = await findAuthUserIdByEmail(rest, targetEmail);
     }
 
     // Sem perfil E sem auth user nao ha o que excluir. Responder ok:true aqui
@@ -248,7 +231,7 @@ if (!supabaseUrl || !serviceRoleKey) {
     }
 
     if (authUserId) {
-      const { error: deleteError } = await adminClient.auth.admin.deleteUser(authUserId);
+      const { error: deleteError } = await rest.adminDeleteUser(authUserId);
       if (deleteError && !String(deleteError.message || "").toLowerCase().includes("not found")) {
         return jsonError(req, 500, "Erro ao excluir o usuário de autenticação.", deleteError.message);
       }

@@ -1,9 +1,17 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
+
+type Corrida = {
+  id: string;
+  colaborador_id: string;
+  recibo_path: string | null;
+  recibo_mime: string | null;
+  status_extracao: string | null;
+};
 
 const ALLOWED_MIME = new Set([
   "image/png",
@@ -58,41 +66,36 @@ serve(async (req) => {
     const callerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
     if (!callerToken) return jsonError(req, 401, "Não autenticado.");
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: { user: callerUser },
-      error: callerError,
-    } = await adminClient.auth.getUser(callerToken);
+    const { data: callerUser, error: callerError } = await rest.getUser(callerToken);
     if (callerError || !callerUser) return jsonError(req, 401, "Não autenticado.");
 
     const body = await req.json();
     const corridaId = String(body?.corrida_id || "").trim();
     if (!corridaId) return jsonError(req, 400, "corrida_id é obrigatório.");
 
-    const { data: corrida, error: corridaError } = await adminClient
-      .from("corridas")
-      .select("id, colaborador_id, recibo_path, recibo_mime, status_extracao")
-      .eq("id", corridaId)
-      .maybeSingle();
+    const { data: corrida, error: corridaError } = await rest.selectOne<Corrida>(
+      "corridas",
+      `id=eq.${corridaId}&select=id,colaborador_id,recibo_path,recibo_mime,status_extracao`,
+    );
     if (corridaError) return jsonError(req, 404, "Corrida não encontrada.");
     if (!corrida) return jsonError(req, 404, "Corrida não encontrada.");
 
     // Dono da corrida ou admin pode disparar a extração.
     if (corrida.colaborador_id !== callerUser.id) {
-      const { data: profile } = await adminClient
-        .from("colaboradores")
-        .select("perfil")
-        .eq("id", callerUser.id)
-        .maybeSingle();
+      const { data: profile } = await rest.selectOne<{ perfil: string | null }>(
+        "colaboradores",
+        `id=eq.${callerUser.id}&select=perfil`,
+      );
       if (profile?.perfil !== "admin") return jsonError(req, 403, "Forbidden");
     }
 
     const markError = async (message: string) => {
-      await adminClient
-        .from("corridas")
-        .update({ status_extracao: "erro", erro_extracao: message.slice(0, 500) })
-        .eq("id", corridaId);
+      await rest.update("corridas", `id=eq.${corridaId}`, {
+        status_extracao: "erro",
+        erro_extracao: message.slice(0, 500),
+      });
     };
 
     if (!corrida.recibo_path) {
@@ -102,9 +105,7 @@ serve(async (req) => {
       return jsonError(req, 400, "Formato de recibo não suportado.");
     }
 
-    const { data: fileBlob, error: downloadError } = await adminClient.storage
-      .from("recibos")
-      .download(corrida.recibo_path);
+    const { data: fileBlob, error: downloadError } = await rest.storageDownload("recibos", corrida.recibo_path);
     if (downloadError || !fileBlob) {
       await markError(`Falha ao baixar recibo: ${downloadError?.message || "arquivo vazio"}`);
       return jsonError(req, 500, "Falha ao baixar o recibo do storage.", downloadError?.message);
@@ -159,8 +160,8 @@ serve(async (req) => {
 
     // Documento não é recibo de corrida: rejeita, apaga arquivo e a corrida.
     if (fields.eh_recibo_corrida === false) {
-      await adminClient.storage.from("recibos").remove([corrida.recibo_path]).catch(() => {});
-      await adminClient.from("corridas").delete().eq("id", corridaId);
+      await rest.storageRemove("recibos", [corrida.recibo_path]);
+      await rest.del("corridas", `id=eq.${corridaId}`);
  return jsonOk(
  req,
  { ok: false, rejected: true, error: "O documento enviado não é um recibo de corrida de aplicativo (Uber/99)." },
@@ -186,12 +187,11 @@ serve(async (req) => {
       erro_extracao: null,
     };
 
-    const { data: updated, error: updateError } = await adminClient
-      .from("corridas")
-      .update(update)
-      .eq("id", corridaId)
-      .select()
-      .maybeSingle();
+    const { data: updated, error: updateError } = await rest.updateReturning(
+      "corridas",
+      `id=eq.${corridaId}&select=*`,
+      update,
+    );
     if (updateError) {
       await markError(`Falha ao salvar extração: ${updateError.message}`);
       return jsonError(req, 500, "Erro ao salvar a extração.", updateError.message);

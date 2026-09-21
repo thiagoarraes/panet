@@ -1,8 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
+
+type Perfil = { id?: string; perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null };
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
 
@@ -56,24 +58,18 @@ if (!supabaseUrl || !serviceRoleKey) {
  if (!callerToken) {
  return jsonError(req, 401, "Não autenticado.");
  }
- const adminClient = createClient(supabaseUrl, serviceRoleKey, {
- auth: { persistSession: false },
- });
+ const rest = criarRest(supabaseUrl, serviceRoleKey);
 
- const {
- data: { user: callerUser },
- error: callerError,
- } = await adminClient.auth.getUser(callerToken);
+ const { data: callerUser, error: callerError } = await rest.getUser(callerToken);
 
  if (callerError || !callerUser) {
  return jsonError(req, 401, "Não autenticado.");
  }
 
- const { data: callerProfile, error: profileError } = await adminClient
- .from("colaboradores")
- .select("id, perfil, admin_modulos, ativo")
- .eq("id", callerUser.id)
- .maybeSingle();
+ const { data: callerProfile, error: profileError } = await rest.selectOne<Perfil>(
+ "colaboradores",
+ `id=eq.${callerUser.id}&select=id,perfil,admin_modulos,ativo`,
+ );
 
  if (profileError || !hasRequiredAdminModule(callerProfile)) {
  return jsonError(req, 403, "Apenas admins com acesso ao módulo colaboradores podem criar usuários.");
@@ -100,11 +96,10 @@ if (!supabaseUrl || !serviceRoleKey) {
  }
  }
 
- const { data: existingProfile, error: existingProfileError } = await adminClient
- .from("colaboradores")
- .select("id")
- .eq("email", email)
- .maybeSingle();
+ const { data: existingProfile, error: existingProfileError } = await rest.selectOne<{ id: string }>(
+ "colaboradores",
+ `email=eq.${encodeURIComponent(email)}&select=id`,
+ );
 
  if (existingProfileError) {
  return jsonError(req, 500, "Erro ao verificar e-mail existente.", existingProfileError.message);
@@ -116,14 +111,14 @@ if (!supabaseUrl || !serviceRoleKey) {
 
  const temporaryPassword = generateTemporaryPassword();
 
- const { data: createdAuth, error: createAuthError } = await adminClient.auth.admin.createUser({
+ const { data: createdUser, error: createAuthError } = await rest.adminCreateUser({
  email,
  password: temporaryPassword,
  email_confirm: true,
  user_metadata: { nome, cargo, perfil },
  });
 
- if (createAuthError || !createdAuth.user) {
+ if (createAuthError || !createdUser?.id) {
  const authErrorMessage = createAuthError?.message || "Failed to create auth user.";
  const authErrorLower = authErrorMessage.toLowerCase();
  return jsonError(
@@ -136,8 +131,8 @@ if (!supabaseUrl || !serviceRoleKey) {
  );
  }
 
- const { error: createProfileError } = await adminClient.from("colaboradores").insert({
- id: createdAuth.user.id,
+ const { error: createProfileError } = await rest.insert("colaboradores", {
+ id: createdUser.id,
  nome,
  cargo,
  email,
@@ -151,12 +146,12 @@ if (!supabaseUrl || !serviceRoleKey) {
  });
 
  if (createProfileError) {
- await adminClient.auth.admin.deleteUser(createdAuth.user.id);
+ await rest.adminDeleteUser(createdUser.id);
  return jsonError(req, 500, "Erro ao criar perfil do colaborador.", createProfileError.message);
  }
 
  return jsonOk(req, {
- user_id: createdAuth.user.id,
+ user_id: createdUser.id,
  email,
  temporary_password: temporaryPassword,
  primeiro_acesso: true,

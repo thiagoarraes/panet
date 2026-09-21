@@ -1,8 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
@@ -97,24 +97,17 @@ serve(async (req) => {
       return jsonError(req, 401, "Não autenticado.");
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await adminClient.auth.getUser(callerToken);
-
+    const { data: user, error: userError } = await rest.getUser(callerToken);
     if (userError || !user) {
       return jsonError(req, 401, "Não autenticado.");
     }
 
-    const { data: profile } = await adminClient
-      .from("colaboradores")
-      .select("email")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { data: profile } = await rest.selectOne<{ email: string | null }>(
+      "colaboradores",
+      `id=eq.${user.id}&select=email`,
+    );
 
     const userEmail = profile?.email || user.email;
     if (!userEmail) throw new Error("User email not found");

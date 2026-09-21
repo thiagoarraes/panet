@@ -1,10 +1,19 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
 
 const DEFAULT_DESCRIPTION = "Intranet da Agencia Pan.";
+type Postagem = {
+  titulo: string | null;
+  descricao: string | null;
+  imagem_url: string | null;
+  categoria: string | null;
+  data_post: string | null;
+  created_at: string | null;
+};
+
 const SIGNED_IMAGE_TTL_SECONDS = 60 * 60;
 
 const toPostSlug = (value: string) =>
@@ -84,16 +93,13 @@ serve(async (req) => {
       return jsonError(req, 400, "Missing slug");
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
-    const { data: posts, error: postsError } = await adminClient
-      .from("postagens")
-      .select("titulo, descricao, imagem_url, categoria, data_post, created_at")
-      .order("data_post", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1000);
+    const { data: posts, error: postsError } = await rest.select<Postagem>(
+      "postagens",
+      "select=titulo,descricao,imagem_url,categoria,data_post,created_at" +
+        "&order=data_post.desc,created_at.desc&limit=1000",
+    );
 
     if (postsError) {
       return jsonError(req, 500, "Erro ao consultar postagens.", postsError.message);
@@ -107,15 +113,13 @@ serve(async (req) => {
     let imageUrl = "";
     const storagePath = extractStoragePath(String(post.imagem_url || ""));
     if (storagePath) {
-      const { data: signedData, error: signedError } = await adminClient.storage
-        .from("postagens")
-        .createSignedUrl(storagePath, SIGNED_IMAGE_TTL_SECONDS);
-
-      if (!signedError && signedData?.signedUrl) {
-        imageUrl = signedData.signedUrl.startsWith("http")
-          ? signedData.signedUrl
-          : `${supabaseUrl}${signedData.signedUrl.startsWith("/") ? "" : "/"}${signedData.signedUrl}`;
-      }
+      // storageSignedUrl ja devolve absoluta.
+      const { data: signedUrl } = await rest.storageSignedUrl(
+        "postagens",
+        storagePath,
+        SIGNED_IMAGE_TTL_SECONDS,
+      );
+      if (signedUrl) imageUrl = signedUrl;
     } else if (String(post.imagem_url || "").trim()) {
       imageUrl = String(post.imagem_url).trim();
     }

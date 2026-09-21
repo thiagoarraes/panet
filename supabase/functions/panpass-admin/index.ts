@@ -5,15 +5,17 @@
 // corpo da requisição e sai cifrada para o banco; nunca volta para o client.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encrypt } from "../_shared/crypto.ts";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
 
 const textoOuNull = (v: unknown): string | null => {
   const s = String(v ?? "").trim();
   return s === "" ? null : s;
 };
+
+type Perfil = { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null };
 
 const REQUIRED_ADMIN_MODULE = "panpass";
 
@@ -36,21 +38,15 @@ serve(async (req) => {
     const callerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
     if (!callerToken) return jsonError(req, 401, "Não autenticado.");
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false },
-    });
+    const rest = criarRest(supabaseUrl, serviceRoleKey);
 
-    const {
-      data: { user: callerUser },
-      error: callerError,
-    } = await adminClient.auth.getUser(callerToken);
+    const { data: callerUser, error: callerError } = await rest.getUser(callerToken);
     if (callerError || !callerUser) return jsonError(req, 401, "Não autenticado.");
 
-    const { data: perfil } = await adminClient
-      .from("colaboradores")
-      .select("perfil, admin_modulos, ativo")
-      .eq("id", callerUser.id)
-      .maybeSingle();
+    const { data: perfil } = await rest.selectOne<Perfil>(
+      "colaboradores",
+      `id=eq.${callerUser.id}&select=perfil,admin_modulos,ativo`,
+    );
     if (!hasRequiredAdminModule(perfil)) return jsonError(req, 403, "Acesso restrito.");
 
     const body = await req.json();
@@ -59,7 +55,7 @@ serve(async (req) => {
     if (acao === "delete") {
       const id = String(body?.id || "").trim();
       if (!id) return jsonError(req, 400, "id é obrigatório.");
-      const { error } = await adminClient.from("panpass_servicos").delete().eq("id", id);
+      const { error } = await rest.del("panpass_servicos", `id=eq.${id}`);
       if (error) return jsonError(req, 500, "Erro ao remover o serviço.", error.message);
       return jsonOk(req, { ok: true });
     }
@@ -96,19 +92,15 @@ serve(async (req) => {
     if (senha) registro.senha_cifrada = await encrypt(senha);
 
     if (id) {
-      const { error } = await adminClient.from("panpass_servicos").update(registro).eq("id", id);
+      const { error } = await rest.update("panpass_servicos", `id=eq.${id}`, registro);
       if (error) return jsonError(req, 500, "Erro ao salvar o serviço.", error.message);
       return jsonOk(req, { ok: true, id });
     }
 
     if (!registro.senha_cifrada) return jsonError(req, 400, "senha é obrigatória.");
 
-    const { data, error } = await adminClient
-      .from("panpass_servicos")
-      .insert(registro)
-      .select("id")
-      .single();
-    if (error) return jsonError(req, 500, "Erro ao criar o serviço.", error.message);
+    const { data, error } = await rest.insertReturning<{ id: string }>("panpass_servicos", "id", registro);
+    if (error || !data) return jsonError(req, 500, "Erro ao criar o serviço.", error?.message);
     return jsonOk(req, { ok: true, id: data.id });
   } catch (error) {
     console.error("[panpass-admin]", error);

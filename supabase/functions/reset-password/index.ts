@@ -1,8 +1,11 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, jsonError, jsonOk } from "../_shared/http.ts";
 import { getServiceRoleKey, getSupabaseUrl } from "../_shared/env.ts";
+import { criarRest } from "../_shared/rest.ts";
+
+type Perfil = { perfil?: string | null; admin_modulos?: string[] | null; ativo?: boolean | null };
+type Alvo = { id: string; email: string };
 
 const REQUIRED_ADMIN_MODULE = "colaboradores";
 
@@ -41,24 +44,18 @@ try {
  if (!callerToken) {
  return jsonError(req, 401, "Não autenticado.");
  }
- const adminClient = createClient(supabaseUrl, serviceRoleKey, {
- auth: { persistSession: false },
- });
+ const rest = criarRest(supabaseUrl, serviceRoleKey);
 
- const {
- data: { user: callerUser },
- error: callerError,
- } = await adminClient.auth.getUser(callerToken);
+ const { data: callerUser, error: callerError } = await rest.getUser(callerToken);
 
  if (callerError || !callerUser) {
  return jsonError(req, 401, "Não autenticado.");
  }
 
- const { data: callerProfile, error: profileError } = await adminClient
- .from("colaboradores")
- .select("id, perfil, admin_modulos, ativo")
- .eq("id", callerUser.id)
- .maybeSingle();
+ const { data: callerProfile, error: profileError } = await rest.selectOne<Perfil>(
+ "colaboradores",
+ `id=eq.${callerUser.id}&select=id,perfil,admin_modulos,ativo`,
+ );
 
  if (profileError || !hasRequiredAdminModule(callerProfile)) {
  return jsonError(req, 403, "Apenas admins com acesso ao módulo colaboradores podem redefinir senhas.");
@@ -82,11 +79,11 @@ try {
  | null = null;
 
  if (userId) {
- const { data, error } = await adminClient.from("colaboradores").select("id,email").eq("id", userId).maybeSingle();
+ const { data, error } = await rest.selectOne<Alvo>("colaboradores", `id=eq.${userId}&select=id,email`);
  if (error) return jsonError(req, 500, "Erro ao localizar colaborador.", error.message);
  targetProfile = data;
  } else {
- const { data, error } = await adminClient.from("colaboradores").select("id,email").eq("email", email).maybeSingle();
+ const { data, error } = await rest.selectOne<Alvo>("colaboradores", `email=eq.${encodeURIComponent(email)}&select=id,email`);
  if (error) return jsonError(req, 500, "Erro ao localizar colaborador.", error.message);
  targetProfile = data;
  }
@@ -96,7 +93,7 @@ try {
  }
 
  const temporaryPassword = generateTemporaryPassword();
- const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(targetProfile.id, {
+ const { error: updateAuthError } = await rest.adminUpdateUser(targetProfile.id, {
  password: temporaryPassword,
  email_confirm: true,
  });
@@ -104,10 +101,7 @@ try {
  return jsonError(req, 500, "Erro ao redefinir a senha.", updateAuthError.message);
  }
 
- const { error: updateProfileError } = await adminClient
- .from("colaboradores")
- .update({ primeiro_acesso: true })
- .eq("id", targetProfile.id);
+ const { error: updateProfileError } = await rest.update("colaboradores", `id=eq.${targetProfile.id}`, { primeiro_acesso: true });
  if (updateProfileError) {
  return jsonError(req, 500, "Erro ao atualizar o perfil.", updateProfileError.message);
  }
