@@ -10,6 +10,7 @@ import {
   useSalvarServicoPanPass,
 } from "../../../hooks/mutations/usePanPassMutations";
 import "../../../styles/panpass.css";
+import { PanPassServicoLogo } from "../../../components/PanPassServicoLogo";
 import { PanTooltip } from "../../../components/ui/PanTooltip";
 
 export const VAZIO = {
@@ -42,15 +43,6 @@ export const ACAO_VERBO = {
 
 export const formatarData = (iso) =>
   new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-
-export const iniciais = (nome) =>
-  (nome || "?")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
 
 export function StatTile({ Icon, valor, rotulo, tom }) {
   return (
@@ -447,11 +439,7 @@ export function ServicoCard({ servico, onEditar, onExcluir }) {
   return (
     <article className={`pp-servico ${servico.ativo ? "" : "is-inativo"}`}>
       <div className="pp-servico-topo">
-        {servico.logo_url ? (
-          <img className="pp-servico-logo" src={servico.logo_url} alt="" width={38} height={38} loading="lazy" />
-        ) : (
-          <span className="pp-servico-logo pp-servico-logo-vazio">{iniciais(servico.nome)}</span>
-        )}
+        <PanPassServicoLogo servico={servico} size={38} className="pp-servico-logo" />
         <div className="pp-servico-id">
           <h3 className="pp-servico-nome">{servico.nome}</h3>
           {servico.categoria && <span className="pp-servico-cat">{servico.categoria}</span>}

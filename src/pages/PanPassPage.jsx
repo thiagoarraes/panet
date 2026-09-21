@@ -4,6 +4,7 @@ import "../styles/panpass.css";
 import { usePanPassServicos } from "../hooks/queries/usePanPassServicos";
 import { useRevelarCredencial } from "../hooks/mutations/usePanPassMutations";
 import { PanTooltip } from "../components/ui/PanTooltip";
+import { PanPassServicoLogo } from "../components/PanPassServicoLogo";
 import { copiarTexto } from "../lib/clipboard";
 
 const SEGUNDOS_VISIVEL = 60;
@@ -79,13 +80,7 @@ function ServicoCard({ servico }) {
 
       <div className="panpass-v2-card-head">
         <div className="panpass-v2-logo-wrap">
-          {servico.logo_url ? (
-            <img className="panpass-v2-logo" src={servico.logo_url} alt="" width={44} height={44} loading="lazy" />
-          ) : (
-            <span className="panpass-v2-logo panpass-v2-logo-fallback" aria-hidden="true">
-              <KeyRound size={20} />
-            </span>
-          )}
+          <PanPassServicoLogo servico={servico} size={44} className="panpass-v2-logo" />
         </div>
         <div className="panpass-v2-titulo-wrap">
           <h3 className="panpass-v2-nome">{servico.nome}</h3>
