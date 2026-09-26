@@ -21,30 +21,34 @@ const ALLOWED_MIME = new Set([
 ]);
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
-const EXTRACTION_PROMPT = `Você recebe um documento enviado por um colaborador que deveria ser o recibo/comprovante de uma corrida de aplicativo (Uber, 99 ou similar). Analise o documento e responda APENAS com um JSON válido, sem cercas de código, exatamente com estas chaves:
-{
-  "eh_recibo_corrida": boolean,
-  "origem": string | null,
-  "destino": string | null,
-  "horario": string | null,
-  "duracao_min": number | null,
-  "km": number | null,
-  "veiculo": string | null,
-  "motorista": string | null,
-  "valor_total": number | null
-}
+const EXTRACTION_SCHEMA = {
+  type: "object",
+  properties: {
+    eh_recibo_corrida: { type: "boolean" },
+    origem: { type: ["string", "null"] },
+    destino: { type: ["string", "null"] },
+    horario: { type: ["string", "null"] },
+    duracao_min: { type: ["number", "null"] },
+    km: { type: ["number", "null"] },
+    veiculo: { type: ["string", "null"] },
+    motorista: { type: ["string", "null"] },
+    valor_total: { type: ["number", "null"] },
+  },
+  required: [
+    "eh_recibo_corrida", "origem", "destino", "horario", "duracao_min",
+    "km", "veiculo", "motorista", "valor_total",
+  ],
+  additionalProperties: false,
+};
+
+const EXTRACTION_PROMPT = `Você recebe um documento enviado por um colaborador que deveria ser o recibo/comprovante de uma corrida de aplicativo (Uber, 99 ou similar). Extraia os campos do documento.
 Regras:
 - eh_recibo_corrida = true SOMENTE se o documento for claramente um recibo/comprovante de viagem de app de transporte (Uber, 99, InDrive, Cabify e similares), com sinais como trajeto/endereços, valor da corrida, motorista/veículo ou a marca do app. Qualquer outra coisa (nota fiscal de loja, boleto, cardápio, foto aleatória, print sem relação, documento em branco) = false.
 - Se eh_recibo_corrida = false, coloque null em todos os outros campos.
 - origem/destino são os endereços de partida/chegada; horario é a data/hora de início em ISO 8601 (se só houver hora sem data, use null); duracao_min em minutos; km é a distância; veiculo é modelo/placa; valor_total é o valor pago em reais como número (ex: 24.90). Use null para campo não encontrado.`;
 
 // deno-lint-ignore no-explicit-any
-const parseExtraction = (text: string): Record<string, any> => {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  const parsed = JSON.parse(cleaned);
-  if (!parsed || typeof parsed !== "object") throw new Error("Resposta da IA não é um objeto JSON.");
-  return parsed;
-};
+const parseExtraction = (text: string): Record<string, any> => JSON.parse(text);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -132,6 +136,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "claude-haiku-4-5",
         max_tokens: 1024,
+        output_config: { format: { type: "json_schema", schema: EXTRACTION_SCHEMA } },
         messages: [
           {
             role: "user",
@@ -148,6 +153,11 @@ serve(async (req) => {
     }
 
     const anthropicJson = await anthropicResponse.json();
+    console.info("[extract-recibo] usage", { corrida: corridaId, stop: anthropicJson?.stop_reason, ...anthropicJson?.usage });
+    if (anthropicJson?.stop_reason === "refusal" || anthropicJson?.stop_reason === "max_tokens") {
+      await markError(`Extração interrompida: ${anthropicJson.stop_reason}`);
+      return jsonError(req, 502, "Não foi possível extrair os dados do recibo.");
+    }
     const rawText = String(anthropicJson?.content?.[0]?.text || "");
 
     let fields;
